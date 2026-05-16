@@ -1,5 +1,6 @@
+import { useNavigate } from 'react-router-dom';
 import { Row, Col } from 'antd';
-import { TeamOutlined, BankOutlined, TrophyOutlined, ClockCircleOutlined, ArrowUpOutlined, ArrowDownOutlined } from '@ant-design/icons';
+import { TeamOutlined, BankOutlined, TrophyOutlined, ClockCircleOutlined, ArrowUpOutlined, ArrowDownOutlined, UserAddOutlined, DollarOutlined, BarChartOutlined, AuditOutlined } from '@ant-design/icons';
 import { PageHeader } from '../../../core/components/PageHeader';
 import { useQuery } from '@tanstack/react-query';
 
@@ -37,6 +38,7 @@ function StatCard({ title, value, icon, sub, trend }: { title: string; value: nu
 }
 
 export function DashboardPage() {
+  const navigate = useNavigate();
   const { data: empData } = useQuery({
     queryKey: ['employees-dash'],
     queryFn: () => import('../../employees/services/employeeService').then(m => m.employeeService.list({ limit: 1 })),
@@ -118,23 +120,39 @@ export function DashboardPage() {
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {[
-                { label: 'Add New Employee', color: '#4f46e5', bg: '#eef2ff' },
-                { label: 'Mark Attendance', color: '#059669', bg: '#ecfdf5' },
-                { label: 'Process Payroll', color: '#d97706', bg: '#fffbeb' },
-                { label: 'Generate Reports', color: '#0284c7', bg: '#f0f9ff' },
-                { label: 'View Audit Logs', color: '#7c3aed', bg: '#faf5ff' },
+                { label: 'Add New Employee', color: '#4f46e5', bg: '#eef2ff', icon: <UserAddOutlined />, path: '/employees/new' },
+                { label: 'Mark Attendance', color: '#059669', bg: '#ecfdf5', icon: <TeamOutlined />, path: '/attendance' },
+                { label: 'Process Payroll', color: '#d97706', bg: '#fffbeb', icon: <DollarOutlined />, path: '/payroll' },
+                { label: 'Generate Reports', color: '#0284c7', bg: '#f0f9ff', icon: <BarChartOutlined />, path: '/reports' },
+                { label: 'View Audit Logs', color: '#7c3aed', bg: '#faf5ff', icon: <AuditOutlined />, path: '/audit-logs' },
               ].map((action, i) => (
-                <div key={i} style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 12,
-                  padding: '12px 16px',
-                  borderRadius: 10,
-                  border: '1px solid var(--hrms-border)',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s',
-                }}>
-                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: action.color, flexShrink: 0 }} />
+                <div 
+                  key={i} 
+                  onClick={() => navigate(action.path)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 12,
+                    padding: '12px 16px',
+                    borderRadius: 10,
+                    border: '1px solid var(--hrms-border)',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  <div style={{ 
+                    width: 32, 
+                    height: 32, 
+                    borderRadius: 8, 
+                    background: action.bg, 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    color: action.color,
+                    flexShrink: 0,
+                  }}>
+                    {action.icon}
+                  </div>
                   <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--hrms-text-primary)' }}>{action.label}</span>
                 </div>
               ))}

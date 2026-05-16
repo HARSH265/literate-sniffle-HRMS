@@ -12,7 +12,7 @@ export function AppLayout() {
   return (
     <Layout style={{ minHeight: '100vh' }}>
       <Sidebar collapsed={sidebarCollapsed} />
-      <Layout style={{ marginLeft: sidebarCollapsed ? 72 : 260, transition: 'margin-left 0.2s' }}>
+      <Layout style={{ marginLeft: sidebarCollapsed ? 80 : 260, transition: 'margin-left 0.2s' }}>
         <Header />
         <Content style={{
           margin: '24px 28px 0',

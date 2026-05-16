@@ -22,6 +22,9 @@ const ReportsPage = lazy(() => import('./features/reports/pages/ReportsPage').th
 const SettingsPage = lazy(() => import('./features/settings/pages/SettingsPage').then((m) => ({ default: m.SettingsPage })));
 const UsersPage = lazy(() => import('./features/users/pages/UsersPage').then((m) => ({ default: m.UsersPage })));
 const AuditLogsPage = lazy(() => import('./features/audit/pages/AuditLogsPage').then((m) => ({ default: m.AuditLogsPage })));
+const WeeklyOffRulesPage = lazy(() => import('./features/weekly-off-rules/pages/WeeklyOffRulesPage').then((m) => ({ default: m.WeeklyOffRulesPage })));
+const OvertimeRulesPage = lazy(() => import('./features/overtime-rules/pages/OvertimeRulesPage').then((m) => ({ default: m.OvertimeRulesPage })));
+const RuleBookPage = lazy(() => import('./features/rule-book/pages/RuleBookPage').then((m) => ({ default: m.RuleBookPage })));
 
 const PageLoader = () => (
   <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
@@ -52,12 +55,15 @@ function App() {
             <Route path="designations" element={<DesignationsPage />} />
             <Route path="shifts" element={<ShiftsPage />} />
             <Route path="holidays" element={<HolidaysPage />} />
+            <Route path="weekly-off-rules" element={<WeeklyOffRulesPage />} />
+            <Route path="overtime-rules" element={<OvertimeRulesPage />} />
             <Route path="attendance" element={<AttendancePage />} />
             <Route path="overtime" element={<OvertimePage />} />
             <Route path="payroll" element={<PayrollPage />} />
             <Route path="salary-slips" element={<SalarySlipsPage />} />
             <Route path="reports" element={<ReportsPage />} />
             <Route path="settings" element={<SettingsPage />} />
+            <Route path="rule-book" element={<RuleBookPage />} />
             <Route path="users" element={<UsersPage />} />
             <Route path="audit-logs" element={<AuditLogsPage />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />

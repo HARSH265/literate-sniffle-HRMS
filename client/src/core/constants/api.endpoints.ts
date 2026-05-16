@@ -127,6 +127,7 @@ export const API_ENDPOINTS = {
 
   auditLogs: {
     list: '/audit-logs',
+    modules: '/audit-logs/modules',
   },
 
   upload: {
