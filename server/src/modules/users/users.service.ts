@@ -111,6 +111,17 @@ export class UsersService {
       throw new AppError('User not found', 404);
     }
 
+    if (id === deletedById) {
+      throw new AppError('You cannot delete your own account', 400);
+    }
+
+    if (user.role === 'super-admin') {
+      const superAdminCount = await User.countDocuments({ role: 'super-admin' });
+      if (superAdminCount <= 1) {
+        throw new AppError('Cannot delete the last super admin', 400);
+      }
+    }
+
     await User.findByIdAndDelete(id);
 
     await AuditService.log({
