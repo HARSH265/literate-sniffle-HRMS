@@ -5,22 +5,26 @@ import { asyncHandler } from '../../core/errors/asyncHandler.js';
 import { PaginationMeta } from '../../core/utils/PaginationUtil.js';
 
 const list = asyncHandler(async (req: Request, res: Response) => {
-  const result = await EmployeesService.list(req.query as Record<string, unknown>);
+  const userRole = req.user!.role;
+  const result = await EmployeesService.list(req.query as Record<string, unknown>, userRole);
   ResponseHandler.paginated(res, result.data, result.meta as PaginationMeta, 'Employees fetched successfully');
 });
 
 const getById = asyncHandler(async (req: Request, res: Response) => {
-  const result = await EmployeesService.getById(req.params.id);
+  const userRole = req.user!.role;
+  const result = await EmployeesService.getById(req.params.id, userRole);
   ResponseHandler.success(res, result, 'Employee fetched successfully');
 });
 
 const create = asyncHandler(async (req: Request, res: Response) => {
-  const result = await EmployeesService.create(req.body, req.user!.id);
+  const userRole = req.user!.role;
+  const result = await EmployeesService.create(req.body, req.user!.id, userRole);
   ResponseHandler.created(res, result, 'Employee created successfully');
 });
 
 const update = asyncHandler(async (req: Request, res: Response) => {
-  const result = await EmployeesService.update(req.params.id, req.body, req.user!.id);
+  const userRole = req.user!.role;
+  const result = await EmployeesService.update(req.params.id, req.body, req.user!.id, userRole);
   ResponseHandler.success(res, result, 'Employee updated successfully');
 });
 

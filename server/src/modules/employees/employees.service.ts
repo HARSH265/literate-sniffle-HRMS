@@ -3,8 +3,33 @@ import { AppError } from '../../core/errors/AppError.js';
 import { AuditService } from '../../core/audit/AuditService.js';
 import { PaginationUtil, PaginationMeta } from '../../core/utils/PaginationUtil.js';
 
+const SALARY_ACCESS_ROLES = ['super-admin', 'hr-admin', 'hr-staff', 'accounts'];
+
+const sanitizeEmployee = (emp: Record<string, unknown>, userRole: string): Record<string, unknown> => {
+  const sanitized = { ...emp };
+  
+  const hasSalaryAccess = SALARY_ACCESS_ROLES.includes(userRole) || userRole === 'super-admin';
+  
+  if (!hasSalaryAccess) {
+    delete sanitized.baseSalary;
+    delete sanitized.dailyWage;
+  }
+  
+  if (emp.bankDetails) {
+    const bankDetails = emp.bankDetails as Record<string, unknown>;
+    sanitized.bankDetails = {
+      bankName: bankDetails.bankName,
+      accountNumber: bankDetails.accountNumber ? '****' + String(bankDetails.accountNumber).slice(-4) : undefined,
+      ifscCode: bankDetails.ifscCode ? '****' + String(bankDetails.ifscCode).slice(-4) : undefined,
+      accountType: bankDetails.accountType,
+    };
+  }
+  
+  return sanitized;
+};
+
 export class EmployeesService {
-  static async list(queryParams: Record<string, unknown>): Promise<{ data: unknown[]; meta: PaginationMeta }> {
+  static async list(queryParams: Record<string, unknown>, userRole: string): Promise<{ data: unknown[]; meta: PaginationMeta }> {
     const { page, limit, sort, order, search } = PaginationUtil.parseFromObject(queryParams);
 
     const filter: Record<string, unknown> = {};
@@ -45,7 +70,7 @@ export class EmployeesService {
 
     const data: unknown[] = employees.map((e) => {
       const { _id, ...rest } = e as Record<string, unknown>;
-      return {
+      const emp = {
         ...rest,
         id: String(_id),
         _id: undefined,
@@ -53,13 +78,14 @@ export class EmployeesService {
         designation: e.designation ? { id: (e.designation as any)._id.toString(), name: (e.designation as any).name } : null,
         shift: e.shift ? { id: (e.shift as any)._id.toString(), name: (e.shift as any).name } : null,
       };
+      return sanitizeEmployee(emp, userRole);
     });
 
     const meta = PaginationUtil.getMeta(page, limit, total);
     return { data, meta };
   }
 
-  static async getById(id: string): Promise<Record<string, unknown>> {
+  static async getById(id: string, userRole: string): Promise<Record<string, unknown>> {
     const emp = await Employee.findById(id)
       .populate('department', 'name code')
       .populate('designation', 'name')
@@ -69,7 +95,7 @@ export class EmployeesService {
       throw new AppError('Employee not found', 404);
     }
     const { _id, ...rest } = emp as Record<string, unknown>;
-    return {
+    const employee = {
       ...rest,
       id: String(_id),
       _id: undefined,
@@ -77,9 +103,10 @@ export class EmployeesService {
       designation: (emp as any).designation ? { id: ((emp as any).designation as any)._id.toString(), name: ((emp as any).designation as any).name } : null,
       shift: (emp as any).shift ? { id: ((emp as any).shift as any)._id.toString(), name: ((emp as any).shift as any).name } : null,
     };
+    return sanitizeEmployee(employee, userRole);
   }
 
-  static async create(data: Record<string, unknown>, createdById: string) {
+  static async create(data: Record<string, unknown>, createdById: string, userRole: string) {
     const existing = await Employee.findOne({ employeeCode: (data.employeeCode as string).toUpperCase() });
     if (existing) {
       throw new AppError('Employee code already exists', 400);
@@ -99,10 +126,10 @@ export class EmployeesService {
       details: { employeeCode: data.employeeCode, fullName: data.fullName },
     });
 
-    return this.getById(emp._id.toString());
+    return this.getById(emp._id.toString(), userRole);
   }
 
-  static async update(id: string, data: Record<string, unknown>, updatedById: string) {
+  static async update(id: string, data: Record<string, unknown>, updatedById: string, userRole: string) {
     const emp = await Employee.findById(id);
     if (!emp) {
       throw new AppError('Employee not found', 404);
@@ -119,7 +146,7 @@ export class EmployeesService {
       details: data,
     });
 
-    return this.getById(id);
+    return this.getById(id, userRole);
   }
 
   static async delete(id: string, deletedById: string) {
@@ -138,7 +165,7 @@ export class EmployeesService {
     });
   }
 
-  static async updatePhoto(id: string, photoUrl: string, updatedById: string) {
+  static async updatePhoto(id: string, photoUrl: string, updatedById: string, userRole: string = 'super-admin') {
     const emp = await Employee.findById(id);
     if (!emp) {
       throw new AppError('Employee not found', 404);
@@ -148,6 +175,6 @@ export class EmployeesService {
     emp.updatedBy = updatedById as any;
     await emp.save();
 
-    return this.getById(id);
+    return this.getById(id, userRole);
   }
 }

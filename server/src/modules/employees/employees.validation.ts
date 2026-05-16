@@ -1,6 +1,15 @@
 import { z } from 'zod';
 import mongoose from 'mongoose';
 
+const bankDetailsSchema = z.object({
+  bankName: z.string().max(100).optional(),
+  accountNumber: z.string().regex(/^[0-9]{9,18}$/, 'Account number must be 9-18 digits').optional(),
+  ifscCode: z.string().regex(/^[A-Z]{4}0[A-Z0-9]{6}$/, 'Invalid IFSC code format').optional(),
+  accountType: z.enum(['savings', 'current']).optional(),
+}).optional();
+
+const contactNumberSchema = z.string().regex(/^[6-9][0-9]{9}$/, 'Invalid Indian mobile number').optional();
+
 export const createEmployeeSchema = z.object({
   employeeCode: z.string().min(1).max(20),
   fullName: z.string().min(2).max(100),
@@ -15,14 +24,9 @@ export const createEmployeeSchema = z.object({
   baseSalary: z.number().min(0),
   dailyWage: z.number().min(0).optional(),
   overtimeEligible: z.boolean().optional(),
-  contactNumber: z.string().optional(),
+  contactNumber: contactNumberSchema,
   address: z.string().optional(),
-  bankDetails: z.object({
-    bankName: z.string().optional(),
-    accountNumber: z.string().optional(),
-    ifscCode: z.string().optional(),
-    accountType: z.enum(['savings', 'current']).optional(),
-  }).optional(),
+  bankDetails: bankDetailsSchema,
   photo: z.string().optional(),
 });
 
@@ -39,15 +43,10 @@ export const updateEmployeeSchema = z.object({
   baseSalary: z.number().min(0).optional(),
   dailyWage: z.number().min(0).optional(),
   overtimeEligible: z.boolean().optional(),
-  contactNumber: z.string().optional(),
+  contactNumber: contactNumberSchema,
   address: z.string().optional(),
   status: z.enum(['active', 'inactive', 'terminated']).optional(),
-  bankDetails: z.object({
-    bankName: z.string().optional(),
-    accountNumber: z.string().optional(),
-    ifscCode: z.string().optional(),
-    accountType: z.enum(['savings', 'current']).optional(),
-  }).optional(),
+  bankDetails: bankDetailsSchema,
   photo: z.string().optional(),
 });
 
