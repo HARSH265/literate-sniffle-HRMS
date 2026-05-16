@@ -1,0 +1,126 @@
+import { useState } from 'react';
+import { Table, Button, Input, message, Modal, Form, Select, InputNumber, Tooltip, Tag } from 'antd';
+import type { ColumnsType } from 'antd/es/table';
+import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined } from '@ant-design/icons';
+import { PageHeader } from '../../../core/components/PageHeader';
+import { shiftService, Shift } from '../services/shiftService';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+
+const APPLICABLE_OPTIONS = [
+  { label: 'All Employees', value: 'all' },
+  { label: 'Workers Only', value: 'worker' },
+  { label: 'Office Staff Only', value: 'office-staff' },
+];
+
+export function ShiftsPage() {
+  const [form] = Form.useForm();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(20);
+  const [search, setSearch] = useState('');
+  const queryClient = useQueryClient();
+
+  const { data, isLoading, isFetching } = useQuery({
+    queryKey: ['shifts', page, limit, search],
+    queryFn: () => shiftService.list({ page, limit, search }),
+    refetchOnWindowFocus: false,
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (payload: any) => shiftService.create(payload),
+    onSuccess: () => { message.success('Shift created'); setIsModalOpen(false); form.resetFields(); queryClient.invalidateQueries({ queryKey: ['shifts'] }); },
+    onError: (err: any) => message.error(err?.response?.data?.message || 'Failed to create'),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: any }) => shiftService.update(id, payload),
+    onSuccess: () => { message.success('Shift updated'); setIsModalOpen(false); form.resetFields(); setEditingId(null); queryClient.invalidateQueries({ queryKey: ['shifts'] }); },
+    onError: (err: any) => message.error(err?.response?.data?.message || 'Failed to update'),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => shiftService.delete(id),
+    onSuccess: () => { message.success('Shift deleted'); queryClient.invalidateQueries({ queryKey: ['shifts'] }); },
+    onError: (err: any) => message.error(err?.response?.data?.message || 'Failed to delete'),
+  });
+
+  
+
+  const columns: ColumnsType<Shift> = [
+    { title: 'Shift Name', dataIndex: 'name', key: 'name', render: (n: string) => <span style={{ fontWeight: 600, fontSize: 14 }}>{n}</span> },
+    {
+      title: 'Time',
+      key: 'time',
+      width: 200,
+      render: (_: unknown, r: Shift) => (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ background: '#f0f9ff', borderRadius: 6, padding: '4px 10px', fontSize: 13, fontWeight: 600, color: '#0369a1' }}>{r.startTime}</div>
+          <span style={{ color: 'var(--hrms-text-muted)' }}>→</span>
+          <div style={{ background: '#fff7ed', borderRadius: 6, padding: '4px 10px', fontSize: 13, fontWeight: 600, color: '#c2410c' }}>{r.endTime}</div>
+        </div>
+      ),
+    },
+    { title: 'Hours/Day', dataIndex: 'workingHours', key: 'workingHours', width: 110, render: (h: number) => <Tag style={{ borderRadius: 20, fontWeight: 600 }} color="blue">{h}h</Tag> },
+    { title: 'Applicable To', dataIndex: 'applicableTo', key: 'applicableTo', width: 160, render: (v: string) => <span className="cat-tag" style={{ background: v === 'all' ? '#ecfdf5' : v === 'worker' ? '#eff6ff' : '#faf5ff', color: v === 'all' ? '#059669' : v === 'worker' ? '#2563eb' : '#7c3aed' }}>{APPLICABLE_OPTIONS.find(o => o.value === v)?.label || v}</span> },
+    { title: 'Status', dataIndex: 'isActive', key: 'isActive', width: 110, render: (a: boolean) => <span className={`status-badge ${a ? 'status-active' : 'status-inactive'}`}>{a ? 'Active' : 'Inactive'}</span> },
+    {
+      title: '',
+      key: 'actions',
+      width: 100,
+      render: (_: unknown, r: Shift) => (
+        <div className="action-group">
+          <Tooltip title="Edit"><Button type="text" size="small" icon={<EditOutlined />} onClick={() => { setEditingId(r.id); form.setFieldsValue(r); setIsModalOpen(true); }} style={{ color: 'var(--hrms-text-muted)', borderRadius: 6 }} /></Tooltip>
+          <Tooltip title="Delete"><Button type="text" size="small" icon={<DeleteOutlined />} onClick={() => deleteMutation.mutate(r.id)} style={{ color: '#ef4444', borderRadius: 6 }} /></Tooltip>
+        </div>
+      ),
+    },
+  ];
+
+  return (
+    <div style={{ padding: '0 4px' }}>
+      <PageHeader title="Shifts" subtitle="Configure work schedules and timing" actions={<Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditingId(null); form.resetFields(); setIsModalOpen(true); }}>Add Shift</Button>} />
+
+      <div className="hrms-table-card">
+        <div className="hrms-table-toolbar">
+          <div className="hrms-table-toolbar-left">
+            <Input.Search placeholder="Search shifts..." onSearch={(val) => { setSearch(val); setPage(1); }} style={{ width: 260 }} allowClear prefix={<SearchOutlined style={{ color: 'var(--hrms-text-muted)' }} />} enterButton={false} loading={isFetching} />
+          </div>
+          <div className="hrms-table-toolbar-right">
+            <span style={{ fontSize: 13, color: 'var(--hrms-text-muted)' }}>{data?.meta?.total ?? 0} shifts</span>
+          </div>
+        </div>
+
+        <Table columns={columns} dataSource={data?.data} rowKey="id" loading={isLoading} scroll={{ x: 800 }}
+          pagination={{ current: page, defaultPageSize: 20, pageSize: limit, total: data?.meta?.total ?? 0, onChange: (p, size) => { setPage(p); setLimit(size ?? 20); }, showSizeChanger: true, pageSizeOptions: ['10', '20', '50', '100'], showTotal: (t, r) => `${r[0]}–${r[1]} of ${t}` }}
+        />
+      </div>
+
+      <Modal title={editingId ? 'Edit Shift' : 'New Shift'} open={isModalOpen}
+        onOk={() => form.validateFields().then(v => editingId ? updateMutation.mutate({ id: editingId, payload: v }) : createMutation.mutate(v))}
+        onCancel={() => { setIsModalOpen(false); form.resetFields(); }}
+        confirmLoading={createMutation.isPending || updateMutation.isPending}
+        okText={editingId ? 'Update' : 'Create'} okButtonProps={{ style: { borderRadius: 8 } }} cancelButtonProps={{ style: { borderRadius: 8 } }}>
+        <Form form={form} layout="vertical" style={{ paddingTop: 8 }}>
+          <Form.Item name="name" label="Shift Name" rules={[{ required: true }]}>
+            <Input placeholder="e.g. Morning Shift" style={{ height: 40 }} />
+          </Form.Item>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+            <Form.Item name="startTime" label="Start Time" rules={[{ required: true }]}>
+              <Input type="time" style={{ height: 40 }} />
+            </Form.Item>
+            <Form.Item name="endTime" label="End Time" rules={[{ required: true }]}>
+              <Input type="time" style={{ height: 40 }} />
+            </Form.Item>
+            <Form.Item name="workingHours" label="Hours/Day" rules={[{ required: true }]}>
+              <InputNumber min={1} max={24} style={{ width: '100%', height: 40 }} />
+            </Form.Item>
+          </div>
+          <Form.Item name="applicableTo" label="Applicable To" rules={[{ required: true }]}>
+            <Select options={APPLICABLE_OPTIONS} style={{ height: 40 }} />
+          </Form.Item>
+        </Form>
+      </Modal>
+    </div>
+  );
+}
