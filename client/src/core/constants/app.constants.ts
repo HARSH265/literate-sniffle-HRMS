@@ -1,0 +1,27 @@
+export const APP_CONSTANTS = {
+  APP_NAME: 'HRMS',
+
+  DEFAULT_PAGE_SIZE: 20,
+  PAGE_SIZE_OPTIONS: [10, 20, 50, 100] as const,
+  MAX_PAGE_SIZE: 100,
+
+  DATE_FORMAT: 'DD/MM/YYYY',
+  DATE_FORMAT_API: 'YYYY-MM-DD',
+  MONTH_FORMAT: 'YYYY-MM',
+  MONTH_FORMAT_DISPLAY: 'MMMM YYYY',
+  TIME_FORMAT: 'HH:mm',
+  DATETIME_FORMAT: 'DD/MM/YYYY HH:mm',
+
+  DEBOUNCE_DELAY: 300,
+
+  MAX_LOGO_SIZE: 2 * 1024 * 1024,
+  MAX_PHOTO_SIZE: 1 * 1024 * 1024,
+
+  ALLOWED_FILE_TYPES: ['image/jpeg', 'image/png', 'image/webp'],
+
+  STALE_TIMES: {
+    MASTER_DATA: 10 * 60 * 1000,
+    DYNAMIC_DATA: 1 * 60 * 1000,
+    REPORTS: 0,
+  },
+} as const;
