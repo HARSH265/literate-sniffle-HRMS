@@ -111,7 +111,7 @@ cd server && npm run seed
 ## Default Login
 
 - **Email:** admin@hrms.com
-- **Password:** admin123
+- **Password:** Admin@1234
 
 ## Project Structure
 

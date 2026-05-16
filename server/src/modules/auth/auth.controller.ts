@@ -21,11 +21,6 @@ const login = asyncHandler(async (req: Request, res: Response) => {
   ResponseHandler.success(res, result, 'Login successful');
 });
 
-const logout = asyncHandler(async (_req: Request, res: Response) => {
-  res.clearCookie('jwt');
-  ResponseHandler.success(res, null, 'Logout successful');
-});
-
 const getMe = asyncHandler(async (req: Request, res: Response) => {
   const user = await AuthService.getMe(req.user!.id);
   ResponseHandler.success(res, user, 'User fetched successfully');
@@ -42,9 +37,26 @@ const changePassword = asyncHandler(async (req: Request, res: Response) => {
   ResponseHandler.success(res, null, 'Password changed successfully');
 });
 
+const refreshToken = asyncHandler(async (req: Request, res: Response) => {
+  const { refreshToken } = req.body;
+
+  const result = await AuthService.refreshToken(refreshToken);
+
+  ResponseHandler.success(res, result, 'Token refreshed successfully');
+});
+
+const logout = asyncHandler(async (req: Request, res: Response) => {
+  if (req.user) {
+    await AuthService.logout(req.user.id);
+  }
+  res.clearCookie('jwt');
+  ResponseHandler.success(res, null, 'Logout successful');
+});
+
 export const authController = {
   login,
   logout,
   getMe,
   changePassword,
+  refreshToken,
 };

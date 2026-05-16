@@ -31,12 +31,12 @@ async function seedAdmin() {
   await User.create({
     name: 'Super Admin',
     email: 'admin@hrms.com',
-    password: 'admin123',
+    password: 'Admin@1234',
     role: ROLES.SUPER_ADMIN,
     isActive: true,
   });
 
-  console.log('Admin user created: admin@hrms.com / admin123');
+  console.log('Admin user created: admin@hrms.com / Admin@1234');
 }
 
 async function seedDepartments() {

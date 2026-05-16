@@ -10,6 +10,9 @@ export interface IUser extends Document {
   isActive: boolean;
   lastLogin?: Date;
   createdBy?: mongoose.Types.ObjectId;
+  failedLoginAttempts?: number;
+  lockUntil?: Date;
+  refreshToken?: string;
   comparePassword(candidatePassword: string): Promise<boolean>;
 }
 
@@ -29,6 +32,9 @@ const UserSchema = new Schema<IUser>(
     isActive: { type: Boolean, default: true },
     lastLogin: { type: Date },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    failedLoginAttempts: { type: Number, default: 0 },
+    lockUntil: { type: Date },
+    refreshToken: { type: String },
   },
   { timestamps: true },
 );

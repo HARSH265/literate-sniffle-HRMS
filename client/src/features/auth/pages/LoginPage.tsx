@@ -10,8 +10,8 @@ export function LoginPage() {
   const handleSubmit = async (values: { email: string; password: string }) => {
     try {
       const res = await apiClient.post('/auth/login', values);
-      const { user, token } = res.data.data;
-      login(user, token);
+      const { user, token, refreshToken } = res.data.data;
+      login(user, token, refreshToken);
       message.success('Welcome back! Login successful.');
       navigate('/dashboard');
     } catch {
@@ -54,7 +54,7 @@ export function LoginPage() {
         </Form>
 
         <div style={{ textAlign: 'center', marginTop: 24, fontSize: 12, color: 'var(--hrms-text-muted)' }}>
-          Default: admin@hrms.com / admin123
+          Default: admin@hrms.com / Admin@1234
         </div>
       </div>
     </div>

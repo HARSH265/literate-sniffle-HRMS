@@ -6,20 +6,28 @@ import { AuditService } from '../../core/audit/AuditService.js';
 
 export class AuthService {
   static async login(email: string, password: string, ipAddress?: string, userAgent?: string) {
-    const user = await User.findOne({ email: email.toLowerCase() }).lean();
+    const user = await User.findOne({ email: email.toLowerCase() });
 
     if (!user) {
       throw new AppError('Invalid email or password', 401);
     }
 
-    const dbUser = await User.findById(user._id);
-    if (!dbUser) {
-      throw new AppError('Invalid email or password', 401);
+    if (user.lockUntil && user.lockUntil > new Date()) {
+      const remainingMinutes = Math.ceil((user.lockUntil.getTime() - Date.now()) / 60000);
+      throw new AppError(`Account is locked. Try again in ${remainingMinutes} minutes`, 401);
     }
 
-    const isMatch = await dbUser.comparePassword(password);
+    const isMatch = await user.comparePassword(password);
 
     if (!isMatch) {
+      const failedAttempts = (user.failedLoginAttempts || 0) + 1;
+      const lockUntil = failedAttempts >= 5 ? new Date(Date.now() + 15 * 60 * 1000) : null;
+      
+      await User.findByIdAndUpdate(user._id, {
+        failedLoginAttempts: failedAttempts,
+        lockUntil: lockUntil,
+      });
+
       throw new AppError('Invalid email or password', 401);
     }
 
@@ -27,13 +35,25 @@ export class AuthService {
       throw new AppError('Account is deactivated', 401);
     }
 
-    await User.findByIdAndUpdate(user._id, { lastLogin: new Date() });
+    await User.findByIdAndUpdate(user._id, {
+      lastLogin: new Date(),
+      failedLoginAttempts: 0,
+      lockUntil: null,
+    });
 
     const token = jwt.sign(
       { id: user._id.toString(), email: user.email, name: user.name, role: user.role },
       env.JWT_SECRET,
-      { expiresIn: '24h' as const },
+      { expiresIn: '24h', algorithm: 'HS256' },
     );
+
+    const refreshToken = jwt.sign(
+      { id: user._id.toString() },
+      env.JWT_SECRET,
+      { expiresIn: '7d', algorithm: 'HS256' },
+    );
+
+    await User.findByIdAndUpdate(user._id, { refreshToken });
 
     await AuditService.log({
       action: 'login',
@@ -51,6 +71,7 @@ export class AuthService {
         role: user.role,
       },
       token,
+      refreshToken,
     };
   }
 
@@ -104,5 +125,42 @@ export class AuthService {
     });
 
     return { message: 'Password changed successfully' };
+  }
+
+  static async refreshToken(refreshToken: string) {
+    const decoded = jwt.verify(refreshToken, env.JWT_SECRET, { algorithms: ['HS256'] }) as { id: string };
+
+    const user = await User.findById(decoded.id);
+
+    if (!user || user.refreshToken !== refreshToken) {
+      throw new AppError('Invalid refresh token', 401);
+    }
+
+    if (!user.isActive) {
+      throw new AppError('Account is deactivated', 401);
+    }
+
+    const newToken = jwt.sign(
+      { id: user._id.toString(), email: user.email, name: user.name, role: user.role },
+      env.JWT_SECRET,
+      { expiresIn: '24h', algorithm: 'HS256' },
+    );
+
+    const newRefreshToken = jwt.sign(
+      { id: user._id.toString() },
+      env.JWT_SECRET,
+      { expiresIn: '7d', algorithm: 'HS256' },
+    );
+
+    await User.findByIdAndUpdate(user._id, { refreshToken: newRefreshToken });
+
+    return {
+      token: newToken,
+      refreshToken: newRefreshToken,
+    };
+  }
+
+  static async logout(userId: string) {
+    await User.findByIdAndUpdate(userId, { refreshToken: null });
   }
 }
