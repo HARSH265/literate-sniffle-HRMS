@@ -2,6 +2,7 @@ import Employee from '../../models/Employee.model.js';
 import { AppError } from '../../core/errors/AppError.js';
 import { AuditService } from '../../core/audit/AuditService.js';
 import { PaginationUtil, PaginationMeta } from '../../core/utils/PaginationUtil.js';
+import { encryptBankDetails, decryptBankDetails } from '../../core/utils/EncryptionUtil.js';
 
 const SALARY_ACCESS_ROLES = ['super-admin', 'hr-admin', 'hr-staff', 'accounts'];
 
@@ -16,7 +17,8 @@ const sanitizeEmployee = (emp: Record<string, unknown>, userRole: string): Recor
   }
   
   if (emp.bankDetails) {
-    const bankDetails = emp.bankDetails as Record<string, unknown>;
+    const decrypted = decryptBankDetails(emp.bankDetails as Record<string, unknown>);
+    const bankDetails = decrypted as Record<string, unknown>;
     sanitized.bankDetails = {
       bankName: bankDetails.bankName,
       accountNumber: bankDetails.accountNumber ? '****' + String(bankDetails.accountNumber).slice(-4) : undefined,
@@ -112,11 +114,14 @@ export class EmployeesService {
       throw new AppError('Employee code already exists', 400);
     }
 
-    const emp = await Employee.create({
+    const encryptedData = {
       ...data,
       employeeCode: (data.employeeCode as string).toUpperCase(),
+      bankDetails: data.bankDetails ? encryptBankDetails(data.bankDetails as Record<string, unknown>) : undefined,
       createdBy: createdById,
-    });
+    };
+
+    const emp = await Employee.create(encryptedData);
 
     await AuditService.log({
       action: 'create',
@@ -135,7 +140,13 @@ export class EmployeesService {
       throw new AppError('Employee not found', 404);
     }
 
-    Object.assign(emp, data, { updatedBy: updatedById });
+    const updateData = {
+      ...data,
+      bankDetails: data.bankDetails ? encryptBankDetails(data.bankDetails as Record<string, unknown>) : data.bankDetails,
+      updatedBy: updatedById,
+    };
+
+    Object.assign(emp, updateData);
     await emp.save();
 
     await AuditService.log({
@@ -155,10 +166,12 @@ export class EmployeesService {
       throw new AppError('Employee not found', 404);
     }
 
-    await Employee.findByIdAndDelete(id);
+    emp.status = 'archived';
+    emp.updatedBy = deletedById as any;
+    await emp.save();
 
     await AuditService.log({
-      action: 'delete',
+      action: 'archive',
       module: 'employees',
       userId: deletedById,
       targetId: id,

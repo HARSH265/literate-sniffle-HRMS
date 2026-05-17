@@ -14,7 +14,7 @@ export interface IEmployee extends Document {
   baseSalary: number;
   dailyWage: number;
   overtimeEligible: boolean;
-  status: 'active' | 'inactive' | 'terminated';
+  status: 'active' | 'inactive' | 'terminated' | 'archived';
   contactNumber?: string;
   address?: string;
   bankDetails?: {
@@ -24,6 +24,12 @@ export interface IEmployee extends Document {
     accountType?: 'savings' | 'current';
   };
   photo?: string;
+  documents?: Array<{
+    type: 'aadhar' | 'pan' | 'voter' | 'driver_license' | 'passport' | 'other';
+    fileName: string;
+    filePath: string;
+    uploadedAt: Date;
+  }>;
   createdBy?: mongoose.Types.ObjectId;
   updatedBy?: mongoose.Types.ObjectId;
 }
@@ -59,7 +65,7 @@ const EmployeeSchema = new Schema<IEmployee>(
     overtimeEligible: { type: Boolean, default: false },
     status: {
       type: String,
-      enum: ['active', 'inactive', 'terminated'],
+      enum: ['active', 'inactive', 'terminated', 'archived'],
       default: 'active',
     },
     contactNumber: { type: String },
@@ -71,6 +77,12 @@ const EmployeeSchema = new Schema<IEmployee>(
       accountType: { type: String, enum: ['savings', 'current'] },
     },
     photo: { type: String },
+    documents: [{
+      type: { type: String, enum: ['aadhar', 'pan', 'voter', 'driver_license', 'passport', 'other'] },
+      fileName: String,
+      filePath: String,
+      uploadedAt: { type: Date, default: Date.now },
+    }],
     createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
   },

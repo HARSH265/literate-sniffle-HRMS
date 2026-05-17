@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Form, Input, Select, InputNumber, DatePicker, Button, Row, Col, message, Card } from 'antd';
-import { ArrowLeftOutlined, SaveOutlined } from '@ant-design/icons';
+import { Form, Input, Select, InputNumber, DatePicker, Button, Row, Col, message, Card, Upload } from 'antd';
+import { ArrowLeftOutlined, SaveOutlined, UploadOutlined } from '@ant-design/icons';
 import { PageHeader } from '../../../core/components/PageHeader';
 import { employeeService, CreateEmployee } from '../services/employeeService';
 import { useQuery, useMutation } from '@tanstack/react-query';
@@ -94,6 +94,25 @@ export function EmployeeNewPage() {
             <Col xs={24} lg={12}>
               <SectionCard title="Basic Information">
                 <Row gutter={12}>
+                  <Col span={24}>
+                    <Form.Item name="photo" label="Photo">
+                      <Upload
+                        accept="image/*"
+                        maxCount={1}
+                        showUploadList={false}
+                        beforeUpload={(file) => {
+                          const reader = new FileReader();
+                          reader.onload = () => {
+                            form.setFieldValue('photo', reader.result as string);
+                          };
+                          reader.readAsDataURL(file);
+                          return false;
+                        }}
+                      >
+                        <Button icon={<UploadOutlined />}>Upload Photo</Button>
+                      </Upload>
+                    </Form.Item>
+                  </Col>
                   <Col span={24}>
                     <Form.Item name="employeeCode" label="Employee Code" rules={[{ required: true }]}>
                       <Input placeholder="EMP001" style={{ height: 36 }} />
@@ -219,6 +238,65 @@ export function EmployeeNewPage() {
                   <Col span={8}>
                     <Form.Item name={['bankDetails', 'ifscCode']} label="IFSC Code">
                       <Input placeholder="IFSC Code" style={{ height: 36 }} />
+                    </Form.Item>
+                  </Col>
+                </Row>
+              </SectionCard>
+
+              <SectionCard title="Documents">
+                <Row gutter={12}>
+                  <Col span={8}>
+                    <Form.Item name={['documents', 'aadhar']} label="Aadhar Card">
+                      <Upload
+                        accept="image/*,.pdf"
+                        maxCount={1}
+                        beforeUpload={(file) => {
+                          const reader = new FileReader();
+                          reader.onload = () => {
+                            form.setFieldValue(['documents', 'aadhar'], { name: file.name, data: reader.result });
+                          };
+                          reader.readAsDataURL(file);
+                          return false;
+                        }}
+                      >
+                        <Button icon={<UploadOutlined />}>Upload</Button>
+                      </Upload>
+                    </Form.Item>
+                  </Col>
+                  <Col span={8}>
+                    <Form.Item name={['documents', 'pan']} label="PAN Card">
+                      <Upload
+                        accept="image/*,.pdf"
+                        maxCount={1}
+                        beforeUpload={(file) => {
+                          const reader = new FileReader();
+                          reader.onload = () => {
+                            form.setFieldValue(['documents', 'pan'], { name: file.name, data: reader.result });
+                          };
+                          reader.readAsDataURL(file);
+                          return false;
+                        }}
+                      >
+                        <Button icon={<UploadOutlined />}>Upload</Button>
+                      </Upload>
+                    </Form.Item>
+                  </Col>
+                  <Col span={8}>
+                    <Form.Item name={['documents', 'voter']} label="Voter ID">
+                      <Upload
+                        accept="image/*,.pdf"
+                        maxCount={1}
+                        beforeUpload={(file) => {
+                          const reader = new FileReader();
+                          reader.onload = () => {
+                            form.setFieldValue(['documents', 'voter'], { name: file.name, data: reader.result });
+                          };
+                          reader.readAsDataURL(file);
+                          return false;
+                        }}
+                      >
+                        <Button icon={<UploadOutlined />}>Upload</Button>
+                      </Upload>
                     </Form.Item>
                   </Col>
                 </Row>

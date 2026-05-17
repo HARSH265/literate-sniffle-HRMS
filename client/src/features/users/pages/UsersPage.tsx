@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Table, Button, Input, message, Modal, Form, Select, Tooltip } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined } from '@ant-design/icons';
@@ -31,11 +32,12 @@ const roleBg: Record<string, string> = {
 };
 
 export function UsersPage() {
+  const navigate = useNavigate();
   const [form] = Form.useForm();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(20);
+  const [limit, setLimit] = useState(10);
   const [search, setSearch] = useState('');
   const queryClient = useQueryClient();
 
@@ -93,10 +95,11 @@ const { data, isLoading, isFetching } = useQuery({
       width: 110,
       render: (a: boolean) => <span className={`status-badge ${a ? 'status-active' : 'status-inactive'}`}>{a ? 'Active' : 'Inactive'}</span>,
     },
-    {
+{
       title: '',
       key: 'actions',
       width: 100,
+      fixed: 'right',
       render: (_: unknown, r: User) => (
         <div className="action-group">
           <Tooltip title="Edit"><Button type="text" size="small" icon={<EditOutlined />} onClick={() => { setEditingId(r.id); form.setFieldsValue({ name: r.name, email: r.email, role: r.role }); setIsModalOpen(true); }} style={{ color: 'var(--hrms-text-muted)', borderRadius: 6 }} /></Tooltip>
@@ -108,7 +111,7 @@ const { data, isLoading, isFetching } = useQuery({
 
   return (
     <div style={{ padding: '0 4px' }}>
-      <PageHeader title="Users" subtitle="Manage system users and their access roles" actions={<Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditingId(null); form.resetFields(); setIsModalOpen(true); }}>Add User</Button>} />
+      <PageHeader title="Users" subtitle="Manage system users and their access roles" actions={<Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/users/new')}>Add User</Button>} />
 
       <div className="hrms-table-card">
         <div className="hrms-table-toolbar">
@@ -121,7 +124,7 @@ const { data, isLoading, isFetching } = useQuery({
         </div>
 
         <Table columns={columns} dataSource={data?.data} rowKey="id" loading={isLoading} scroll={{ x: 700 }}
-          pagination={{ current: page, defaultPageSize: 20, pageSize: limit, total: data?.meta?.total ?? 0, onChange: (p, size) => { setPage(p); setLimit(size ?? 20); }, showSizeChanger: true, pageSizeOptions: ['10', '20', '50', '100'], showTotal: (t, r) => `${r[0]}–${r[1]} of ${t}` }}
+          pagination={{ current: page, defaultPageSize: 10, pageSize: limit, total: data?.meta?.total ?? 0, onChange: (p, size) => { setPage(p); setLimit(size ?? 10); }, showSizeChanger: true, pageSizeOptions: ['10', '20', '50', '100'], showTotal: (t, r) => `${r[0]}–${r[1]} of ${t}` }}
         />
       </div>
 

@@ -1,7 +1,7 @@
 import AuditLog from '../../models/AuditLog.model.js';
 import { logger } from '../logger/logger.js';
 
-export type AuditAction = 'create' | 'update' | 'delete' | 'finalize' | 'login' | 'logout';
+export type AuditAction = 'create' | 'update' | 'delete' | 'archive' | 'finalize' | 'login' | 'logout';
 
 export interface AuditData {
   action: AuditAction;

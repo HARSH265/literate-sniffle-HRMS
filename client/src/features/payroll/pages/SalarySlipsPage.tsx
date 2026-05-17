@@ -89,6 +89,8 @@ export function SalarySlipsPage() {
     {
       title: '',
       key: 'actions',
+      width: 120,
+      fixed: 'right' as const,
       render: (_: unknown, record: any) => (
         <div style={{ display: 'flex', gap: 8 }}>
           <Button 

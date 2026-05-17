@@ -31,6 +31,17 @@ dotenv.config();
 
 const app = express();
 
+app.use((_req, res, next) => {
+  res.setTimeout(30000, () => {
+    res.status(503).json({
+      success: false,
+      message: 'Request timed out',
+      errors: [],
+    });
+  });
+  next();
+});
+
 app.use(helmet());
 app.use(
   cors({

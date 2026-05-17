@@ -22,4 +22,6 @@ export const env = {
   EMAIL_USER: process.env.EMAIL_USER || '',
   EMAIL_PASSWORD: process.env.EMAIL_PASSWORD || '',
   EMAIL_FROM: process.env.EMAIL_FROM || '',
+
+  ENCRYPTION_KEY: process.env.ENCRYPTION_KEY || 'hrms-secure-key-32chars!!',
 };

@@ -6,7 +6,6 @@ import {
   BankOutlined,
   TrophyOutlined,
   ClockCircleOutlined,
-  CalendarOutlined,
   FieldTimeOutlined,
   DollarOutlined,
   FileTextOutlined,
@@ -18,6 +17,7 @@ import {
   AppstoreOutlined,
   UnorderedListOutlined,
   PlusOutlined,
+  PlayCircleOutlined,
 } from '@ant-design/icons';
 import { usePermission } from '../core/hooks/usePermission';
 import { useUIStore } from '../core/stores/uiStore';
@@ -63,10 +63,8 @@ export function Sidebar({ collapsed }: SidebarProps) {
     const path = location.pathname;
     if (path === '/employees' || path === '/employees/new') return ['employees'];
     if (path.includes('/departments') || path.includes('/designations') || path.includes('/shifts')) return ['organization'];
-    if (path.includes('/attendance')) return ['attendance'];
     if (path.includes('/overtime')) return ['overtime'];
     if (path.includes('/payroll') || path.includes('/salary-slips')) return ['payroll'];
-    if (path.includes('/reports')) return ['reports'];
     return [];
   };
 
@@ -92,27 +90,8 @@ export function Sidebar({ collapsed }: SidebarProps) {
         { key: '/shifts', icon: <ClockCircleOutlined />, label: 'Shifts' },
       ]
     },
-    { key: '/holidays', icon: <CalendarOutlined />, label: 'Holidays' },
-    { key: '/weekly-off-rules', icon: <CalendarOutlined />, label: 'Weekly Off' },
-    { 
-      key: 'attendance', 
-      icon: <FieldTimeOutlined />, 
-      label: 'Attendance', 
-      permission: 'manage-attendance',
-      children: [
-        { key: '/attendance', icon: <FieldTimeOutlined />, label: 'Mark Attendance' },
-      ]
-    },
-    { 
-      key: 'overtime', 
-      icon: <ClockCircleOutlined />, 
-      label: 'Overtime', 
-      permission: 'manage-overtime',
-      children: [
-        { key: '/overtime-rules', icon: <SettingOutlined />, label: 'Overtime Rules' },
-        { key: '/overtime', icon: <ClockCircleOutlined />, label: 'Overtime Entries' },
-      ]
-    },
+    { key: '/attendance', icon: <FieldTimeOutlined />, label: 'Attendance', permission: 'manage-attendance' },
+    { key: '/overtime', icon: <PlayCircleOutlined />, label: 'Overtime', permission: 'manage-overtime' },
     { 
       key: 'payroll', 
       icon: <DollarOutlined />, 
@@ -123,18 +102,10 @@ export function Sidebar({ collapsed }: SidebarProps) {
         { key: '/salary-slips', icon: <FileTextOutlined />, label: 'Salary Slips' },
       ]
     },
-    { 
-      key: 'reports', 
-      icon: <BarChartOutlined />, 
-      label: 'Reports', 
-      permission: 'view-reports',
-      children: [
-        { key: '/reports', icon: <BarChartOutlined />, label: 'View Reports' },
-      ]
-    },
+    { key: '/reports', icon: <BarChartOutlined />, label: 'Reports', permission: 'view-reports' },
     { key: '/users', icon: <UserOutlined />, label: 'Users', permission: 'manage-users' },
     { key: '/audit-logs', icon: <FileDoneOutlined />, label: 'Audit Logs', permission: 'view-audit' },
-    { key: '/rule-book', icon: <BookOutlined />, label: 'Rule Book' },
+    { key: '/rule-book', icon: <BookOutlined />, label: 'User Guide' },
     { key: '/settings', icon: <SettingOutlined />, label: 'Settings', permission: 'manage-settings' },
   ];
 

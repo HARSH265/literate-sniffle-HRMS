@@ -152,6 +152,7 @@ const { data, isLoading, isFetching } = useQuery({
       title: '',
       key: 'actions',
       width: 100,
+      fixed: 'right',
       render: (_: unknown, record: Holiday) => (
         <div className="action-group">
           <Tooltip title="Edit">
@@ -212,10 +213,10 @@ const { data, isLoading, isFetching } = useQuery({
           loading={isLoading}
           pagination={{
             current: page,
-            defaultPageSize: 20,
+            defaultPageSize: 10,
             pageSize: limit,
             total: data?.meta?.total ?? 0,
-            onChange: (p, size) => { setPage(p); setLimit(size ?? 20); },
+            onChange: (p, size) => { setPage(p); setLimit(size ?? 10); },
             showSizeChanger: true,
             pageSizeOptions: ['10', '20', '50', '100'],
             showTotal: (total, range) => `${range[0]}–${range[1]} of ${total}`,

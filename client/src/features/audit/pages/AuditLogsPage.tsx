@@ -149,7 +149,7 @@ export function AuditLogsPage() {
             setLimit(l);
           },
           showSizeChanger: true,
-          pageSizeOptions: ['20', '50', '100'],
+          pageSizeOptions: ['10', '20', '50', '100'],
           showTotal: (total) => `Total ${total} logs`,
         }}
         scroll={{ x: 800 }}

@@ -1,5 +1,6 @@
 import OvertimeEntry from '../../models/OvertimeEntry.model.js';
 import Employee from '../../models/Employee.model.js';
+import OvertimeRule from '../../models/OvertimeRule.model.js';
 import { AppError } from '../../core/errors/AppError.js';
 import { AuditService } from '../../core/audit/AuditService.js';
 import { PaginationUtil, PaginationMeta } from '../../core/utils/PaginationUtil.js';
@@ -74,7 +75,56 @@ export class OvertimeEntriesService {
 
     const hours = data.hours as number;
     if (hours <= 0 || hours > 24) {
-      throw new AppError('Overtime hours must be between 0 and 24', 400);
+      throw new AppError('Overtime hours must be between 0.5 and 24 per day', 400);
+    }
+
+    const existingRuleId = data.overtimeRule as string;
+    let rule = null;
+    if (existingRuleId) {
+      rule = await OvertimeRule.findById(existingRuleId).lean();
+    } else {
+      rule = await OvertimeRule.findOne({ isActive: true, applicableTo: 'all' }).lean();
+      if (!rule) {
+        rule = await OvertimeRule.findOne({ isActive: true }).sort({ createdAt: -1 }).lean();
+      }
+    }
+
+    if (rule) {
+      const entryDate = new Date(data.date as string);
+      const startOfMonth = new Date(entryDate.getFullYear(), entryDate.getMonth(), 1);
+      const endOfMonth = new Date(entryDate.getFullYear(), entryDate.getMonth() + 1, 0);
+
+      const existingHoursResult = await OvertimeEntry.aggregate([
+        {
+          $match: {
+            employee: data.employee as any,
+            date: { $gte: startOfMonth, $lte: endOfMonth },
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            totalHours: { $sum: '$hours' },
+          },
+        },
+      ]);
+
+      const existingHours = existingHoursResult[0]?.totalHours || 0;
+      const newTotal = existingHours + hours;
+
+      if (rule.maxHoursPerMonth && newTotal > rule.maxHoursPerMonth) {
+        throw new AppError(
+          `Cannot add ${hours} hours. Employee has ${existingHours} hours this month. Maximum allowed is ${rule.maxHoursPerMonth} hours/month as per "${rule.name}" rule.`,
+          400
+        );
+      }
+
+      if (rule.maxHoursPerDay && hours > rule.maxHoursPerDay) {
+        throw new AppError(
+          `Cannot add ${hours} hours. Maximum ${rule.maxHoursPerDay} hours per day allowed as per "${rule.name}" rule.`,
+          400
+        );
+      }
     }
 
     const entry = await OvertimeEntry.create({

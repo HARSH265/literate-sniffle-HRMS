@@ -92,7 +92,7 @@ const { data, isLoading, isFetching } = useQuery({
         </div>
 
         <Table columns={columns} dataSource={data?.data} rowKey="id" loading={isLoading} scroll={{ x: 800 }}
-          pagination={{ current: page, defaultPageSize: 20, pageSize: limit, total: data?.meta?.total ?? 0, onChange: (p, size) => { setPage(p); setLimit(size ?? 20); }, showSizeChanger: true, pageSizeOptions: ['10', '20', '50', '100'], showTotal: (t, r) => `${r[0]}–${r[1]} of ${t}` }}
+          pagination={{ current: page, defaultPageSize: 10, pageSize: limit, total: data?.meta?.total ?? 0, onChange: (p, size) => { setPage(p); setLimit(size ?? 10); }, showSizeChanger: true, pageSizeOptions: ['10', '20', '50', '100'], showTotal: (t, r) => `${r[0]}–${r[1]} of ${t}` }}
         />
       </div>
 

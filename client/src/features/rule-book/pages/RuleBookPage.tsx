@@ -21,8 +21,8 @@ export function RuleBookPage() {
   return (
     <div style={{ padding: '0 4px' }}>
       <PageHeader 
-        title="Rule Book" 
-        subtitle="System rules and policies explanation guide" 
+        title="User Guide" 
+        subtitle="System documentation and user manual" 
       />
 
       <div style={{ maxWidth: 900, margin: '0 auto' }}>

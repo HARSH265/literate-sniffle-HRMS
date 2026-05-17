@@ -15,8 +15,9 @@ export interface Employee {
   baseSalary: number;
   dailyWage: number;
   overtimeEligible: boolean;
-  status: 'active' | 'inactive' | 'terminated';
+  status: 'active' | 'inactive' | 'terminated' | 'archived';
   contactNumber?: string;
+  email?: string;
   address?: string;
   bankDetails?: {
     bankName?: string;
@@ -25,6 +26,13 @@ export interface Employee {
     accountType?: 'savings' | 'current';
   };
   photo?: string;
+  documents?: Array<{
+    type: 'aadhar' | 'pan' | 'voter' | 'driver_license' | 'passport' | 'other';
+    fileName: string;
+    filePath: string;
+    uploadedAt: string;
+    _id: string;
+  }>;
 }
 
 export interface CreateEmployee {
@@ -81,5 +89,39 @@ export const employeeService = {
 
   async delete(id: string): Promise<void> {
     await apiClient.delete(`/employees/${id}`);
+  },
+
+  async export(): Promise<Blob> {
+    const response = await apiClient.get('/employees/export', { responseType: 'blob' });
+    return response.data;
+  },
+
+  async downloadTemplate(): Promise<Blob> {
+    const response = await apiClient.get('/employees/template', { responseType: 'blob' });
+    return response.data;
+  },
+
+  async import(file: File): Promise<{ success: number; failed: number; errors: string[] }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    const { data } = await apiClient.post('/employees/import', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return data;
+  },
+
+  async uploadDocument(employeeId: string, file: File, documentType: string): Promise<any> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('documentType', documentType);
+    const { data } = await apiClient.post(`/employees/${employeeId}/documents`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return data;
+  },
+
+  async deleteDocument(employeeId: string, docId: string): Promise<any> {
+    const { data } = await apiClient.delete(`/employees/${employeeId}/documents/${docId}`);
+    return data;
   },
 };
