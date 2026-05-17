@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Row, Col, Avatar, Button, Spin, Card, Descriptions, Tag, message, Upload, Select, Popconfirm, Modal } from 'antd';
 import { ArrowLeftOutlined, EditOutlined, UserOutlined, CheckCircleOutlined, CloseCircleOutlined, DeleteOutlined, UploadOutlined, FileTextOutlined, EyeOutlined } from '@ant-design/icons';
@@ -26,11 +26,6 @@ export function EmployeeDetailPage() {
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [selectedDocType, setSelectedDocType] = useState('aadhar');
 
-  if (id === 'new') {
-    navigate('/employees/new');
-    return null;
-  }
-
   const queryEnabled = !!(id && id !== 'new');
 
   const { data, isLoading, isFetching, error, refetch } = useQuery({
@@ -42,15 +37,33 @@ export function EmployeeDetailPage() {
     throwOnError: false,
   });
 
-  if (!queryEnabled) {
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
-        <Spin size="large" />
-      </div>
-    );
-  }
+  const uploadMutation = useMutation({
+    mutationFn: ({ file, docType }: { file: File; docType: string }) => 
+      employeeService.uploadDocument(id!, file, docType),
+    onSuccess: () => {
+      message.success('Document uploaded');
+      setUploadModalOpen(false);
+      queryClient.invalidateQueries({ queryKey: ['employee', id] });
+    },
+    onError: () => message.error('Upload failed'),
+  });
 
-  if (isLoading) {
+  const deleteMutation = useMutation({
+    mutationFn: (docId: string) => employeeService.deleteDocument(id!, docId),
+    onSuccess: () => {
+      message.success('Document deleted');
+      queryClient.invalidateQueries({ queryKey: ['employee', id] });
+    },
+    onError: () => message.error('Delete failed'),
+  });
+
+  useEffect(() => {
+    if (id === 'new') {
+      navigate('/employees/new');
+    }
+  }, [id, navigate]);
+
+  if (!queryEnabled || isLoading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
         <Spin size="large" />
@@ -83,26 +96,6 @@ export function EmployeeDetailPage() {
   }
 
   const employee = data.data;
-
-  const uploadMutation = useMutation({
-    mutationFn: ({ file, docType }: { file: File; docType: string }) => 
-      employeeService.uploadDocument(id!, file, docType),
-    onSuccess: () => {
-      message.success('Document uploaded');
-      setUploadModalOpen(false);
-      queryClient.invalidateQueries({ queryKey: ['employee', id] });
-    },
-    onError: () => message.error('Upload failed'),
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: (docId: string) => employeeService.deleteDocument(id!, docId),
-    onSuccess: () => {
-      message.success('Document deleted');
-      queryClient.invalidateQueries({ queryKey: ['employee', id] });
-    },
-    onError: () => message.error('Delete failed'),
-  });
 
   const docTypeLabels: Record<string, string> = {
     aadhar: 'Aadhar Card',
