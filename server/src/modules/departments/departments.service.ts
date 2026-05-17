@@ -1,4 +1,5 @@
 import Department from '../../models/Department.model.js';
+import Employee from '../../models/Employee.model.js';
 import { AppError } from '../../core/errors/AppError.js';
 import { CacheService } from '../../core/cache/CacheService.js';
 import { CACHE_KEYS } from '../../core/cache/cache.keys.js';
@@ -52,7 +53,7 @@ export class DepartmentsService {
   static async getById(id: string): Promise<Record<string, unknown>> {
     const dept = await Department.findById(id).lean();
     if (!dept) {
-      throw new AppError('Department not found', 404);
+      throw new AppError('Department not found or already deleted', 404);
     }
     return { ...dept, id: dept._id.toString(), _id: undefined };
   }
@@ -91,7 +92,7 @@ export class DepartmentsService {
   static async update(id: string, data: Record<string, unknown>, updatedById: string) {
     const dept = await Department.findById(id);
     if (!dept) {
-      throw new AppError('Department not found', 404);
+      throw new AppError('Department not found or already deleted', 404);
     }
 
     if (data.code) {
@@ -127,7 +128,12 @@ export class DepartmentsService {
   static async delete(id: string, deletedById: string) {
     const dept = await Department.findById(id);
     if (!dept) {
-      throw new AppError('Department not found', 404);
+      throw new AppError('Department not found or already deleted', 404);
+    }
+
+    const employeeCount = await Employee.countDocuments({ department: id });
+    if (employeeCount > 0) {
+      throw new AppError(`Cannot delete department with ${employeeCount} assigned employees. Please reassign employees first.`, 400);
     }
 
     await Department.findByIdAndDelete(id);

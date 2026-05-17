@@ -4,6 +4,11 @@ import { AppError } from '../../core/errors/AppError.js';
 import { AuditService } from '../../core/audit/AuditService.js';
 import { PaginationUtil, PaginationMeta } from '../../core/utils/PaginationUtil.js';
 
+function parseTimeToMinutes(time: string): number {
+  const [hours, minutes] = time.split(':').map(Number);
+  return hours * 60 + minutes;
+}
+
 export class AttendanceService {
   static async list(queryParams: Record<string, unknown>): Promise<{ data: unknown[]; meta: PaginationMeta }> {
     const { page, limit, sort, order } = PaginationUtil.parseFromObject(queryParams);
@@ -119,10 +124,21 @@ export class AttendanceService {
 
   static async bulkCreate(data: { date: string; entries: Array<Record<string, unknown>> }, userId: string) {
     const date = new Date(data.date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (date > today) {
+      throw new AppError('Cannot mark attendance for future dates', 400);
+    }
+
     const results = [];
 
     for (const entry of data.entries) {
       try {
+        const employeeExists = await Employee.exists({ _id: entry.employee });
+        if (!employeeExists) {
+          results.push({ employee: entry.employee, status: 'failed', error: 'Employee not found' });
+          continue;
+        }
         const existing = await AttendanceEntry.findOne({
           employee: entry.employee,
           date: {
@@ -167,6 +183,26 @@ export class AttendanceService {
   }
 
   static async create(data: Record<string, unknown>, userId: string) {
+    const employeeExists = await Employee.exists({ _id: data.employee });
+    if (!employeeExists) {
+      throw new AppError('Employee not found', 400);
+    }
+
+    const attendanceDate = new Date(data.date as string);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (attendanceDate > today) {
+      throw new AppError('Cannot mark attendance for future dates', 400);
+    }
+
+    if (data.inTime && data.outTime) {
+      const inMinutes = parseTimeToMinutes(data.inTime as string);
+      const outMinutes = parseTimeToMinutes(data.outTime as string);
+      if (outMinutes <= inMinutes) {
+        throw new AppError('Out time must be greater than in time', 400);
+      }
+    }
+
     const entry = await AttendanceEntry.create({
       ...data,
       date: new Date(data.date as string),
@@ -187,7 +223,15 @@ export class AttendanceService {
   static async update(id: string, data: Record<string, unknown>, userId: string) {
     const entry = await AttendanceEntry.findById(id);
     if (!entry) {
-      throw new AppError('Attendance entry not found', 404);
+      throw new AppError('Attendance entry not found or already deleted', 404);
+    }
+
+    if (data.inTime && data.outTime) {
+      const inMinutes = parseTimeToMinutes(data.inTime as string);
+      const outMinutes = parseTimeToMinutes(data.outTime as string);
+      if (outMinutes <= inMinutes) {
+        throw new AppError('Out time must be greater than in time', 400);
+      }
     }
 
     Object.assign(entry, data, { updatedBy: userId });
@@ -207,7 +251,7 @@ export class AttendanceService {
   static async delete(id: string, userId: string) {
     const entry = await AttendanceEntry.findById(id);
     if (!entry) {
-      throw new AppError('Attendance entry not found', 404);
+      throw new AppError('Attendance entry not found or already deleted', 404);
     }
 
     await AttendanceEntry.findByIdAndDelete(id);

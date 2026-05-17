@@ -3,44 +3,44 @@
 ## Backend Performance
 
 ### Database
-- [ ] MongoDB indexes defined on all queried fields — see docs/schema.md
-- [ ] lean() used on all read-only queries
-- [ ] select only required fields (never select all blindly)
+- [x] MongoDB indexes defined on all queried fields — see docs/schema.md
+- [x] lean() used on all read-only queries
+- [x] select only required fields (never select all blindly)
 - [ ] MongoDB aggregation used for all reports and summaries
 - [ ] Connection pool size configured for MongoDB Atlas
 - [ ] Query timeout configured
 
 ### Caching
-- [ ] node-cache configured for master data
-- [ ] CACHE_KEYS constants used everywhere (no hardcoded strings)
-- [ ] Cache invalidated on master data updates
-- [ ] Default TTL: 1 hour for master data
-- [ ] Cached: departments, designations, shifts, settings, holidays, weekly-off-rules
+- [x] node-cache configured for master data
+- [x] CACHE_KEYS constants used everywhere (no hardcoded strings)
+- [x] Cache invalidated on master data updates
+- [x] Default TTL: 1 hour for master data
+- [x] Cached: departments, designations, shifts, settings, holidays, weekly-off-rules
 
 ### API
-- [ ] All list endpoints paginated (page, limit)
-- [ ] Default page 1, limit 20
-- [ ] Maximum limit 100 enforced
-- [ ] Default sort, order, search, filters on all list endpoints
+- [x] All list endpoints paginated (page, limit)
+- [x] Default page 1, limit 20
+- [x] Maximum limit 100 enforced
+- [x] Default sort, order, search, filters on all list endpoints
 - [ ] Request timeout: 30 seconds
 - [ ] Response compression (gzip): enabled
-- [ ] Maximum request body size: 10MB
+- [x] Maximum request body size: 10MB
 
 ### Rate Limiting
 - [ ] Auth routes: 10 requests per minute
 - [ ] General routes: 100 requests per minute
 
 ### Error Handling
-- [ ] Global error handler catches all errors
+- [x] Global error handler catches all errors
 - [ ] Winston logger used everywhere (no console.log/error)
-- [ ] Stack traces hidden in production
+- [x] Stack traces hidden in production
 
 ### Server
 - [ ] Health check endpoint at GET /api/v1/health
 - [ ] Graceful shutdown for SIGTERM and SIGINT
-- [ ] express-mongo-sanitize on all requests
-- [ ] helmet for secure HTTP headers
-- [ ] CORS configured for frontend origin only
+- [x] express-mongo-sanitize on all requests
+- [x] helmet for secure HTTP headers
+- [x] CORS configured for frontend origin only
 
 ---
 
@@ -73,16 +73,16 @@
 - [ ] No unnecessary re-renders from prop drilling (use context for global state)
 
 ### Bundle
-- [ ] ESLint configured
-- [ ] Prettier configured
+- [x] ESLint configured
+- [x] Prettier configured
 - [ ] No console.log in application code
-- [ ] TypeScript strict mode on
+- [x] TypeScript strict mode on
 
 ---
 
 ## General
-- [ ] All API responses use ResponseHandler (consistent shape)
+- [x] All API responses use ResponseHandler (consistent shape)
 - [ ] All TanStack Query hooks return typed data
 - [ ] All API endpoints typed in types/index.ts
-- [ ] PaginationUtil used in every paginated service
+- [x] PaginationUtil used in every paginated service
 - [ ] AggregationUtil used for all MongoDB aggregation pipelines

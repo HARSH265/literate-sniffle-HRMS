@@ -6,6 +6,8 @@ import { ROLES } from '../../config/constants.js';
 export type Permission =
   | 'manage-employees'
   | 'view-employees'
+  | 'manage-departments'
+  | 'view-departments'
   | 'manage-attendance'
   | 'manage-overtime'
   | 'process-payroll'

@@ -1,4 +1,5 @@
 import Shift from '../../models/Shift.model.js';
+import Employee from '../../models/Employee.model.js';
 import { AppError } from '../../core/errors/AppError.js';
 import { CacheService } from '../../core/cache/CacheService.js';
 import { CACHE_KEYS } from '../../core/cache/cache.keys.js';
@@ -53,7 +54,7 @@ export class ShiftsService {
   static async getById(id: string): Promise<Record<string, unknown>> {
     const shift = await Shift.findById(id).lean();
     if (!shift) {
-      throw new AppError('Shift not found', 404);
+      throw new AppError('Shift not found or already deleted', 404);
     }
     return { ...shift, id: shift._id.toString(), _id: undefined };
   }
@@ -86,7 +87,17 @@ export class ShiftsService {
   static async update(id: string, data: Record<string, unknown>, updatedById: string) {
     const shift = await Shift.findById(id);
     if (!shift) {
-      throw new AppError('Shift not found', 404);
+      throw new AppError('Shift not found or already deleted', 404);
+    }
+
+    const startTime = (data.startTime as string) || shift.startTime;
+    const endTime = (data.endTime as string) || shift.endTime;
+
+    if (data.startTime && data.endTime) {
+      const isNightShift = startTime > endTime;
+      if (!isNightShift && startTime >= endTime) {
+        throw new AppError('End time must be greater than start time', 400);
+      }
     }
 
     if (data.name) shift.name = data.name as string;
@@ -113,7 +124,12 @@ export class ShiftsService {
   static async delete(id: string, deletedById: string) {
     const shift = await Shift.findById(id);
     if (!shift) {
-      throw new AppError('Shift not found', 404);
+      throw new AppError('Shift not found or already deleted', 404);
+    }
+
+    const employeeCount = await Employee.countDocuments({ shift: id });
+    if (employeeCount > 0) {
+      throw new AppError(`Cannot delete shift with ${employeeCount} assigned employees. Please reassign employees first.`, 400);
     }
 
     await Shift.findByIdAndDelete(id);

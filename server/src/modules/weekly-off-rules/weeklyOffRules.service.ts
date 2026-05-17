@@ -37,12 +37,18 @@ export class WeeklyOffRulesService {
   static async getById(id: string): Promise<Record<string, unknown>> {
     const rule = await WeeklyOffRule.findById(id).lean();
     if (!rule) {
-      throw new AppError('Weekly off rule not found', 404);
+      throw new AppError('Weekly off rule not found or already deleted', 404);
     }
     return { ...rule, id: rule._id.toString(), _id: undefined };
   }
 
   static async create(data: Record<string, unknown>, createdById: string) {
+    const category = data.category || 'all';
+    const existing = await WeeklyOffRule.findOne({ category });
+    if (existing) {
+      throw new AppError(`Weekly off rule already exists for category: ${category}`, 400);
+    }
+
     const rule = await WeeklyOffRule.create({
       ...data,
       createdBy: createdById,
@@ -62,7 +68,7 @@ export class WeeklyOffRulesService {
   static async update(id: string, data: Record<string, unknown>, updatedById: string) {
     const rule = await WeeklyOffRule.findById(id);
     if (!rule) {
-      throw new AppError('Weekly off rule not found', 404);
+      throw new AppError('Weekly off rule not found or already deleted', 404);
     }
 
     if (data.name) (rule as any).name = data.name;
@@ -86,7 +92,7 @@ export class WeeklyOffRulesService {
   static async delete(id: string, deletedById: string) {
     const rule = await WeeklyOffRule.findById(id);
     if (!rule) {
-      throw new AppError('Weekly off rule not found', 404);
+      throw new AppError('Weekly off rule not found or already deleted', 404);
     }
 
     await WeeklyOffRule.findByIdAndDelete(id);

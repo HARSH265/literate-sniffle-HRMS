@@ -30,7 +30,7 @@ export class OvertimeRulesService {
 
   static async getById(id: string): Promise<Record<string, unknown>> {
     const rule = await OvertimeRule.findById(id).lean();
-    if (!rule) throw new AppError('Overtime rule not found', 404);
+    if (!rule) throw new AppError('Overtime rule not found or already deleted', 404);
     return { ...rule, id: rule._id.toString(), _id: undefined };
   }
 
@@ -50,7 +50,7 @@ export class OvertimeRulesService {
 
   static async update(id: string, data: Record<string, unknown>, userId: string) {
     const rule = await OvertimeRule.findById(id);
-    if (!rule) throw new AppError('Overtime rule not found', 404);
+    if (!rule) throw new AppError('Overtime rule not found or already deleted', 404);
 
     Object.assign(rule, data);
     await rule.save();
@@ -68,7 +68,7 @@ export class OvertimeRulesService {
 
   static async delete(id: string, userId: string) {
     const rule = await OvertimeRule.findById(id);
-    if (!rule) throw new AppError('Overtime rule not found', 404);
+    if (!rule) throw new AppError('Overtime rule not found or already deleted', 404);
 
     await OvertimeRule.findByIdAndDelete(id);
 

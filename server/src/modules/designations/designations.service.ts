@@ -1,4 +1,6 @@
 import Designation from '../../models/Designation.model.js';
+import Department from '../../models/Department.model.js';
+import Employee from '../../models/Employee.model.js';
 import { AppError } from '../../core/errors/AppError.js';
 import { CacheService } from '../../core/cache/CacheService.js';
 import { CACHE_KEYS } from '../../core/cache/cache.keys.js';
@@ -63,7 +65,7 @@ export class DesignationsService {
   static async getById(id: string) {
     const des = await Designation.findById(id).populate('department', 'name code').lean();
     if (!des) {
-      throw new AppError('Designation not found', 404);
+      throw new AppError('Designation not found or already deleted', 404);
     }
     return {
       id: des._id.toString(),
@@ -76,6 +78,11 @@ export class DesignationsService {
   }
 
   static async create(data: Record<string, unknown>, createdById: string) {
+    const deptExists = await Department.exists({ _id: data.department });
+    if (!deptExists) {
+      throw new AppError('Department not found', 400);
+    }
+
     const existing = await Designation.findOne({
       name: data.name as string,
       department: data.department,
@@ -114,7 +121,14 @@ export class DesignationsService {
   static async update(id: string, data: Record<string, unknown>, updatedById: string) {
     const des = await Designation.findById(id);
     if (!des) {
-      throw new AppError('Designation not found', 404);
+      throw new AppError('Designation not found or already deleted', 404);
+    }
+
+    if (data.department) {
+      const deptExists = await Department.exists({ _id: data.department });
+      if (!deptExists) {
+        throw new AppError('Department not found', 400);
+      }
     }
 
     if (data.name && data.department) {
@@ -158,7 +172,12 @@ export class DesignationsService {
   static async delete(id: string, deletedById: string) {
     const des = await Designation.findById(id);
     if (!des) {
-      throw new AppError('Designation not found', 404);
+      throw new AppError('Designation not found or already deleted', 404);
+    }
+
+    const employeeCount = await Employee.countDocuments({ designation: id });
+    if (employeeCount > 0) {
+      throw new AppError(`Cannot delete designation with ${employeeCount} assigned employees. Please reassign employees first.`, 400);
     }
 
     await Designation.findByIdAndDelete(id);

@@ -45,13 +45,23 @@ export class HolidaysService {
   static async getById(id: string): Promise<Record<string, unknown>> {
     const holiday = await Holiday.findById(id).lean();
     if (!holiday) {
-      throw new AppError('Holiday not found', 404);
+      throw new AppError('Holiday not found or already deleted', 404);
     }
     return { ...holiday, id: holiday._id.toString(), _id: undefined };
   }
 
   static async create(data: Record<string, unknown>, createdById: string) {
     const date = new Date(data.date as string);
+    if (isNaN(date.getTime())) {
+      throw new AppError('Invalid date format', 400);
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (date < today) {
+      throw new AppError('Cannot create holidays for past dates', 400);
+    }
+
     const year = data.year ? Number(data.year) : date.getFullYear();
 
     const existing = await Holiday.findOne({
@@ -82,18 +92,36 @@ export class HolidaysService {
   static async update(id: string, data: Record<string, unknown>, updatedById: string) {
     const holiday = await Holiday.findById(id);
     if (!holiday) {
-      throw new AppError('Holiday not found', 404);
+      throw new AppError('Holiday not found or already deleted', 404);
     }
 
     if (data.date) {
       const date = new Date(data.date as string);
+      if (isNaN(date.getTime())) {
+        throw new AppError('Invalid date format', 400);
+      }
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (date < today) {
+        throw new AppError('Cannot set holidays for past dates', 400);
+      }
       (holiday as any).year = date.getFullYear();
+      (holiday as any).date = date;
     }
     if (data.name) (holiday as any).name = (data.name as string).trim();
-    if (data.date) (holiday as any).date = new Date(data.date as string);
     if (data.type) (holiday as any).type = data.type;
     if (data.applicableTo) (holiday as any).applicableTo = data.applicableTo;
     if (data.isPaid !== undefined) (holiday as any).isPaid = data.isPaid;
+
+    const year = (holiday as any).year;
+    const existing = await Holiday.findOne({
+      name: (holiday as any).name,
+      year,
+      _id: { $ne: id },
+    });
+    if (existing) {
+      throw new AppError('Holiday with this name already exists for the year', 400);
+    }
 
     await (holiday as any).save();
 
@@ -111,7 +139,7 @@ export class HolidaysService {
   static async delete(id: string, deletedById: string) {
     const holiday = await Holiday.findById(id);
     if (!holiday) {
-      throw new AppError('Holiday not found', 404);
+      throw new AppError('Holiday not found or already deleted', 404);
     }
 
     await Holiday.findByIdAndDelete(id);
