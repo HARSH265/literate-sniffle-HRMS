@@ -31,16 +31,18 @@ export function EmployeeDetailPage() {
     return null;
   }
 
+  const queryEnabled = !!(id && id !== 'new');
+
   const { data, isLoading, isFetching, error, refetch } = useQuery({
     queryKey: ['employee', id],
     queryFn: () => employeeService.getById(id!),
-    enabled: !!id && id !== 'new',
+    enabled: queryEnabled,
     retry: 1,
     refetchOnWindowFocus: false,
     throwOnError: false,
   });
 
-  if (!id || id === 'new') {
+  if (!queryEnabled) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
         <Spin size="large" />
@@ -48,7 +50,7 @@ export function EmployeeDetailPage() {
     );
   }
 
-  if (isLoading || isFetching) {
+  if (isLoading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
         <Spin size="large" />
@@ -56,7 +58,9 @@ export function EmployeeDetailPage() {
     );
   }
 
-  if (error) {
+  const hasError = error && !isFetching;
+
+  if (hasError) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '50vh', gap: 16 }}>
         <div>Something went wrong</div>
