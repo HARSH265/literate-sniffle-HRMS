@@ -16,10 +16,10 @@ export function DesignationsPage() {
   const [deptFilter, setDeptFilter] = useState('');
   const queryClient = useQueryClient();
 
-  const { data, isLoading, isFetching } = useQuery({
+const { data, isLoading, isFetching } = useQuery({
     queryKey: ['designations', page, limit, search, deptFilter],
-    queryFn: () => designationService.list({ page, limit, search, department: deptFilter || undefined }),
-    refetchOnWindowFocus: false,
+    queryFn: () => designationService.list({ page, limit, search, department: deptFilter }),
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: deptData } = useQuery({

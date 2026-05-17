@@ -15,10 +15,10 @@ export function DepartmentsPage() {
   const [search, setSearch] = useState('');
   const queryClient = useQueryClient();
 
-  const { data, isLoading, isFetching } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ['departments', page, limit, search],
     queryFn: () => departmentService.list({ page, limit, search }),
-    refetchOnWindowFocus: false,
+    staleTime: 5 * 60 * 1000,
   });
 
   const createMutation = useMutation({
@@ -144,7 +144,7 @@ export function DepartmentsPage() {
               allowClear
               prefix={<SearchOutlined style={{ color: 'var(--hrms-text-muted)' }} />}
               enterButton={false}
-              loading={isFetching}
+              loading={isLoading}
             />
           </div>
           <div className="hrms-table-toolbar-right">

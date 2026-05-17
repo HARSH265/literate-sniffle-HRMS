@@ -39,10 +39,10 @@ export function UsersPage() {
   const [search, setSearch] = useState('');
   const queryClient = useQueryClient();
 
-  const { data, isLoading, isFetching } = useQuery({
+const { data, isLoading, isFetching } = useQuery({
     queryKey: ['users', page, limit, search],
     queryFn: () => userService.list({ page, limit, search }),
-    refetchOnWindowFocus: false,
+    staleTime: 5 * 60 * 1000,
   });
 
   const createMutation = useMutation({

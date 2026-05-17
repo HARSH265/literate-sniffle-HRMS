@@ -1,4 +1,4 @@
-import axios, { AxiosInstance, AxiosError } from 'axios';
+import axios, { AxiosInstance, AxiosError, AxiosRequestConfig } from 'axios';
 import { useAuthStore } from '../stores/authStore';
 
 let isRefreshing = false;
@@ -35,7 +35,7 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
-    const originalRequest = error.config as { _retry?: boolean };
+    const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean };
 
     if (error.response?.status === 401 && !originalRequest._retry) {
       if (isRefreshing) {
@@ -43,7 +43,9 @@ apiClient.interceptors.response.use(
           failedQueue.push({ resolve, reject });
         })
           .then((token) => {
-            originalRequest.headers.Authorization = `Bearer ${token}`;
+            if (originalRequest.headers) {
+              originalRequest.headers.Authorization = `Bearer ${token}`;
+            }
             return apiClient(originalRequest);
           })
           .catch((err) => Promise.reject(err));
@@ -75,7 +77,9 @@ apiClient.interceptors.response.use(
         );
 
         processQueue(null, token);
-        originalRequest.headers.Authorization = `Bearer ${token}`;
+        if (originalRequest.headers) {
+          originalRequest.headers.Authorization = `Bearer ${token}`;
+        }
         return apiClient(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError, null);

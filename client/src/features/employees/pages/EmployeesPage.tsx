@@ -56,10 +56,10 @@ export function EmployeesPage() {
   const [detailEmployee, setDetailEmployee] = useState<Employee | null>(null);
   const queryClient = useQueryClient();
 
-  const { data, isLoading, isFetching } = useQuery({
+const { data, isLoading, isFetching } = useQuery({
     queryKey: ['employees', page, limit, search, statusFilter, categoryFilter],
-    queryFn: () => employeeService.list({ page, limit, search, status: statusFilter || undefined, category: categoryFilter || undefined }),
-    refetchOnWindowFocus: false,
+    queryFn: () => employeeService.list({ page, limit, search, status: statusFilter, category: categoryFilter }),
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: deptData } = useQuery({

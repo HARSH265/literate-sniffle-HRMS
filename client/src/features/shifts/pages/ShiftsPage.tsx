@@ -21,10 +21,10 @@ export function ShiftsPage() {
   const [search, setSearch] = useState('');
   const queryClient = useQueryClient();
 
-  const { data, isLoading, isFetching } = useQuery({
+const { data, isLoading, isFetching } = useQuery({
     queryKey: ['shifts', page, limit, search],
     queryFn: () => shiftService.list({ page, limit, search }),
-    refetchOnWindowFocus: false,
+    staleTime: 5 * 60 * 1000,
   });
 
   const createMutation = useMutation({

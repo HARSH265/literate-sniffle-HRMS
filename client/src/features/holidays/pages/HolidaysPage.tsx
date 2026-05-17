@@ -37,10 +37,10 @@ export function HolidaysPage() {
   const [yearFilter, setYearFilter] = useState<number | undefined>(undefined);
   const queryClient = useQueryClient();
 
-  const { data, isLoading, isFetching } = useQuery({
+const { data, isLoading, isFetching } = useQuery({
     queryKey: ['holidays', page, limit, search, yearFilter],
-    queryFn: () => holidayService.list({ page, limit, search, ...(yearFilter ? { year: yearFilter } : {}) }),
-    refetchOnWindowFocus: false,
+    queryFn: () => holidayService.list({ page, limit, search, year: yearFilter }),
+    staleTime: 5 * 60 * 1000,
   });
 
   const createMutation = useMutation({
