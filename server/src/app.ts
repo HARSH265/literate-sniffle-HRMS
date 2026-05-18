@@ -110,7 +110,7 @@ app.use('/api/v1/overtime-entries', overtimeEntryRoutes);
 app.use('/api/v1/settings', settingsRoutes);
 app.use('/api/v1/payroll', payrollRoutes);
 app.use('/api/v1/salary-slips', salarySlipRoutes);
-app.use('/api/v1/reports', reportsRoutes);
+app.use('/api/v1/reports', auditMiddleware, reportsRoutes);
 app.use('/api/v1/notifications', notificationsRoutes);
 app.use('/api/v1/audit-logs', auditRoutes);
 

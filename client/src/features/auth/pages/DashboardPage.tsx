@@ -59,10 +59,40 @@ export function DashboardPage() {
     queryFn: () => import('../../shifts/services/shiftService').then(m => m.shiftService.list({ limit: 1 })),
   });
 
+  const { data: auditData } = useQuery({
+    queryKey: ['recent-audit-logs'],
+    queryFn: () => import('../../audit/services/auditService').then(m => m.auditService.list({ limit: 10 })),
+    refetchInterval: 30000,
+  });
+
   const totalEmployees = empData?.meta?.total ?? 0;
   const totalDepartments = deptData?.meta?.total ?? 0;
   const totalDesignations = desigData?.meta?.total ?? 0;
   const totalShifts = shiftData?.meta?.total ?? 0;
+
+  const getActivityColor = (action: string) => {
+    if (['CREATE', 'ADD', 'INSERT'].includes(action?.toUpperCase())) return 'var(--hrms-primary)';
+    if (['DELETE', 'REMOVE'].includes(action?.toUpperCase())) return 'var(--hrms-danger)';
+    if (['PAYROLL', 'PROCESS', 'GENERATE'].includes(action?.toUpperCase())) return 'var(--hrms-success)';
+    return 'var(--hrms-warning)';
+  };
+
+  const formatActivityTime = (dateStr: string) => {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+    if (minutes < 1) return 'Just now';
+    if (minutes < 60) return `${minutes}m ago`;
+    if (hours < 24) return `${hours}h ago`;
+    if (days === 1) return 'Yesterday';
+    if (days < 7) return `${days} days ago`;
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
+
+  const recentActivities = auditData?.data || [];
 
   return (
     <div style={{ padding: '0 4px' }}>
@@ -86,28 +116,38 @@ export function DashboardPage() {
       <Row gutter={[16, 16]}>
         <Col xs={24} lg={16}>
           <div className="hrms-table-card" style={{ padding: 24 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
               <div>
                 <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: 'var(--hrms-text-primary)' }}>Recent Activity</h3>
                 <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--hrms-text-muted)' }}>Latest system events and updates</p>
               </div>
+              <span 
+                onClick={() => navigate('/audit-logs')}
+                style={{ fontSize: 12, color: 'var(--hrms-primary)', cursor: 'pointer', fontWeight: 500 }}
+              >
+                View All →
+              </span>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {[
-                { time: 'Today, 10:30 AM', text: 'New employee Rahul Kumar added to Production department', type: 'create' },
-                { time: 'Today, 09:15 AM', text: 'Shift timing updated for Night Shift', type: 'update' },
-                { time: 'Yesterday, 4:45 PM', text: 'Payroll for April 2024 generated successfully', type: 'payroll' },
-                { time: 'Yesterday, 2:00 PM', text: 'New department "Quality Control" created', type: 'create' },
-                { time: '2 days ago', text: 'Attendance marked for 45 workers', type: 'attendance' },
-              ].map((item, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 16px', background: '#f8fafc', borderRadius: 10 }}>
-                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: item.type === 'create' ? 'var(--hrms-primary)' : item.type === 'payroll' ? 'var(--hrms-success)' : 'var(--hrms-warning)', flexShrink: 0 }} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {recentActivities.slice(0, 5).map((item: any) => (
+                <div key={item._id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 16px', background: '#f8fafc', borderRadius: 10 }}>
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: getActivityColor(item.action), flexShrink: 0 }} />
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 13, color: 'var(--hrms-text-primary)', fontWeight: 500 }}>{item.text}</div>
-                    <div style={{ fontSize: 11, color: 'var(--hrms-text-muted)', marginTop: 2 }}>{item.time}</div>
+                    <div style={{ fontSize: 13, color: 'var(--hrms-text-primary)', fontWeight: 500 }}>
+                      {item.actionLabel || item.action} {item.moduleLabel || item.module}
+                      {item.targetName && ` - ${item.targetName}`}
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--hrms-text-muted)', marginTop: 2 }}>
+                      {item.userId?.name || 'System'} · {formatActivityTime(item.createdAt)}
+                    </div>
                   </div>
                 </div>
-              ))}
+))}
+              {recentActivities.length === 0 && (
+                <div style={{ textAlign: 'center', padding: '24px 16px', color: 'var(--hrms-text-muted)', fontSize: 13 }}>
+                  No recent activity
+                </div>
+              )}
             </div>
           </div>
         </Col>

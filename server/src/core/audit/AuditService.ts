@@ -4,7 +4,7 @@ import { logger } from '../logger/logger.js';
 export type AuditAction =
   | 'create' | 'update' | 'delete' | 'archive' | 'finalize' | 'unfinalize'
   | 'login' | 'logout' | 'logout-all-devices' | 'upload-logo' | 'test-email'
-  | 'import' | 'export' | 'mark-read' | 'mark-all-read'
+  | 'import' | 'export' | 'export-employees' | 'export-report' | 'export-audit' | 'mark-read' | 'mark-all-read'
   | 'bulk-create' | 'bulk-update'
   | 'change-password' | 'reset-password' | 'update-settings'
   | 'add-shift' | 'edit-shift' | 'delete-shift'

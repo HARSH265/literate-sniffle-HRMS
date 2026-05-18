@@ -10,6 +10,7 @@ const router = Router();
 
 router.use(authenticate);
 
+router.get('/next-code', employeesController.generateNextCode);
 router.get('/', authorize('view-employees'), employeesController.list);
 router.get('/export', authorize('view-employees'), employeesController.export);
 router.get('/template', authorize('view-employees'), employeesController.downloadTemplate);

@@ -60,10 +60,11 @@ function getActionFromMethod(method: string, path: string): AuditAction | null {
   if (path.includes('/payroll') && path.includes('/unfinalize')) return 'unfinalize';
   if (path.includes('/settings/logo')) return 'upload-logo';
   if (path.includes('/settings/test-email')) return 'test-email';
-  if (path.includes('/audit-logs/export')) return 'export';
+  if (path.includes('/reports/employees')) return 'export-employees';
+  if (path.includes('/reports/attendance') || path.includes('/reports/payroll') || path.includes('/reports/overtime')) return 'export-report';
+  if (path.includes('/audit-logs/export')) return 'export-audit';
   if (path.includes('/notifications/mark-all-read')) return 'mark-all-read';
   if (path.includes('/notifications/') && path.includes('/read')) return 'mark-read';
-  if (path.includes('/reports/') && (path.includes('/attendance') || path.includes('/payroll') || path.includes('/overtime'))) return 'export';
 
   return null;
 }

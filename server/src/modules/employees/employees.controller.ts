@@ -318,4 +318,9 @@ const importEmployees = asyncHandler(async (req: Request, res: Response) => {
   });
 });
 
-export const employeesController = { list, getById, create, update, remove, export: exportEmployees, downloadTemplate, import: importEmployees, uploadDocument, removeDocument, downloadDocument };
+const generateNextCode = asyncHandler(async (_req: Request, res: Response) => {
+  const result = await EmployeesService.generateNextEmployeeCode();
+  ResponseHandler.success(res, { employeeCode: result }, 'Employee code generated');
+});
+
+export const employeesController = { list, getById, create, update, remove, export: exportEmployees, downloadTemplate, import: importEmployees, uploadDocument, removeDocument, downloadDocument, generateNextCode };

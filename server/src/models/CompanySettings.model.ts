@@ -68,6 +68,18 @@ export interface ICompanySettings extends Document {
     notifyOnUserCreated?: boolean;
     notifyOnAttendanceEntry?: boolean;
   };
+  employeeCodeConfig: {
+    prefix: string;
+    startNumber: number;
+    padding: number;
+    isAutoGenerate: boolean;
+  };
+  employeeDefaults: {
+    defaultCategory: 'worker' | 'office-staff';
+    defaultEmploymentType: 'permanent' | 'contract' | 'temporary' | 'trainee';
+    defaultSalaryType: 'monthly' | 'daily';
+    defaultWorkingDays: number;
+  };
   updatedBy?: mongoose.Types.ObjectId;
 }
 
@@ -160,6 +172,18 @@ const CompanySettingsSchema = new Schema<ICompanySettings>(
       notifyOnEmployeeAdded: { type: Boolean, default: true },
       notifyOnUserCreated: { type: Boolean, default: true },
       notifyOnAttendanceEntry: { type: Boolean, default: false },
+    },
+    employeeCodeConfig: {
+      prefix: { type: String, default: 'EMP' },
+      startNumber: { type: Number, default: 1 },
+      padding: { type: Number, default: 3 },
+      isAutoGenerate: { type: Boolean, default: true },
+    },
+    employeeDefaults: {
+      defaultCategory: { type: String, enum: ['worker', 'office-staff'], default: 'worker' },
+      defaultEmploymentType: { type: String, enum: ['permanent', 'contract', 'temporary', 'trainee'], default: 'permanent' },
+      defaultSalaryType: { type: String, enum: ['monthly', 'daily'], default: 'monthly' },
+      defaultWorkingDays: { type: Number, default: 26 },
     },
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
   },

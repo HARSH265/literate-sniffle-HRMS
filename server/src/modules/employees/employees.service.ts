@@ -1,5 +1,6 @@
 import Employee from '../../models/Employee.model.js';
 import User from '../../models/User.model.js';
+import CompanySettings from '../../models/CompanySettings.model.js';
 import { AppError } from '../../core/errors/AppError.js';
 import { AuditService } from '../../core/audit/AuditService.js';
 import { PaginationUtil, PaginationMeta } from '../../core/utils/PaginationUtil.js';

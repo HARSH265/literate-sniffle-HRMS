@@ -23,8 +23,8 @@ export function Header() {
   const fetchNotifications = async () => {
     try {
       const [{ data: notifs }, { data: count }] = await Promise.all([
-        apiClient.get('/api/v1/notifications?limit=5'),
-        apiClient.get('/api/v1/notifications/unread-count'),
+        apiClient.get('/notifications?limit=5'),
+        apiClient.get('/notifications/unread-count'),
       ]);
       setNotifications(notifs.data.notifications);
       setUnreadCount(count.data.count);
@@ -43,13 +43,13 @@ export function Header() {
   };
 
   const handleMarkAllRead = async () => {
-    await apiClient.patch('/api/v1/notifications/mark-all-read');
+    await apiClient.patch('/notifications/mark-all-read');
     setUnreadCount(0);
     setNotifications(notifications.map(n => ({ ...n, isRead: true })));
   };
 
   const handleMarkAsRead = async (notificationId: string) => {
-    await apiClient.patch(`/api/v1/notifications/${notificationId}/read`);
+    await apiClient.patch(`/notifications/${notificationId}/read`);
     setNotifications(notifications.map(n => n.id === notificationId || n._id === notificationId ? { ...n, isRead: true } : n));
     setUnreadCount(Math.max(0, unreadCount - 1));
   };

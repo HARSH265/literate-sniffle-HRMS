@@ -11,17 +11,20 @@ const { RangePicker } = DatePicker;
 interface Filters {
   status: string | undefined;
   category: string | undefined;
-  department: string | undefined;
+  empDeptId: string | undefined;
 }
 
 export function ReportsPage() {
   const [loading, setLoading] = useState<string | null>(null);
-  const [filters, setFilters] = useState<Filters>({ status: undefined, category: undefined, department: undefined });
+  const [filters, setFilters] = useState<Filters>({ status: undefined, category: undefined, empDeptId: undefined });
   const [attendanceMonth, setAttendanceMonth] = useState<dayjs.Dayjs>(dayjs());
+  const [attendanceDept, setAttendanceDept] = useState<string | undefined>(undefined);
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
   const [payrollYear, setPayrollYear] = useState<number>(dayjs().year());
+  const [payrollDept, setPayrollDept] = useState<string | undefined>(undefined);
   const [activeTab, setActiveTab] = useState('export');
   const [overtimeMonth, setOvertimeMonth] = useState<dayjs.Dayjs>(dayjs());
+  const [overtimeDept, setOvertimeDept] = useState<string | undefined>(undefined);
 
   const deptData = useQuery({
     queryKey: ['departments-report'],
@@ -33,7 +36,7 @@ export function ReportsPage() {
   });
 
   const { data: attendanceSummary } = useQuery({
-    queryKey: ['attendance-summary', dateRange?.[0]?.format('YYYY-MM-DD'), dateRange?.[1]?.format('YYYY-MM-DD'), filters.department],
+    queryKey: ['attendance-summary', dateRange?.[0]?.format('YYYY-MM-DD'), dateRange?.[1]?.format('YYYY-MM-DD'), attendanceDept],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (dateRange) {
@@ -43,7 +46,7 @@ export function ReportsPage() {
         params.append('month', String(attendanceMonth.month() + 1));
         params.append('year', String(attendanceMonth.year()));
       }
-      if (filters.department) params.append('department', filters.department);
+      if (attendanceDept) params.append('department', attendanceDept);
       const res = await fetch(`${apiClient.getUri()}/reports/attendance/summary?${params.toString()}`, { credentials: 'include' });
       return res.json();
     },
@@ -51,11 +54,11 @@ export function ReportsPage() {
   });
 
   const { data: payrollSummary } = useQuery({
-    queryKey: ['payroll-summary', payrollYear, filters.department],
+    queryKey: ['payroll-summary', payrollYear, payrollDept],
     queryFn: async () => {
       const params = new URLSearchParams();
       params.append('year', String(payrollYear));
-      if (filters.department) params.append('department', filters.department);
+      if (payrollDept) params.append('department', payrollDept);
       const res = await fetch(`${apiClient.getUri()}/reports/payroll/summary?${params.toString()}`, { credentials: 'include' });
       return res.json();
     },
@@ -72,12 +75,12 @@ export function ReportsPage() {
   });
 
   const { data: overtimeSummary } = useQuery({
-    queryKey: ['overtime-summary', overtimeMonth.month() + 1, overtimeMonth.year(), filters.department],
+    queryKey: ['overtime-summary', overtimeMonth.month() + 1, overtimeMonth.year(), overtimeDept],
     queryFn: async () => {
       const params = new URLSearchParams();
       params.append('month', String(overtimeMonth.month() + 1));
       params.append('year', String(overtimeMonth.year()));
-      if (filters.department) params.append('department', filters.department);
+      if (overtimeDept) params.append('department', overtimeDept);
       const res = await fetch(`${apiClient.getUri()}/reports/overtime/summary?${params.toString()}`, { credentials: 'include' });
       return res.json();
     },
@@ -95,8 +98,8 @@ export function ReportsPage() {
           const params = new URLSearchParams();
           if (filters.status) params.append('status', filters.status);
           if (filters.category) params.append('category', filters.category);
-          if (filters.department) params.append('department', filters.department);
-          url = `/api/v1/reports/employees?${params.toString()}`;
+          if (filters.empDeptId) params.append('department', filters.empDeptId);
+          url = `/reports/employees?${params.toString()}`;
           filename = 'employees';
           break;
         case 'attendance':
@@ -108,8 +111,8 @@ export function ReportsPage() {
             attParams.append('month', String(attendanceMonth.month() + 1));
             attParams.append('year', String(attendanceMonth.year()));
           }
-          if (filters.department) attParams.append('department', filters.department);
-          url = `/api/v1/reports/attendance?${attParams.toString()}`;
+          if (attendanceDept) attParams.append('department', attendanceDept);
+          url = `/reports/attendance?${attParams.toString()}`;
           filename = 'attendance';
           break;
         case 'payroll':
@@ -120,16 +123,16 @@ export function ReportsPage() {
           } else {
             payParams.append('year', String(payrollYear));
           }
-          if (filters.department) payParams.append('department', filters.department);
-          url = `/api/v1/reports/payroll?${payParams.toString()}`;
+          if (payrollDept) payParams.append('department', payrollDept);
+          url = `/reports/payroll?${payParams.toString()}`;
           filename = 'payroll';
           break;
         case 'overtime':
           const otParams = new URLSearchParams();
           otParams.append('month', String(overtimeMonth.month() + 1));
           otParams.append('year', String(overtimeMonth.year()));
-          if (filters.department) otParams.append('department', filters.department);
-          url = `/api/v1/reports/overtime?${otParams.toString()}`;
+          if (overtimeDept) otParams.append('department', overtimeDept);
+          url = `/reports/overtime?${otParams.toString()}`;
           filename = 'overtime';
           break;
       }
@@ -314,8 +317,17 @@ export function ReportsPage() {
             <Space wrap>
               <Select placeholder="Status" allowClear style={{ width: 120 }} value={filters.status || undefined} onChange={(val) => setFilters({ ...filters, status: val })} options={[{ label: 'Active', value: 'active' }, { label: 'Inactive', value: 'inactive' }, { label: 'Terminated', value: 'terminated' }]} />
               <Select placeholder="Category" allowClear style={{ width: 140 }} value={filters.category || undefined} onChange={(val) => setFilters({ ...filters, category: val })} options={[{ label: 'Office Staff', value: 'staff' }, { label: 'Worker', value: 'worker' }]} />
-              <Select placeholder="Department" allowClear style={{ width: 140 }} value={filters.department || undefined} onChange={(val) => setFilters({ ...filters, department: val })} options={deptData.data?.data?.map((d: any) => ({ label: d.name, value: d.id })) || []} />
             </Space>
+            <div style={{ marginTop: 12 }}>
+              <Select 
+                placeholder="Filter by Department (Optional)" 
+                allowClear 
+                style={{ width: 220 }} 
+                value={filters.empDeptId} 
+                onChange={(val) => setFilters({ ...filters, empDeptId: val })}
+                options={deptData.data?.data?.map((d: any) => ({ label: d.name, value: d.id })) || []}
+              />
+            </div>
           </div>
           <Button type="primary" icon={<DownloadOutlined />} block loading={loading === 'employees'} onClick={() => handleExport('employees')}>Export</Button>
         </Space>
@@ -326,7 +338,7 @@ export function ReportsPage() {
           <div>
             <span style={{ color: '#888', fontSize: 12, display: 'block', marginBottom: 8 }}>FILTERS</span>
             <Space direction="vertical" style={{ width: '100%' }}>
-              <Select placeholder="Department" allowClear style={{ width: '100%' }} value={filters.department || undefined} onChange={(val) => setFilters({ ...filters, department: val })} options={deptData.data?.data?.map((d: any) => ({ label: d.name, value: d.id })) || []} />
+              <Select placeholder="Department" allowClear style={{ width: '100%' }} value={attendanceDept} onChange={setAttendanceDept} options={deptData.data?.data?.map((d: any) => ({ label: d.name, value: d.id })) || []} />
               <RangePicker 
                 value={dateRange} 
                 onChange={(dates) => setDateRange(dates as [dayjs.Dayjs, dayjs.Dayjs] | null)} 
@@ -344,7 +356,7 @@ export function ReportsPage() {
           <div>
             <span style={{ color: '#888', fontSize: 12, display: 'block', marginBottom: 8 }}>FILTERS</span>
             <Space direction="vertical" style={{ width: '100%' }}>
-              <Select placeholder="Department" allowClear style={{ width: '100%' }} value={filters.department || undefined} onChange={(val) => setFilters({ ...filters, department: val })} options={deptData.data?.data?.map((d: any) => ({ label: d.name, value: d.id })) || []} />
+              <Select placeholder="Department" allowClear style={{ width: '100%' }} value={payrollDept} onChange={setPayrollDept} options={deptData.data?.data?.map((d: any) => ({ label: d.name, value: d.id })) || []} />
               <RangePicker value={dateRange} onChange={(dates) => setDateRange(dates as [dayjs.Dayjs, dayjs.Dayjs] | null)} placeholder={['Start Date', 'End Date']} />
               <Select value={payrollYear} onChange={setPayrollYear} style={{ width: '100%' }} placeholder="Select Year" options={[{ label: '2026', value: 2026 }, { label: '2025', value: 2025 }, { label: '2024', value: 2024 }]} />
             </Space>
@@ -358,7 +370,7 @@ export function ReportsPage() {
           <div>
             <span style={{ color: '#888', fontSize: 12, display: 'block', marginBottom: 8 }}>FILTERS</span>
             <Space direction="vertical" style={{ width: '100%' }}>
-              <Select placeholder="Department" allowClear style={{ width: '100%' }} value={filters.department || undefined} onChange={(val) => setFilters({ ...filters, department: val })} options={deptData.data?.data?.map((d: any) => ({ label: d.name, value: d.id })) || []} />
+              <Select placeholder="Department" allowClear style={{ width: '100%' }} value={overtimeDept} onChange={setOvertimeDept} options={deptData.data?.data?.map((d: any) => ({ label: d.name, value: d.id })) || []} />
               <DatePicker.MonthPicker value={overtimeMonth} onChange={(val) => val && setOvertimeMonth(val)} allowClear={false} style={{ width: '100%' }} />
             </Space>
           </div>
