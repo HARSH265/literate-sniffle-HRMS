@@ -82,6 +82,24 @@ const removeDocument = asyncHandler(async (req: Request, res: Response) => {
   ResponseHandler.success(res, employee.documents, 'Document deleted successfully');
 });
 
+const downloadDocument = asyncHandler(async (req: Request, res: Response) => {
+  const { id, docId } = req.params;
+  
+  const employee = await Employee.findById(id);
+  if (!employee) {
+    res.status(404).json({ success: false, message: 'Employee not found' });
+    return;
+  }
+
+  const doc = (employee.documents || []).find((d: any) => d._id?.toString() === docId);
+  if (!doc) {
+    res.status(404).json({ success: false, message: 'Document not found' });
+    return;
+  }
+
+  res.redirect(doc.filePath);
+});
+
 const remove = asyncHandler(async (req: Request, res: Response) => {
   await EmployeesService.delete(req.params.id, req.user!.id);
   ResponseHandler.noContent(res);
@@ -300,4 +318,4 @@ const importEmployees = asyncHandler(async (req: Request, res: Response) => {
   });
 });
 
-export const employeesController = { list, getById, create, update, remove, export: exportEmployees, downloadTemplate, import: importEmployees, uploadDocument, removeDocument };
+export const employeesController = { list, getById, create, update, remove, export: exportEmployees, downloadTemplate, import: importEmployees, uploadDocument, removeDocument, downloadDocument };

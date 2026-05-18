@@ -14,10 +14,12 @@ import {
   UserOutlined,
   FileDoneOutlined,
   BookOutlined,
+  BellOutlined,
   AppstoreOutlined,
   UnorderedListOutlined,
   PlusOutlined,
   PlayCircleOutlined,
+  GiftOutlined,
 } from '@ant-design/icons';
 import { usePermission } from '../core/hooks/usePermission';
 import { useUIStore } from '../core/stores/uiStore';
@@ -62,7 +64,7 @@ export function Sidebar({ collapsed }: SidebarProps) {
   const openKeys = () => {
     const path = location.pathname;
     if (path === '/employees' || path === '/employees/new') return ['employees'];
-    if (path.includes('/departments') || path.includes('/designations') || path.includes('/shifts')) return ['organization'];
+    if (path.includes('/departments') || path.includes('/designations') || path.includes('/shifts') || path.includes('/holidays')) return ['organization'];
     if (path.includes('/overtime')) return ['overtime'];
     if (path.includes('/payroll') || path.includes('/salary-slips')) return ['payroll'];
     return [];
@@ -80,14 +82,15 @@ export function Sidebar({ collapsed }: SidebarProps) {
         { key: '/employees/new', icon: <PlusOutlined />, label: 'Add Employee' },
       ]
     },
-    { 
-      key: 'organization', 
-      icon: <AppstoreOutlined />, 
-      label: 'Organization', 
+{
+      key: 'organization',
+      icon: <AppstoreOutlined />,
+      label: 'Organization',
       children: [
         { key: '/departments', icon: <BankOutlined />, label: 'Departments' },
         { key: '/designations', icon: <TrophyOutlined />, label: 'Designations' },
         { key: '/shifts', icon: <ClockCircleOutlined />, label: 'Shifts' },
+        { key: '/holidays', icon: <GiftOutlined />, label: 'Holidays' },
       ]
     },
     { key: '/attendance', icon: <FieldTimeOutlined />, label: 'Attendance', permission: 'manage-attendance' },
@@ -105,6 +108,7 @@ export function Sidebar({ collapsed }: SidebarProps) {
     { key: '/reports', icon: <BarChartOutlined />, label: 'Reports', permission: 'view-reports' },
     { key: '/users', icon: <UserOutlined />, label: 'Users', permission: 'manage-users' },
     { key: '/audit-logs', icon: <FileDoneOutlined />, label: 'Audit Logs', permission: 'view-audit' },
+    { key: '/notifications', icon: <BellOutlined />, label: 'Notifications', permission: undefined },
     { key: '/rule-book', icon: <BookOutlined />, label: 'User Guide' },
     { key: '/settings', icon: <SettingOutlined />, label: 'Settings', permission: 'manage-settings' },
   ];

@@ -19,6 +19,7 @@ router.post('/', authorize('manage-employees'), validate(createEmployeeSchema), 
 router.put('/:id', authorize('manage-employees'), validate(updateEmployeeSchema), employeesController.update);
 router.delete('/:id', authorize('manage-employees'), employeesController.remove);
 router.post('/:id/documents', authorize('manage-employees'), uploadDocument.single('file'), employeesController.uploadDocument);
+router.get('/:id/documents/:docId', authorize('view-employees'), employeesController.downloadDocument);
 router.delete('/:id/documents/:docId', authorize('manage-employees'), employeesController.removeDocument);
 
 export default router;

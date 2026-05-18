@@ -5,6 +5,8 @@ import type { ColumnsType } from 'antd/es/table';
 import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, SearchOutlined, UserOutlined, DownloadOutlined, UploadOutlined } from '@ant-design/icons';
 import { PageHeader } from '../../../core/components/PageHeader';
 import { employeeService, Employee } from '../services/employeeService';
+import { departmentService } from '../../departments/services/departmentService';
+import { designationService } from '../../designations/services/designationService';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 const CATEGORY_OPTIONS = [
@@ -40,7 +42,19 @@ export function EmployeesPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [categoryFilter, setCategoryFilter] = useState<string>('');
+  const [departmentFilter, setDepartmentFilter] = useState<string>('');
+  const [designationFilter, setDesignationFilter] = useState<string>('');
   const queryClient = useQueryClient();
+
+  const { data: deptData } = useQuery({
+    queryKey: ['departments-filter'],
+    queryFn: () => departmentService.list({ limit: 1000 }),
+  });
+
+  const { data: desigData } = useQuery({
+    queryKey: ['designations-filter', departmentFilter],
+    queryFn: () => designationService.list({ limit: 1000, department: departmentFilter || undefined }),
+  });
 
   const importMutation = useMutation({
     mutationFn: (file: File) => employeeService.import(file),
@@ -89,8 +103,8 @@ export function EmployeesPage() {
   };
 
 const { data, isLoading, isFetching } = useQuery({
-    queryKey: ['employees', page, limit, search, statusFilter, categoryFilter],
-    queryFn: () => employeeService.list({ page, limit, search, status: statusFilter, category: categoryFilter }),
+    queryKey: ['employees', page, limit, search, statusFilter, categoryFilter, departmentFilter, designationFilter],
+    queryFn: () => employeeService.list({ page, limit, search, status: statusFilter, category: categoryFilter, department: departmentFilter, designation: designationFilter }),
     staleTime: 5 * 60 * 1000,
   });
 
@@ -217,9 +231,9 @@ const { data, isLoading, isFetching } = useQuery({
         <div className="hrms-table-toolbar">
           <div className="hrms-table-toolbar-left">
             <Input.Search
-              placeholder="Search by code or name..."
+              placeholder="Search by code, name, or father's name..."
               onSearch={(val) => { setSearch(val); setPage(1); }}
-              style={{ width: 260 }}
+              style={{ width: 280 }}
               allowClear
               prefix={<SearchOutlined style={{ color: 'var(--hrms-text-muted)' }} />}
               enterButton={false}
@@ -238,6 +252,21 @@ const { data, isLoading, isFetching } = useQuery({
               style={{ width: 150 }}
               onChange={(val) => { setCategoryFilter(val || ''); setPage(1); }}
               options={CATEGORY_OPTIONS}
+            />
+            <Select
+              placeholder="Department"
+              allowClear
+              style={{ width: 150 }}
+              onChange={(val) => { setDepartmentFilter(val || ''); setDesignationFilter(''); setPage(1); }}
+              options={deptData?.data?.map((d: any) => ({ label: d.name, value: d.id })) || []}
+            />
+            <Select
+              placeholder="Designation"
+              allowClear
+              style={{ width: 150 }}
+              onChange={(val) => { setDesignationFilter(val || ''); setPage(1); }}
+              options={desigData?.data?.map((d: any) => ({ label: d.name, value: d.id })) || []}
+              disabled={!departmentFilter}
             />
           </div>
           <div className="hrms-table-toolbar-right">

@@ -1,23 +1,32 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '../../../core/components/PageHeader';
-import { Tabs, Form, Input, InputNumber, Switch, Button, Card, Row, Col, message, Table, Tag, Select, Popconfirm, Modal, DatePicker } from 'antd';
-import { SaveOutlined, PlusOutlined, DeleteOutlined } from '@ant-design/icons';
+import { Form, Input, InputNumber, Switch, Button, Card, Row, Col, message, Table, Tag, Select, Popconfirm, Modal, DatePicker, Avatar, Upload } from 'antd';
+import { SaveOutlined, PlusOutlined, DeleteOutlined, UserOutlined, BankOutlined, DollarOutlined, CalendarOutlined, GiftOutlined, ClockCircleOutlined, MailOutlined, BellOutlined } from '@ant-design/icons';
 import { settingsService, CompanySettings } from '../services/settingsService';
 import { overtimeRuleService, OvertimeRule, CreateOvertimeRule } from '../../overtime-rules/services/overtimeRuleService';
 import { weeklyOffRuleService, WeeklyOffRule, CreateWeeklyOffRule } from '../../weekly-off-rules/services/weeklyOffRuleService';
 import { holidayService, Holiday, CreateHoliday } from '../../holidays/services/holidayService';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import apiClient from '../../../core/api/apiClient';
+import { useAuthStore } from '../../../core/stores/authStore';
 import dayjs from 'dayjs';
 
-const SectionCard = ({ title, children }: { title: string; children: React.ReactNode }) => (
-  <Card size="small" title={title} style={{ marginBottom: 16 }}>
-    {children}
-  </Card>
-);
+const SETTINGS_MENU = [
+  { key: 'profile', label: 'My Profile', icon: <UserOutlined /> },
+  { key: 'company', label: 'Company', icon: <BankOutlined /> },
+  { key: 'auth', label: 'Auth Settings', icon: <UserOutlined /> },
+  { key: 'email', label: 'Email Settings', icon: <MailOutlined /> },
+  { key: 'payroll', label: 'Payroll', icon: <DollarOutlined /> },
+  { key: 'attendance', label: 'Attendance', icon: <CalendarOutlined /> },
+  { key: 'allowances', label: 'Allowances', icon: <GiftOutlined /> },
+  { key: 'overtime', label: 'Overtime Rules', icon: <ClockCircleOutlined /> },
+  { key: 'weeklyoff', label: 'Weekly Off', icon: <CalendarOutlined /> },
+  { key: 'holidays', label: 'Holidays', icon: <GiftOutlined /> },
+];
 
 export function SettingsPage() {
-  const [form] = Form.useForm();
-  const [activeTab, setActiveTab] = useState('company');
+  const [activeSection, setActiveSection] = useState('profile');
   const [otModalOpen, setOtModalOpen] = useState(false);
   const [woModalOpen, setWoModalOpen] = useState(false);
   const [holidayModalOpen, setHolidayModalOpen] = useState(false);
@@ -26,6 +35,7 @@ export function SettingsPage() {
   const [woForm] = Form.useForm();
   const [holidayForm] = Form.useForm();
   const [allowanceForm] = Form.useForm();
+  const [profileForm] = Form.useForm();
   const queryClient = useQueryClient();
 
   const { data } = useQuery({
@@ -60,372 +70,111 @@ export function SettingsPage() {
     onError: (err: any) => message.error(err?.response?.data?.message || 'Failed to create'),
   });
 
+  const testEmailMutation = useMutation({
+    mutationFn: (email: string) => settingsService.testEmail(email),
+    onSuccess: (res: any) => {
+      if (res.success) {
+        message.success('Test email sent successfully!');
+      } else {
+        message.error(res.message || 'Failed to send test email');
+      }
+    },
+    onError: (err: any) => message.error(err?.response?.data?.message || 'Failed to send test email'),
+  });
+
+  const [companyForm] = Form.useForm();
+
   useEffect(() => {
     if (data?.data) {
-      form.setFieldsValue(data.data);
+      companyForm.setFieldsValue(data.data);
     }
-  }, [data, form]);
+  }, [data, companyForm]);
 
-  const handleSave = (values: any) => {
+  const handleSaveCompany = (values: any) => {
     updateMutation.mutate(values);
   };
 
-  const CompanyTab = () => (
-    <SectionCard title="Company Information">
-      <Row gutter={16}>
-        <Col span={12}>
-          <Form.Item name={['companyInfo', 'name']} label="Company Name">
-            <Input style={{ height: 40 }} />
-          </Form.Item>
-        </Col>
-        <Col span={12}>
-          <Form.Item name={['companyInfo', 'financialYearStart']} label="Financial Year Start (Month)">
-            <InputNumber style={{ width: '100%', height: 40 }} min={1} max={12} />
-          </Form.Item>
-        </Col>
-        <Col span={24}>
-          <Form.Item name={['companyInfo', 'address']} label="Address">
-            <Input.TextArea rows={2} />
-          </Form.Item>
-        </Col>
-        <Col span={12}>
-          <Form.Item name={['companyInfo', 'phone']} label="Phone">
-            <Input style={{ height: 40 }} />
-          </Form.Item>
-        </Col>
-        <Col span={12}>
-          <Form.Item name={['companyInfo', 'email']} label="Email">
-            <Input style={{ height: 40 }} />
-          </Form.Item>
-        </Col>
-      </Row>
-    </SectionCard>
-  );
-
-  const PayrollTab = () => (
-    <>
-      <SectionCard title="Payroll Configuration">
-        <Row gutter={16}>
-          <Col span={8}>
-            <Form.Item name={['payrollConfig', 'overtimeBase']} label="Overtime Base">
-              <Select 
-                style={{ width: '100%', height: 40 }}
-                options={[
-                  { label: 'Basic Salary', value: 'basic' },
-                  { label: 'Basic + Allowances', value: 'basicPlusAllowances' },
-                ]} 
-              />
-            </Form.Item>
-          </Col>
-          <Col span={8}>
-            <Form.Item name={['payrollConfig', 'overtimeMultiplier']} label="Overtime Multiplier">
-              <InputNumber style={{ width: '100%', height: 40 }} min={0} step={0.5} />
-            </Form.Item>
-          </Col>
-          <Col span={8}>
-            <Form.Item name={['payrollConfig', 'halfDayDeductionPercent']} label="Half Day Deduction (%)">
-              <InputNumber style={{ width: '100%', height: 40 }} min={0} max={100} />
-            </Form.Item>
-          </Col>
-          <Col span={8}>
-            <Form.Item name={['payrollConfig', 'lateDeductionPerDay']} label="Late Deduction/Day (₹)">
-              <InputNumber style={{ width: '100%', height: 40 }} min={0} />
-            </Form.Item>
-          </Col>
-          <Col span={8}>
-            <Form.Item name={['payrollConfig', 'defaultWorkingDays']} label="Default Working Days">
-              <InputNumber style={{ width: '100%', height: 40 }} min={1} max={31} />
-            </Form.Item>
-          </Col>
-          <Col span={8}>
-            <Form.Item name={['payrollConfig', 'standardHoursPerDay']} label="Standard Hours/Day">
-              <InputNumber style={{ width: '100%', height: 40 }} min={1} max={24} />
-            </Form.Item>
-          </Col>
-          <Col span={8}>
-            <Form.Item name={['payrollConfig', 'paidWeeklyOff']} label="Paid Weekly Off" valuePropName="checked">
-              <Switch />
-            </Form.Item>
-          </Col>
-          <Col span={8}>
-            <Form.Item name={['payrollConfig', 'paidHolidays']} label="Paid Holidays" valuePropName="checked">
-              <Switch />
-            </Form.Item>
-          </Col>
-          <Col span={8}>
-            <Form.Item name={['payrollConfig', 'payrollLockDays']} label="Payroll Lock Days">
-              <InputNumber style={{ width: '100%', height: 40 }} min={0} />
-            </Form.Item>
-          </Col>
-        </Row>
-      </SectionCard>
-    </>
-  );
-
-  const AttendanceTab = () => (
-    <SectionCard title="Attendance Configuration">
-      <Row gutter={16}>
-        <Col span={8}>
-          <Form.Item name={['attendanceConfig', 'pastEntryLimitDays']} label="Past Entry Limit (Days)">
-            <InputNumber style={{ width: '100%', height: 40 }} min={0} />
-          </Form.Item>
-        </Col>
-        <Col span={8}>
-          <Form.Item name={['attendanceConfig', 'lateMarkEnabled']} label="Late Mark Enabled" valuePropName="checked">
-            <Switch />
-          </Form.Item>
-        </Col>
-        <Col span={8}>
-          <Form.Item name={['attendanceConfig', 'lateMarkThresholdMinutes']} label="Late Threshold (Min)">
-            <InputNumber style={{ width: '100%', height: 40 }} min={0} />
-          </Form.Item>
-        </Col>
-        <Col span={8}>
-          <Form.Item name={['attendanceConfig', 'lateToHalfDayAfterOccurrences']} label="Late to Half Day After">
-            <InputNumber style={{ width: '100%', height: 40 }} min={0} />
-          </Form.Item>
-        </Col>
-      </Row>
-    </SectionCard>
-  );
-
-  const AllowancesTab = () => {
-    const allowances = form.getFieldValue('allowanceConfig') || [];
-    
-    const handleAddAllowance = (values: any) => {
-      const current = form.getFieldValue('allowanceConfig') || [];
-      form.setFieldValue('allowanceConfig', [...current, { ...values, key: Date.now() }]);
-      setAllowanceModalOpen(false);
-      allowanceForm.resetFields();
-    };
-
-    const handleDeleteAllowance = (key: number) => {
-      const current = form.getFieldValue('allowanceConfig') || [];
-      form.setFieldValue('allowanceConfig', current.filter((_: any, i: number) => i !== key));
-    };
-
-    return (
-      <SectionCard title="Allowances">
-        <div style={{ marginBottom: 16 }}>
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => setAllowanceModalOpen(true)}>
-            Add Allowance
-          </Button>
-        </div>
-        <Table
-          size="small"
-          dataSource={allowances}
-          rowKey="key"
-          pagination={false}
-          columns={[
-            { title: 'Name', dataIndex: 'name', key: 'name' },
-            { title: 'Type', dataIndex: 'type', key: 'type', render: (t: string) => <Tag>{t}</Tag> },
-            { title: 'Value', dataIndex: 'value', key: 'value', render: (v: number, r: any) => r.type === 'percentage' ? `${v}%` : `₹${v}` },
-            { title: 'Applicable To', dataIndex: 'applicableTo', key: 'applicableTo', render: (v: string) => v === 'all' ? 'All' : v },
-            { title: 'Status', dataIndex: 'isActive', key: 'isActive', render: (s: boolean) => <Tag color={s ? 'green' : 'red'}>{s ? 'Active' : 'Inactive'}</Tag> },
-            { title: '', key: 'actions', width: 60, render: (_: any, _r: any, index: number) => (
-              <Popconfirm title="Delete this allowance?" onConfirm={() => handleDeleteAllowance(index)}>
-                <Button type="text" size="small" danger icon={<DeleteOutlined />} />
-              </Popconfirm>
-            )},
-          ]}
-        />
-
-        <Modal title="Add Allowance" open={allowanceModalOpen} onCancel={() => { setAllowanceModalOpen(false); allowanceForm.resetFields(); }} onOk={allowanceForm.submit} okText="Add">
-          <Form form={allowanceForm} layout="vertical" onFinish={handleAddAllowance}>
-            <Form.Item name="name" label="Allowance Name" rules={[{ required: true, message: 'Enter name' }]}>
-              <Input placeholder="e.g. HRA, Conveyance" />
-            </Form.Item>
-            <Row gutter={12}>
-              <Col span={12}>
-                <Form.Item name="type" label="Type" rules={[{ required: true }]}>
-                  <Select placeholder="Select type">
-                    <Select.Option value="fixed">Fixed Amount</Select.Option>
-                    <Select.Option value="percentage">Percentage</Select.Option>
-                  </Select>
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item name="value" label="Value" rules={[{ required: true }]}>
-                  <InputNumber style={{ width: '100%' }} min={0} placeholder="500 or 10" />
-                </Form.Item>
-              </Col>
-            </Row>
-            <Form.Item name="applicableTo" label="Applicable To">
-              <Select placeholder="Select category">
-                <Select.Option value="all">All</Select.Option>
-                <Select.Option value="worker">Worker</Select.Option>
-                <Select.Option value="office-staff">Office Staff</Select.Option>
-              </Select>
-            </Form.Item>
-            <Form.Item name="isActive" label="Active" valuePropName="checked">
-              <Switch defaultChecked />
-            </Form.Item>
-          </Form>
-        </Modal>
-      </SectionCard>
-    );
+  const renderContent = () => {
+    switch (activeSection) {
+      case 'profile':
+        return <ProfileSection form={profileForm} />;
+      case 'company':
+        return <CompanySection form={companyForm} onSave={handleSaveCompany} />;
+      case 'auth':
+        return <AuthSection form={companyForm} onSave={handleSaveCompany} />;
+      case 'email':
+        return <EmailSection form={companyForm} onSave={handleSaveCompany} onTestEmail={(email) => testEmailMutation.mutate(email)} isTesting={testEmailMutation.isPending} />;
+      case 'payroll':
+        return <PayrollSection form={companyForm} onSave={handleSaveCompany} />;
+      case 'attendance':
+        return <AttendanceSection form={companyForm} onSave={handleSaveCompany} />;
+      case 'allowances':
+        return <AllowancesSection form={companyForm} onAdd={() => setAllowanceModalOpen(true)} />;
+      case 'overtime':
+        return <OvertimeSection onAdd={() => setOtModalOpen(true)} />;
+      case 'weeklyoff':
+        return <WeeklyOffSection onAdd={() => setWoModalOpen(true)} />;
+      case 'holidays':
+        return <HolidaysSection onAdd={() => setHolidayModalOpen(true)} />;
+      default:
+        return null;
+    }
   };
-
-  const OvertimeRulesTab = () => {
-    const { data, isLoading } = useQuery({
-      queryKey: ['overtime-rules'],
-      queryFn: () => overtimeRuleService.list({ limit: 100 }),
-    });
-
-    const deleteMutation = useMutation({
-      mutationFn: (id: string) => overtimeRuleService.delete(id),
-      onSuccess: () => { message.success('Rule deleted'); queryClient.invalidateQueries({ queryKey: ['overtime-rules'] }); },
-      onError: (err: any) => message.error(err?.response?.data?.message || 'Failed to delete'),
-    });
-
-    return (
-      <SectionCard title="Overtime Rules">
-        <div style={{ marginBottom: 16 }}>
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => setOtModalOpen(true)}>
-            Add Rule
-          </Button>
-        </div>
-        <Table
-          size="small"
-          dataSource={data?.data}
-          loading={isLoading}
-          rowKey="id"
-          pagination={false}
-          columns={[
-            { title: 'Name', dataIndex: 'name', key: 'name' },
-            { title: 'Category', dataIndex: 'applicableTo', key: 'applicableTo', render: (c: string) => <Tag color={c === 'worker' ? 'blue' : c === 'office-staff' ? 'purple' : 'green'}>{c === 'all' ? 'All' : c}</Tag> },
-            { title: 'Max Hours/Day', dataIndex: 'maxHoursPerDay', key: 'maxHoursPerDay', render: (v: number) => `${v}h` },
-            { title: 'Max Hours/Month', dataIndex: 'maxHoursPerMonth', key: 'maxHoursPerMonth', render: (v: number) => `${v}h` },
-            { title: 'Multiplier', dataIndex: 'multiplier', key: 'multiplier' },
-            { title: 'Status', dataIndex: 'isActive', key: 'isActive', render: (s: boolean) => <Tag color={s ? 'green' : 'red'}>{s ? 'Active' : 'Inactive'}</Tag> },
-            { title: '', key: 'actions', width: 60, render: (_: any, r: OvertimeRule) => (
-              <Popconfirm title="Delete this rule?" onConfirm={() => deleteMutation.mutate(r.id)}>
-                <Button type="text" size="small" danger icon={<DeleteOutlined />} />
-              </Popconfirm>
-            )},
-          ]}
-        />
-      </SectionCard>
-    );
-  };
-
-  const WeeklyOffTab = () => {
-    const { data, isLoading } = useQuery({
-      queryKey: ['weekly-off-rules'],
-      queryFn: () => weeklyOffRuleService.list({ limit: 100 }),
-    });
-
-    const deleteMutation = useMutation({
-      mutationFn: (id: string) => weeklyOffRuleService.delete(id),
-      onSuccess: () => { message.success('Rule deleted'); queryClient.invalidateQueries({ queryKey: ['weekly-off-rules'] }); },
-      onError: (err: any) => message.error(err?.response?.data?.message || 'Failed to delete'),
-    });
-
-    return (
-      <SectionCard title="Weekly Off Rules">
-        <div style={{ marginBottom: 16 }}>
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => setWoModalOpen(true)}>
-            Add Rule
-          </Button>
-        </div>
-        <Table
-          size="small"
-          dataSource={data?.data}
-          loading={isLoading}
-          rowKey="id"
-          pagination={false}
-          columns={[
-            { title: 'Name', dataIndex: 'name', key: 'name' },
-            { title: 'Category', dataIndex: 'category', key: 'category', render: (c: string) => <Tag>{c === 'all' ? 'All' : c === 'worker' ? 'Worker' : 'Office Staff'}</Tag> },
-            { title: 'Off Days', dataIndex: 'offDays', key: 'offDays', render: (days: number[]) => days?.map(d => ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d]).join(', ') },
-            { title: 'Status', dataIndex: 'isActive', key: 'isActive', render: (s: boolean) => <Tag color={s ? 'green' : 'red'}>{s ? 'Active' : 'Inactive'}</Tag> },
-            { title: '', key: 'actions', width: 60, render: (_: any, r: WeeklyOffRule) => (
-              <Popconfirm title="Delete this rule?" onConfirm={() => deleteMutation.mutate(r.id)}>
-                <Button type="text" size="small" danger icon={<DeleteOutlined />} />
-              </Popconfirm>
-            )},
-          ]}
-        />
-      </SectionCard>
-    );
-  };
-
-  const HolidaysTab = () => {
-    const { data, isLoading } = useQuery({
-      queryKey: ['holidays'],
-      queryFn: () => holidayService.list({ limit: 100 }),
-    });
-
-    const deleteMutation = useMutation({
-      mutationFn: (id: string) => holidayService.delete(id),
-      onSuccess: () => { message.success('Holiday deleted'); queryClient.invalidateQueries({ queryKey: ['holidays'] }); },
-      onError: (err: any) => message.error(err?.response?.data?.message || 'Failed to delete'),
-    });
-
-    return (
-      <SectionCard title="Holidays">
-        <div style={{ marginBottom: 16 }}>
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => setHolidayModalOpen(true)}>
-            Add Holiday
-          </Button>
-        </div>
-        <Table
-          size="small"
-          dataSource={data?.data}
-          loading={isLoading}
-          rowKey="id"
-          pagination={false}
-          columns={[
-            { title: 'Date', dataIndex: 'date', key: 'date', render: (d: string) => d ? dayjs(d).format('DD MMM YYYY') : '-' },
-            { title: 'Name', dataIndex: 'name', key: 'name' },
-            { title: 'Type', dataIndex: 'category', key: 'category', render: (t: string) => <Tag color={t === 'national' ? 'red' : t === 'festival' ? 'purple' : 'orange'}>{t}</Tag> },
-            { title: 'Year', dataIndex: 'year', key: 'year' },
-            { title: 'Paid', dataIndex: 'isPaid', key: 'isPaid', render: (s: boolean) => s ? 'Yes' : 'No' },
-            { title: '', key: 'actions', width: 60, render: (_: any, r: Holiday) => (
-              <Popconfirm title="Delete this holiday?" onConfirm={() => deleteMutation.mutate(r.id)}>
-                <Button type="text" size="small" danger icon={<DeleteOutlined />} />
-              </Popconfirm>
-            )},
-          ]}
-        />
-      </SectionCard>
-    );
-  };
-
-  const tabItems = [
-    { key: 'company', label: 'Company', children: <CompanyTab /> },
-    { key: 'payroll', label: 'Payroll', children: <PayrollTab /> },
-    { key: 'attendance', label: 'Attendance', children: <AttendanceTab /> },
-    { key: 'allowances', label: 'Allowances', children: <AllowancesTab /> },
-    { key: 'overtime', label: 'Overtime Rules', children: <OvertimeRulesTab /> },
-    { key: 'weeklyoff', label: 'Weekly Off', children: <WeeklyOffTab /> },
-    { key: 'holidays', label: 'Holidays', children: <HolidaysTab /> },
-  ];
 
   return (
-    <div style={{ padding: '0 4px' }}>
-      <PageHeader title="Settings" subtitle="Configure company and payroll settings" />
+    <div>
+      <PageHeader title="Settings" subtitle="Manage your profile and system configurations" />
       
-      <Form form={form} layout="vertical" onFinish={handleSave}>
-        <Tabs 
-          activeKey={activeTab} 
-          onChange={setActiveTab} 
-          items={tabItems}
-        />
+      <Row gutter={24}>
+        <Col xs={24} md={5}>
+          <Card 
+            bodyStyle={{ padding: '12px' }}
+            style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
+          >
+            <div style={{ padding: '4px 8px', marginBottom: 8 }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--hrms-text-muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                Settings Menu
+              </span>
+            </div>
+{SETTINGS_MENU.map((item) => {
+                const isActive = activeSection === item.key;
+                return (
+                  <div
+                    key={item.key}
+                    onClick={() => setActiveSection(item.key)}
+                    style={{
+                      padding: '14px 16px',
+                      cursor: 'pointer',
+                      borderRadius: 8,
+                      marginBottom: 4,
+                      background: isActive ? '#f5f5f5' : 'transparent',
+                      color: 'var(--hrms-text-primary)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 12,
+                      transition: 'all 0.15s ease',
+                      fontWeight: isActive ? 600 : 400,
+                      fontSize: 14,
+                      borderLeft: isActive ? '3px solid #1890ff' : '3px solid transparent',
+                    }}
+                  >
+                    <span style={{ fontSize: 16, color: isActive ? '#1890ff' : 'inherit' }}>{item.icon}</span>
+                    <span>{item.label}</span>
+                  </div>
+                );
+              })}
+          </Card>
+        </Col>
         
-        {!['overtime', 'weeklyoff', 'holidays', 'allowances'].includes(activeTab) && (
-          <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--hrms-border-light)' }}>
-            <Button 
-              type="primary" 
-              htmlType="submit" 
-              icon={<SaveOutlined />} 
-              loading={updateMutation.isPending}
-            >
-              Save Settings
-            </Button>
-          </div>
-        )}
-      </Form>
+        <Col xs={24} md={19}>
+          <Card 
+            bodyStyle={{ padding: 24 }}
+            style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
+          >
+            {renderContent()}
+          </Card>
+        </Col>
+      </Row>
 
       <Modal title="Add Overtime Rule" open={otModalOpen} onCancel={() => { setOtModalOpen(false); otForm.resetFields(); }} onOk={otForm.submit} okText="Create">
         <Form form={otForm} layout="vertical" onFinish={(values) => otCreateMutation.mutate(values)}>
@@ -516,6 +265,677 @@ export function SettingsPage() {
           </Form.Item>
         </Form>
       </Modal>
+
+      <Modal 
+        title="Add Allowance" 
+        open={allowanceModalOpen} 
+        onCancel={() => { setAllowanceModalOpen(false); allowanceForm.resetFields(); }} 
+        onOk={() => {
+          allowanceForm.validateFields().then(values => {
+            const current = companyForm.getFieldValue('allowanceConfig') || [];
+            companyForm.setFieldValue('allowanceConfig', [...current, { ...values, key: Date.now() }]);
+            setAllowanceModalOpen(false);
+            allowanceForm.resetFields();
+          });
+        }}
+        okText="Add"
+      >
+        <Form form={allowanceForm} layout="vertical">
+          <Form.Item name="name" label="Allowance Name" rules={[{ required: true, message: 'Enter name' }]}>
+            <Input placeholder="e.g. HRA, Conveyance" />
+          </Form.Item>
+          <Row gutter={12}>
+            <Col span={12}>
+              <Form.Item name="type" label="Type" rules={[{ required: true }]}>
+                <Select placeholder="Select type">
+                  <Select.Option value="fixed">Fixed Amount</Select.Option>
+                  <Select.Option value="percentage">Percentage</Select.Option>
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="value" label="Value" rules={[{ required: true }]}>
+                <InputNumber style={{ width: '100%' }} min={0} placeholder="500 or 10" />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Form.Item name="applicableTo" label="Applicable To">
+            <Select placeholder="Select category">
+              <Select.Option value="all">All</Select.Option>
+              <Select.Option value="worker">Worker</Select.Option>
+              <Select.Option value="office-staff">Office Staff</Select.Option>
+            </Select>
+          </Form.Item>
+          <Form.Item name="isActive" label="Active" valuePropName="checked">
+            <Switch defaultChecked />
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 }
+
+function ProfileSection({ form }: { form: any }) {
+  const [logoutLoading, setLogoutLoading] = useState(false);
+  const logout = useAuthStore((state) => state.logout);
+  const navigate = useNavigate();
+
+  const handleLogoutAll = async () => {
+    setLogoutLoading(true);
+    try {
+      await apiClient.post('/auth/logout-all-devices');
+      logout();
+      message.success('Logged out from all devices');
+      navigate('/login');
+    } catch {
+      message.error('Failed to logout from all devices');
+    } finally {
+      setLogoutLoading(false);
+    }
+  };
+
+  return (
+    <div>
+      <div style={{ 
+        textAlign: 'center', 
+        marginBottom: 32,
+        padding: 24,
+        background: 'linear-gradient(135deg, #f0f7ff 0%, #e6f4ff 100%)',
+        borderRadius: 12,
+      }}>
+        <Avatar 
+          size={100} 
+          icon={<UserOutlined />} 
+          style={{ 
+            backgroundColor: 'var(--hrms-primary-color)',
+            boxShadow: '0 4px 12px rgba(24, 144, 255, 0.3)',
+          }} 
+        />
+        <div style={{ marginTop: 12 }}>
+          <Upload showUploadList={false}>
+            <Button type="link" icon={<PlusOutlined />}>Change Photo</Button>
+          </Upload>
+        </div>
+      </div>
+      
+      <div style={{ marginBottom: 24 }}>
+        <h3 style={{ 
+          marginBottom: 16, 
+          paddingBottom: 8, 
+          borderBottom: '2px solid #f0f0f0',
+          color: 'var(--hrms-text-primary)',
+        }}>
+          Personal Information
+        </h3>
+      </div>
+      
+      <Form form={form} layout="vertical">
+        <Row gutter={20}>
+          <Col span={12}>
+            <Form.Item name="fullName" label="Full Name">
+              <Input style={{ height: 44 }} placeholder="Your name" />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item name="email" label="Email">
+              <Input style={{ height: 44 }} placeholder="your.email@company.com" />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item name="phone" label="Phone">
+              <Input style={{ height: 44 }} placeholder="+91 9876543210" />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item name="department" label="Department">
+              <Input style={{ height: 44 }} placeholder="Your department" />
+            </Form.Item>
+          </Col>
+          <Col span={24}>
+            <Form.Item name="address" label="Address">
+              <Input.TextArea rows={2} placeholder="Your address" style={{ borderRadius: 8 }} />
+            </Form.Item>
+          </Col>
+        </Row>
+        
+        <div style={{ 
+          margin: '32px 0 24px', 
+          paddingTop: 24,
+          borderTop: '1px dashed #e0e0e0',
+        }}>
+          <h3 style={{ 
+            marginBottom: 16, 
+            color: 'var(--hrms-text-primary)',
+          }}>
+            Change Password
+          </h3>
+        </div>
+        
+        <Row gutter={20}>
+          <Col span={8}>
+            <Form.Item name="currentPassword" label="Current Password">
+              <Input.Password style={{ height: 44 }} placeholder="Enter current password" />
+            </Form.Item>
+          </Col>
+          <Col span={8}>
+            <Form.Item name="newPassword" label="New Password">
+              <Input.Password style={{ height: 44 }} placeholder="Enter new password" />
+            </Form.Item>
+          </Col>
+          <Col span={8}>
+            <Form.Item name="confirmPassword" label="Confirm Password">
+              <Input.Password style={{ height: 44 }} placeholder="Confirm new password" />
+            </Form.Item>
+          </Col>
+        </Row>
+        
+        <div style={{ marginTop: 24, display: 'flex', gap: 12 }}>
+          <Button type="primary" size="large" icon={<SaveOutlined />}>
+            Save Profile
+          </Button>
+          <Popconfirm
+            title="Logout from all devices?"
+            description="This will end all active sessions on other devices."
+            onConfirm={handleLogoutAll}
+            okText="Yes, logout all"
+            cancelText="Cancel"
+          >
+            <Button size="large" danger loading={logoutLoading}>
+              Logout All Devices
+            </Button>
+          </Popconfirm>
+        </div>
+      </Form>
+    </div>
+  );
+}
+
+function CompanySection({ form, onSave }: { form: any; onSave: (values: any) => void }) {
+  return (
+    <Form form={form} layout="vertical" onFinish={onSave}>
+      <h3 style={{ marginBottom: 16 }}>Company Information</h3>
+      <Row gutter={16}>
+        <Col span={12}>
+          <Form.Item name={['companyInfo', 'name']} label="Company Name">
+            <Input style={{ height: 40 }} />
+          </Form.Item>
+        </Col>
+        <Col span={12}>
+          <Form.Item name={['companyInfo', 'financialYearStart']} label="Financial Year Start (Month)">
+            <InputNumber style={{ width: '100%', height: 40 }} min={1} max={12} />
+          </Form.Item>
+        </Col>
+        <Col span={24}>
+          <Form.Item name={['companyInfo', 'address']} label="Address">
+            <Input.TextArea rows={2} />
+          </Form.Item>
+        </Col>
+        <Col span={12}>
+          <Form.Item name={['companyInfo', 'phone']} label="Phone">
+            <Input style={{ height: 40 }} />
+          </Form.Item>
+        </Col>
+        <Col span={12}>
+          <Form.Item name={['companyInfo', 'email']} label="Email">
+            <Input style={{ height: 40 }} />
+          </Form.Item>
+        </Col>
+      </Row>
+      <Button type="primary" icon={<SaveOutlined />} htmlType="submit">
+        Save Company Info
+      </Button>
+    </Form>
+  );
+}
+
+function AuthSection({ form, onSave }: { form: any; onSave: (values: any) => void }) {
+  return (
+    <Form form={form} layout="vertical" onFinish={onSave}>
+      <h3 style={{ marginBottom: 16 }}>Authentication Settings</h3>
+      
+      <div style={{ marginBottom: 24, padding: 16, background: '#f8f9fa', borderRadius: 8 }}>
+        <h4 style={{ marginBottom: 12 }}>Token Configuration</h4>
+        <Row gutter={16}>
+          <Col span={12}>
+            <Form.Item name={['authConfig', 'tokenExpiry']} label="Token Expiry">
+              <Input style={{ height: 40 }} placeholder="e.g. 24h, 8h, 30m" />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item name={['authConfig', 'refreshTokenExpiry']} label="Refresh Token Expiry">
+              <Input style={{ height: 40 }} placeholder="e.g. 7d, 30d" />
+            </Form.Item>
+          </Col>
+        </Row>
+      </div>
+
+      <div style={{ marginBottom: 24, padding: 16, background: '#f8f9fa', borderRadius: 8 }}>
+        <h4 style={{ marginBottom: 12 }}>Password Requirements</h4>
+        <Row gutter={16}>
+          <Col span={8}>
+            <Form.Item name={['authConfig', 'passwordMinLength']} label="Minimum Length">
+              <InputNumber style={{ width: '100%', height: 40 }} min={6} max={32} />
+            </Form.Item>
+          </Col>
+          <Col span={8}>
+            <Form.Item name={['authConfig', 'passwordHistoryCount']} label="Password History (count)">
+              <InputNumber style={{ width: '100%', height: 40 }} min={0} max={10} />
+            </Form.Item>
+          </Col>
+        </Row>
+        <Row gutter={16}>
+          <Col span={6}>
+            <Form.Item name={['authConfig', 'requireUppercase']} label="Require Uppercase" valuePropName="checked">
+              <Switch />
+            </Form.Item>
+          </Col>
+          <Col span={6}>
+            <Form.Item name={['authConfig', 'requireLowercase']} label="Require Lowercase" valuePropName="checked">
+              <Switch />
+            </Form.Item>
+          </Col>
+          <Col span={6}>
+            <Form.Item name={['authConfig', 'requireNumber']} label="Require Number" valuePropName="checked">
+              <Switch />
+            </Form.Item>
+          </Col>
+          <Col span={6}>
+            <Form.Item name={['authConfig', 'requireSpecialChar']} label="Require Special Char" valuePropName="checked">
+              <Switch />
+            </Form.Item>
+          </Col>
+        </Row>
+      </div>
+
+      <Button type="primary" icon={<SaveOutlined />} htmlType="submit">
+        Save Auth Settings
+      </Button>
+    </Form>
+  );
+}
+
+function EmailSection({ form, onSave, onTestEmail, isTesting }: { form: any; onSave: (values: any) => void; onTestEmail: (email: string) => void; isTesting: boolean }) {
+  const [testEmail, setTestEmail] = useState('');
+
+  const handleTest = () => {
+    if (testEmail) {
+      onTestEmail(testEmail);
+    } else {
+      message.warning('Please enter an email address to test');
+    }
+  };
+
+  return (
+    <Form form={form} layout="vertical" onFinish={onSave}>
+      <h3 style={{ marginBottom: 16 }}>Email Configuration (SMTP)</h3>
+      <Row gutter={16}>
+        <Col span={12}>
+          <Form.Item name={['emailConfig', 'host']} label="SMTP Host">
+            <Input style={{ height: 40 }} placeholder="smtp.gmail.com" />
+          </Form.Item>
+        </Col>
+        <Col span={8}>
+          <Form.Item name={['emailConfig', 'port']} label="Port">
+            <InputNumber style={{ width: '100%', height: 40 }} placeholder="587" />
+          </Form.Item>
+        </Col>
+        <Col span={4}>
+          <Form.Item name={['emailConfig', 'secure']} label="SSL" valuePropName="checked">
+            <Switch />
+          </Form.Item>
+        </Col>
+        <Col span={12}>
+          <Form.Item name={['emailConfig', 'user']} label="Username">
+            <Input style={{ height: 40 }} placeholder="email@example.com" />
+          </Form.Item>
+        </Col>
+        <Col span={12}>
+          <Form.Item name={['emailConfig', 'password']} label="Password">
+            <Input.Password style={{ height: 40 }} placeholder="App password or password" />
+          </Form.Item>
+        </Col>
+        <Col span={12}>
+          <Form.Item name={['emailConfig', 'fromEmail']} label="From Email">
+            <Input style={{ height: 40 }} placeholder="noreply@company.com" />
+          </Form.Item>
+        </Col>
+        <Col span={12}>
+          <Form.Item name={['emailConfig', 'fromName']} label="From Name">
+            <Input style={{ height: 40 }} placeholder="HRMS System" />
+          </Form.Item>
+        </Col>
+      </Row>
+
+      <div style={{ marginTop: 16, padding: 16, background: '#f0f5ff', borderRadius: 8, border: '1px solid #d9e6ff' }}>
+        <h4 style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <BellOutlined /> Notification Preferences
+        </h4>
+        <Row gutter={16}>
+          <Col span={24}>
+            <Form.Item name={['notificationConfig', 'emailEnabled']} valuePropName="checked" style={{ marginBottom: 12 }}>
+              <Switch /> <span style={{ marginLeft: 8, fontWeight: 500 }}>Enable email notifications</span>
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item name={['notificationConfig', 'notifyOnPayrollRun']} valuePropName="checked" style={{ marginBottom: 8 }}>
+              <Switch /> <span style={{ marginLeft: 8, fontSize: 13 }}>Notify on payroll run/finalize</span>
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item name={['notificationConfig', 'notifyOnEmployeeAdded']} valuePropName="checked" style={{ marginBottom: 8 }}>
+              <Switch /> <span style={{ marginLeft: 8, fontSize: 13 }}>Notify on new employee added</span>
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item name={['notificationConfig', 'notifyOnUserCreated']} valuePropName="checked" style={{ marginBottom: 8 }}>
+              <Switch /> <span style={{ marginLeft: 8, fontSize: 13 }}>Notify on new user created</span>
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item name={['notificationConfig', 'notifyOnAttendanceEntry']} valuePropName="checked" style={{ marginBottom: 8 }}>
+              <Switch /> <span style={{ marginLeft: 8, fontSize: 13 }}>Notify on attendance entry</span>
+            </Form.Item>
+          </Col>
+        </Row>
+      </div>
+
+      <div style={{ marginTop: 24, padding: 16, background: '#f5f5f5', borderRadius: 8 }}>
+        <h4 style={{ marginBottom: 12 }}>Test Email Configuration</h4>
+        <Row gutter={12} align="middle">
+          <Col flex="auto">
+            <Input
+              placeholder="Enter email address to test"
+              value={testEmail}
+              onChange={(e) => setTestEmail(e.target.value)}
+              style={{ height: 40 }}
+            />
+          </Col>
+          <Col>
+            <Button
+              type="primary"
+              icon={<MailOutlined />}
+              onClick={handleTest}
+              loading={isTesting}
+            >
+              Send Test
+            </Button>
+          </Col>
+        </Row>
+      </div>
+
+      <Button type="primary" icon={<SaveOutlined />} htmlType="submit" style={{ marginTop: 16 }}>
+        Save Email Settings
+      </Button>
+    </Form>
+  );
+}
+
+function PayrollSection({ form, onSave }: { form: any; onSave: (values: any) => void }) {
+  return (
+    <Form form={form} layout="vertical" onFinish={onSave}>
+      <h3 style={{ marginBottom: 16 }}>Payroll Configuration</h3>
+      <Row gutter={16}>
+        <Col span={8}>
+          <Form.Item name={['payrollConfig', 'overtimeBase']} label="Overtime Base">
+            <Select 
+              style={{ width: '100%', height: 40 }}
+              options={[
+                { label: 'Basic Salary', value: 'basic' },
+                { label: 'Basic + Allowances', value: 'basicPlusAllowances' },
+              ]} 
+            />
+          </Form.Item>
+        </Col>
+        <Col span={8}>
+          <Form.Item name={['payrollConfig', 'overtimeMultiplier']} label="Overtime Multiplier">
+            <InputNumber style={{ width: '100%', height: 40 }} min={0} step={0.5} />
+          </Form.Item>
+        </Col>
+        <Col span={8}>
+          <Form.Item name={['payrollConfig', 'halfDayDeductionPercent']} label="Half Day Deduction (%)">
+            <InputNumber style={{ width: '100%', height: 40 }} min={0} max={100} />
+          </Form.Item>
+        </Col>
+        <Col span={8}>
+          <Form.Item name={['payrollConfig', 'lateDeductionPerDay']} label="Late Deduction/Day (₹)">
+            <InputNumber style={{ width: '100%', height: 40 }} min={0} />
+          </Form.Item>
+        </Col>
+        <Col span={8}>
+          <Form.Item name={['payrollConfig', 'defaultWorkingDays']} label="Default Working Days">
+            <InputNumber style={{ width: '100%', height: 40 }} min={1} max={31} />
+          </Form.Item>
+        </Col>
+        <Col span={8}>
+          <Form.Item name={['payrollConfig', 'standardHoursPerDay']} label="Standard Hours/Day">
+            <InputNumber style={{ width: '100%', height: 40 }} min={1} max={24} />
+          </Form.Item>
+        </Col>
+        <Col span={8}>
+          <Form.Item name={['payrollConfig', 'paidWeeklyOff']} label="Paid Weekly Off" valuePropName="checked">
+            <Switch />
+          </Form.Item>
+        </Col>
+        <Col span={8}>
+          <Form.Item name={['payrollConfig', 'paidHolidays']} label="Paid Holidays" valuePropName="checked">
+            <Switch />
+          </Form.Item>
+        </Col>
+        <Col span={8}>
+          <Form.Item name={['payrollConfig', 'payrollLockDays']} label="Payroll Lock Days">
+            <InputNumber style={{ width: '100%', height: 40 }} min={0} />
+          </Form.Item>
+        </Col>
+      </Row>
+      <Button type="primary" icon={<SaveOutlined />} htmlType="submit">
+        Save Payroll Settings
+      </Button>
+    </Form>
+  );
+}
+
+function AttendanceSection({ form, onSave }: { form: any; onSave: (values: any) => void }) {
+  return (
+    <Form form={form} layout="vertical" onFinish={onSave}>
+      <h3 style={{ marginBottom: 16 }}>Attendance Configuration</h3>
+      <Row gutter={16}>
+        <Col span={8}>
+          <Form.Item name={['attendanceConfig', 'pastEntryLimitDays']} label="Past Entry Limit (Days)">
+            <InputNumber style={{ width: '100%', height: 40 }} min={0} />
+          </Form.Item>
+        </Col>
+        <Col span={8}>
+          <Form.Item name={['attendanceConfig', 'lateMarkEnabled']} label="Late Mark Enabled" valuePropName="checked">
+            <Switch />
+          </Form.Item>
+        </Col>
+        <Col span={8}>
+          <Form.Item name={['attendanceConfig', 'lateMarkThresholdMinutes']} label="Late Threshold (Min)">
+            <InputNumber style={{ width: '100%', height: 40 }} min={0} />
+          </Form.Item>
+        </Col>
+        <Col span={8}>
+          <Form.Item name={['attendanceConfig', 'lateToHalfDayAfterOccurrences']} label="Late to Half Day After">
+            <InputNumber style={{ width: '100%', height: 40 }} min={0} />
+          </Form.Item>
+        </Col>
+      </Row>
+      <Button type="primary" icon={<SaveOutlined />} htmlType="submit">
+        Save Attendance Settings
+      </Button>
+    </Form>
+  );
+}
+
+function AllowancesSection({ form, onAdd }: { form: any; onAdd: () => void }) {
+  const allowances = form.getFieldValue('allowanceConfig') || [];
+  
+  const handleDeleteAllowance = (index: number) => {
+    const current = form.getFieldValue('allowanceConfig') || [];
+    form.setFieldValue('allowanceConfig', current.filter((_: any, i: number) => i !== index));
+  };
+
+  return (
+    <div>
+      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h3 style={{ margin: 0 }}>Allowances</h3>
+        <Button type="primary" icon={<PlusOutlined />} onClick={onAdd}>
+          Add Allowance
+        </Button>
+      </div>
+      
+      <Table
+        size="small"
+        dataSource={allowances}
+        rowKey="key"
+        pagination={false}
+        locale={{ emptyText: 'No allowances configured. Add one to get started.' }}
+        columns={[
+          { title: 'Name', dataIndex: 'name', key: 'name' },
+          { title: 'Type', dataIndex: 'type', key: 'type', render: (t: string) => <Tag>{t}</Tag> },
+          { title: 'Value', dataIndex: 'value', key: 'value', render: (v: number, r: any) => r.type === 'percentage' ? `${v}%` : `₹${v}` },
+          { title: 'Applicable To', dataIndex: 'applicableTo', key: 'applicableTo', render: (v: string) => v === 'all' ? 'All' : v },
+          { title: 'Status', dataIndex: 'isActive', key: 'isActive', render: (s: boolean) => <Tag color={s ? 'green' : 'red'}>{s ? 'Active' : 'Inactive'}</Tag> },
+          { title: '', key: 'actions', width: 60, render: (_: any, _r: any, index: number) => (
+            <Popconfirm title="Delete this allowance?" onConfirm={() => handleDeleteAllowance(index)}>
+              <Button type="text" size="small" danger icon={<DeleteOutlined />} />
+            </Popconfirm>
+          )},
+        ]}
+      />
+    </div>
+  );
+}
+
+function OvertimeSection({ onAdd }: { onAdd: () => void }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ['overtime-rules'],
+    queryFn: () => overtimeRuleService.list({ limit: 100 }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => overtimeRuleService.delete(id),
+    onSuccess: () => { message.success('Rule deleted'); },
+    onError: (err: any) => message.error(err?.response?.data?.message || 'Failed to delete'),
+  });
+
+  return (
+    <div>
+      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h3 style={{ margin: 0 }}>Overtime Rules</h3>
+        <Button type="primary" icon={<PlusOutlined />} onClick={onAdd}>
+          Add Rule
+        </Button>
+      </div>
+      <Table
+        size="small"
+        dataSource={data?.data}
+        loading={isLoading}
+        rowKey="id"
+        pagination={false}
+        locale={{ emptyText: 'No overtime rules configured.' }}
+        columns={[
+          { title: 'Name', dataIndex: 'name', key: 'name' },
+          { title: 'Category', dataIndex: 'applicableTo', key: 'applicableTo', render: (c: string) => <Tag color={c === 'worker' ? 'blue' : c === 'office-staff' ? 'purple' : 'green'}>{c === 'all' ? 'All' : c}</Tag> },
+          { title: 'Max Hours/Day', dataIndex: 'maxHoursPerDay', key: 'maxHoursPerDay', render: (v: number) => `${v}h` },
+          { title: 'Max Hours/Month', dataIndex: 'maxHoursPerMonth', key: 'maxHoursPerMonth', render: (v: number) => `${v}h` },
+          { title: 'Multiplier', dataIndex: 'multiplier', key: 'multiplier' },
+          { title: 'Status', dataIndex: 'isActive', key: 'isActive', render: (s: boolean) => <Tag color={s ? 'green' : 'red'}>{s ? 'Active' : 'Inactive'}</Tag> },
+          { title: '', key: 'actions', width: 60, render: (_: any, r: OvertimeRule) => (
+            <Popconfirm title="Delete this rule?" onConfirm={() => deleteMutation.mutate(r.id)}>
+              <Button type="text" size="small" danger icon={<DeleteOutlined />} />
+            </Popconfirm>
+          )},
+        ]}
+      />
+    </div>
+  );
+}
+
+function WeeklyOffSection({ onAdd }: { onAdd: () => void }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ['weekly-off-rules'],
+    queryFn: () => weeklyOffRuleService.list({ limit: 100 }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => weeklyOffRuleService.delete(id),
+    onSuccess: () => { message.success('Rule deleted'); },
+    onError: (err: any) => message.error(err?.response?.data?.message || 'Failed to delete'),
+  });
+
+  return (
+    <div>
+      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h3 style={{ margin: 0 }}>Weekly Off Rules</h3>
+        <Button type="primary" icon={<PlusOutlined />} onClick={onAdd}>
+          Add Rule
+        </Button>
+      </div>
+      <Table
+        size="small"
+        dataSource={data?.data}
+        loading={isLoading}
+        rowKey="id"
+        pagination={false}
+        locale={{ emptyText: 'No weekly off rules configured.' }}
+        columns={[
+          { title: 'Name', dataIndex: 'name', key: 'name' },
+          { title: 'Category', dataIndex: 'category', key: 'category', render: (c: string) => <Tag>{c === 'all' ? 'All' : c === 'worker' ? 'Worker' : 'Office Staff'}</Tag> },
+          { title: 'Off Days', dataIndex: 'offDays', key: 'offDays', render: (days: number[]) => days?.map(d => ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d]).join(', ') },
+          { title: 'Status', dataIndex: 'isActive', key: 'isActive', render: (s: boolean) => <Tag color={s ? 'green' : 'red'}>{s ? 'Active' : 'Inactive'}</Tag> },
+          { title: '', key: 'actions', width: 60, render: (_: any, r: WeeklyOffRule) => (
+            <Popconfirm title="Delete this rule?" onConfirm={() => deleteMutation.mutate(r.id)}>
+              <Button type="text" size="small" danger icon={<DeleteOutlined />} />
+            </Popconfirm>
+          )},
+        ]}
+      />
+    </div>
+  );
+}
+
+function HolidaysSection({ onAdd }: { onAdd: () => void }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ['holidays'],
+    queryFn: () => holidayService.list({ limit: 100 }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => holidayService.delete(id),
+    onSuccess: () => { message.success('Holiday deleted'); },
+    onError: (err: any) => message.error(err?.response?.data?.message || 'Failed to delete'),
+  });
+
+  return (
+    <div>
+      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h3 style={{ margin: 0 }}>Holidays</h3>
+        <Button type="primary" icon={<PlusOutlined />} onClick={onAdd}>
+          Add Holiday
+        </Button>
+      </div>
+      <Table
+        size="small"
+        dataSource={data?.data}
+        loading={isLoading}
+        rowKey="id"
+        pagination={false}
+        locale={{ emptyText: 'No holidays configured.' }}
+        columns={[
+          { title: 'Date', dataIndex: 'date', key: 'date', render: (d: string) => d ? dayjs(d).format('DD MMM YYYY') : '-' },
+          { title: 'Name', dataIndex: 'name', key: 'name' },
+          { title: 'Type', dataIndex: 'category', key: 'category', render: (t: string) => <Tag color={t === 'national' ? 'red' : t === 'festival' ? 'purple' : 'orange'}>{t}</Tag> },
+          { title: 'Year', dataIndex: 'year', key: 'year' },
+          { title: 'Paid', dataIndex: 'isPaid', key: 'isPaid', render: (s: boolean) => s ? 'Yes' : 'No' },
+          { title: '', key: 'actions', width: 60, render: (_: any, r: Holiday) => (
+            <Popconfirm title="Delete this holiday?" onConfirm={() => deleteMutation.mutate(r.id)}>
+              <Button type="text" size="small" danger icon={<DeleteOutlined />} />
+            </Popconfirm>
+          )},
+        ]}
+      />
+    </div>
+  );
+}
+

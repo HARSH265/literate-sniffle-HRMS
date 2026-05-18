@@ -10,6 +10,7 @@ const router = Router();
 router.use(authenticate);
 
 router.get('/', authorize('view-employees'), attendanceController.list);
+router.get('/employee/:employeeId', authorize('view-employees'), attendanceController.getByEmployee);
 router.get('/monthly-view', authorize('view-employees'), attendanceController.monthlyView);
 router.post('/bulk', authorize('manage-attendance'), validate(bulkAttendanceSchema), attendanceController.bulkCreate);
 router.post('/', authorize('manage-attendance'), validate(createAttendanceEntrySchema), attendanceController.create);

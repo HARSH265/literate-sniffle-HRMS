@@ -51,25 +51,34 @@ export class HolidaysService {
   }
 
   static async create(data: Record<string, unknown>, createdById: string) {
-    const date = new Date(data.date as string);
+    const dateStr = data.date as string;
+    const date = new Date(dateStr);
     if (isNaN(date.getTime())) {
       throw new AppError('Invalid date format', 400);
     }
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    if (date < today) {
-      throw new AppError('Cannot create holidays for past dates', 400);
-    }
-
     const year = data.year ? Number(data.year) : date.getFullYear();
 
-    const existing = await Holiday.findOne({
+    const existingByName = await Holiday.findOne({
       name: (data.name as string).trim(),
       year,
     });
-    if (existing) {
+    if (existingByName) {
       throw new AppError('Holiday with this name already exists for the year', 400);
+    }
+
+    const existingByDate = await Holiday.findOne({
+      date: {
+        $gte: new Date(year, 0, 1),
+        $lte: new Date(year, 11, 31),
+      },
+    });
+    const dateStrNormalized = date.toISOString().split('T')[0];
+    if (existingByDate) {
+      const existingDateStr = new Date(existingByDate.date).toISOString().split('T')[0];
+      if (existingDateStr === dateStrNormalized) {
+        throw new AppError(`A holiday already exists on ${dateStrNormalized}`, 400);
+      }
     }
 
     const holiday = await Holiday.create({
@@ -95,32 +104,44 @@ export class HolidaysService {
       throw new AppError('Holiday not found or already deleted', 404);
     }
 
+    let year = (holiday as any).year;
+
     if (data.date) {
       const date = new Date(data.date as string);
       if (isNaN(date.getTime())) {
         throw new AppError('Invalid date format', 400);
       }
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      if (date < today) {
-        throw new AppError('Cannot set holidays for past dates', 400);
-      }
-      (holiday as any).year = date.getFullYear();
+      year = date.getFullYear();
       (holiday as any).date = date;
+      (holiday as any).year = year;
     }
     if (data.name) (holiday as any).name = (data.name as string).trim();
     if (data.type) (holiday as any).type = data.type;
     if (data.applicableTo) (holiday as any).applicableTo = data.applicableTo;
     if (data.isPaid !== undefined) (holiday as any).isPaid = data.isPaid;
 
-    const year = (holiday as any).year;
-    const existing = await Holiday.findOne({
+    const nameConflict = await Holiday.findOne({
       name: (holiday as any).name,
       year,
       _id: { $ne: id },
     });
-    if (existing) {
+    if (nameConflict) {
       throw new AppError('Holiday with this name already exists for the year', 400);
+    }
+
+    const dateConflict = await Holiday.findOne({
+      date: {
+        $gte: new Date(year, 0, 1),
+        $lte: new Date(year, 11, 31),
+      },
+      _id: { $ne: id },
+    });
+    if (dateConflict) {
+      const existingDateStr = new Date(dateConflict.date).toISOString().split('T')[0];
+      const currentDateStr = new Date((holiday as any).date).toISOString().split('T')[0];
+      if (existingDateStr === currentDateStr) {
+        throw new AppError(`A holiday already exists on ${currentDateStr}`, 400);
+      }
     }
 
     await (holiday as any).save();

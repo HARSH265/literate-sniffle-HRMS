@@ -2,14 +2,29 @@ import apiClient from '../../../core/api/apiClient';
 
 export interface AttendanceEntry {
   id: string;
-  employee: { id: string; fullName: string; employeeCode: string } | null;
-  shift: { id: string; name: string } | null;
+  employee: { id: string; fullName: string; employeeCode: string; department?: string } | null;
+  shift: { id: string; name: string; startTime?: string; endTime?: string } | null;
   date: string;
   status: 'present' | 'absent' | 'half-day' | 'leave' | 'weekly-off' | 'holiday';
   inTime?: string;
   outTime?: string;
-  overtimeHours: number;
+  isLate?: boolean;
   remarks?: string;
+}
+
+export interface MonthlyAttendanceView {
+  employee: {
+    id: string;
+    fullName: string;
+    employeeCode: string;
+    department?: string;
+  };
+  days: Record<string, {
+    id: string;
+    status: string;
+    inTime?: string;
+    outTime?: string;
+  } | null>;
 }
 
 export interface CreateAttendanceEntry {
@@ -19,7 +34,6 @@ export interface CreateAttendanceEntry {
   status: 'present' | 'absent' | 'half-day' | 'leave' | 'weekly-off' | 'holiday';
   inTime?: string;
   outTime?: string;
-  overtimeHours?: number;
   remarks?: string;
 }
 
@@ -30,7 +44,6 @@ export interface BulkAttendanceEntry {
     status: 'present' | 'absent' | 'half-day' | 'leave' | 'weekly-off' | 'holiday';
     inTime?: string;
     outTime?: string;
-    overtimeHours?: number;
     remarks?: string;
   }>;
 }
@@ -48,7 +61,7 @@ export const attendanceService = {
     return data;
   },
 
-  async monthlyView(params: { month: number; year: number; department?: string }): Promise<any[]> {
+  async monthlyView(params: { month: number; year: number; department?: string }): Promise<MonthlyAttendanceView[]> {
     const { data } = await apiClient.get('/attendance/monthly-view', { params });
     return data.data;
   },
@@ -70,5 +83,13 @@ export const attendanceService = {
 
   async delete(id: string): Promise<void> {
     await apiClient.delete(`/attendance/${id}`);
+  },
+
+  async getByEmployee(employeeId: string, startDate?: string, endDate?: string): Promise<AttendanceEntry[]> {
+    const params: Record<string, string> = {};
+    if (startDate) params.startDate = startDate;
+    if (endDate) params.endDate = endDate;
+    const { data } = await apiClient.get(`/attendance/employee/${employeeId}`, { params });
+    return data.data;
   },
 };

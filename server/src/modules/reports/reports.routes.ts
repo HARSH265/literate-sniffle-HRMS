@@ -9,6 +9,11 @@ router.use(authenticate);
 
 router.get('/employees', authorize('view-reports'), reportsController.exportEmployees);
 router.get('/attendance', authorize('view-reports'), reportsController.exportAttendance);
+router.get('/attendance/summary', authorize('view-reports'), reportsController.getAttendanceSummary);
 router.get('/payroll', authorize('view-reports'), reportsController.exportPayroll);
+router.get('/payroll/summary', authorize('view-reports'), reportsController.getPayrollSummary);
+router.get('/departments', authorize('view-reports'), reportsController.getDepartmentSummary);
+router.get('/overtime', authorize('view-reports'), reportsController.exportOvertime);
+router.get('/overtime/summary', authorize('view-reports'), reportsController.getOvertimeSummary);
 
 export default router;

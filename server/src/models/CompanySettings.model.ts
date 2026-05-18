@@ -51,6 +51,23 @@ export interface ICompanySettings extends Document {
     password?: string;
     fromAddress?: string;
   };
+  authConfig: {
+    tokenExpiry?: string;
+    refreshTokenExpiry?: string;
+    passwordMinLength?: number;
+    requireUppercase?: boolean;
+    requireLowercase?: boolean;
+    requireNumber?: boolean;
+    requireSpecialChar?: boolean;
+    passwordHistoryCount?: number;
+  };
+  notificationConfig: {
+    emailEnabled?: boolean;
+    notifyOnPayrollRun?: boolean;
+    notifyOnEmployeeAdded?: boolean;
+    notifyOnUserCreated?: boolean;
+    notifyOnAttendanceEntry?: boolean;
+  };
   updatedBy?: mongoose.Types.ObjectId;
 }
 
@@ -126,6 +143,23 @@ const CompanySettingsSchema = new Schema<ICompanySettings>(
       user: { type: String },
       password: { type: String },
       fromAddress: { type: String },
+    },
+    authConfig: {
+      tokenExpiry: { type: String, default: '24h' },
+      refreshTokenExpiry: { type: String, default: '7d' },
+      passwordMinLength: { type: Number, default: 8 },
+      requireUppercase: { type: Boolean, default: true },
+      requireLowercase: { type: Boolean, default: true },
+      requireNumber: { type: Boolean, default: true },
+      requireSpecialChar: { type: Boolean, default: true },
+      passwordHistoryCount: { type: Number, default: 5 },
+    },
+    notificationConfig: {
+      emailEnabled: { type: Boolean, default: false },
+      notifyOnPayrollRun: { type: Boolean, default: true },
+      notifyOnEmployeeAdded: { type: Boolean, default: true },
+      notifyOnUserCreated: { type: Boolean, default: true },
+      notifyOnAttendanceEntry: { type: Boolean, default: false },
     },
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
   },

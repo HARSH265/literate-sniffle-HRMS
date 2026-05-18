@@ -8,6 +8,7 @@ const router = Router();
 router.use(authenticate);
 
 router.get('/', authorize('view-reports'), salarySlipsController.list);
+router.get('/:id/preview', authorize('view-reports'), salarySlipsController.preview);
 router.get('/:id/pdf', authorize('view-reports'), salarySlipsController.generatePdf);
 
 export default router;

@@ -53,4 +53,18 @@ export const settingsService = {
     const { data } = await apiClient.patch('/settings', payload);
     return data;
   },
+
+  async testEmail(email: string): Promise<{ success: boolean; message?: string }> {
+    const { data } = await apiClient.post('/settings/test-email', null, { params: { email } });
+    return data;
+  },
+
+  async uploadLogo(file: File): Promise<{ success: boolean; logoUrl?: string; message?: string }> {
+    const formData = new FormData();
+    formData.append('logo', file);
+    const { data } = await apiClient.post('/settings/logo', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return data;
+  },
 };

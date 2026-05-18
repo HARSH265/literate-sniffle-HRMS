@@ -7,12 +7,13 @@ export interface User {
   role: 'super-admin' | 'hr-admin' | 'hr-staff' | 'accounts' | 'manager';
   isActive: boolean;
   createdAt: string;
+  lastLogin?: string;
 }
 
 export interface CreateUser {
   name: string;
   email: string;
-  password: string;
+  password?: string;
   role: 'super-admin' | 'hr-admin' | 'hr-staff' | 'accounts' | 'manager';
 }
 
@@ -40,11 +41,37 @@ export const userService = {
   },
 
   async update(id: string, payload: Partial<CreateUser>): Promise<{ success: boolean; data: User }> {
-    const { data } = await apiClient.put(`/users/${id}`, payload);
+    const { data } = await apiClient.patch(`/users/${id}`, payload);
     return data;
   },
 
-  async delete(id: string): Promise<void> {
-    await apiClient.delete(`/users/${id}`);
+  async deactivate(id: string): Promise<{ success: boolean; data: { id: string; isActive: boolean } }> {
+    const { data } = await apiClient.patch(`/users/${id}/deactivate`);
+    return data;
+  },
+
+  async activate(id: string): Promise<{ success: boolean; data: { id: string; isActive: boolean } }> {
+    const { data } = await apiClient.patch(`/users/${id}/activate`);
+    return data;
+  },
+
+  async getUserActivity(id: string, page = 1, limit = 20): Promise<{ success: boolean; data: any[]; meta: any }> {
+    const { data } = await apiClient.get(`/users/${id}/activity`, { params: { page, limit } });
+    return data;
+  },
+
+  async getUserStats(id: string): Promise<{ success: boolean; data: any }> {
+    const { data } = await apiClient.get(`/users/${id}/stats`);
+    return data;
+  },
+
+  async exportUsers(): Promise<{ success: boolean; data: any[] }> {
+    const { data } = await apiClient.get('/users/export');
+    return data;
+  },
+
+  async importUsers(users: CreateUser[]): Promise<{ success: boolean; data: { created: number; updated: number; errors: string[] } }> {
+    const { data } = await apiClient.post('/users/import', { users });
+    return data;
   },
 };

@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Table, Button, Modal, Form, Input, Select, DatePicker, message, Popconfirm, Tag, Tooltip, Row, Col } from 'antd';
+import { Table, Button, Modal, Form, Input, Select, DatePicker, message, Popconfirm, Tag, Tooltip, Row, Col, Tabs } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, CalendarOutlined, UnorderedListOutlined } from '@ant-design/icons';
 import { PageHeader } from '../../../core/components/PageHeader';
 import { holidayService, Holiday, CreateHoliday } from '../services/holidayService';
+import { HolidayCalendar } from '../components/HolidayCalendar';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 
@@ -34,13 +35,21 @@ export function HolidaysPage() {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(20);
   const [search, setSearch] = useState('');
-  const [yearFilter, setYearFilter] = useState<number | undefined>(undefined);
+  const [yearFilter, setYearFilter] = useState<number>(dayjs().year());
+  const [activeTab, setActiveTab] = useState('list');
   const queryClient = useQueryClient();
 
-const { data, isLoading, isFetching } = useQuery({
+  const { data, isLoading, isFetching } = useQuery({
     queryKey: ['holidays', page, limit, search, yearFilter],
-    queryFn: () => holidayService.list({ page, limit, search, year: yearFilter }),
+    queryFn: () => holidayService.list({ page, limit: 100, search, year: yearFilter }),
     staleTime: 5 * 60 * 1000,
+  });
+
+  const calendarYearQuery = useQuery({
+    queryKey: ['holidays-calendar', yearFilter],
+    queryFn: () => holidayService.list({ limit: 100, year: yearFilter }),
+    staleTime: 5 * 60 * 1000,
+    enabled: activeTab === 'calendar',
   });
 
   const createMutation = useMutation({
@@ -170,57 +179,109 @@ const { data, isLoading, isFetching } = useQuery({
 
   return (
     <div style={{ padding: '0 4px' }}>
-      <PageHeader title="Holidays" subtitle="Manage company holidays and festivals" />
+      <PageHeader
+        title="Holidays"
+        subtitle="Manage company holidays and festivals"
+        actions={<Button type="primary" icon={<PlusOutlined />} onClick={() => { setActiveTab('list'); setIsModalOpen(true); }}>Add Holiday</Button>}
+      />
 
-      <div className="hrms-table-card">
-        <div className="hrms-table-toolbar">
-          <div className="hrms-table-toolbar-left">
-            <Input.Search
-              placeholder="Search holidays..."
-              onSearch={(val) => { setSearch(val); setPage(1); }}
-              style={{ width: 240 }}
-              allowClear
-              prefix={<SearchOutlined style={{ color: 'var(--hrms-text-muted)' }} />}
-              enterButton={false}
-              loading={isFetching}
-            />
-            <Select
-              value={yearFilter}
-              onChange={(val) => { setYearFilter(val); setPage(1); }}
-              style={{ width: 120 }}
-              allowClear
-              placeholder="All Years"
-              options={[
-                { label: '2024', value: 2024 },
-                { label: '2025', value: 2025 },
-                { label: '2026', value: 2026 },
-                { label: '2027', value: 2027 },
-                { label: '2028', value: 2028 },
-              ]}
-            />
-          </div>
-          <div className="hrms-table-toolbar-right">
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => setIsModalOpen(true)}>
-              Add Holiday
-            </Button>
-          </div>
-        </div>
+      <div className="hrms-table-card" style={{ padding: '0 8px' }}>
+        <Tabs
+          activeKey={activeTab}
+          onChange={(key) => setActiveTab(key)}
+          style={{ marginTop: 8 }}
+          items={[
+            {
+              key: 'list',
+              label: <span><UnorderedListOutlined /> List</span>,
+              children: (
+                <>
+                  <div className="hrms-table-toolbar">
+                    <div className="hrms-table-toolbar-left">
+                      <Input.Search
+                        placeholder="Search holidays..."
+                        onSearch={(val) => { setSearch(val); setPage(1); }}
+                        style={{ width: 240 }}
+                        allowClear
+                        prefix={<SearchOutlined style={{ color: 'var(--hrms-text-muted)' }} />}
+                        enterButton={false}
+                        loading={isFetching}
+                      />
+                      <Select
+                        value={yearFilter}
+                        onChange={(val) => { setYearFilter(val); setPage(1); }}
+                        style={{ width: 120 }}
+                        placeholder="All Years"
+                        options={[
+                          { label: '2024', value: 2024 },
+                          { label: '2025', value: 2025 },
+                          { label: '2026', value: 2026 },
+                          { label: '2027', value: 2027 },
+                          { label: '2028', value: 2028 },
+                        ]}
+                      />
+                    </div>
+                    <div className="hrms-table-toolbar-right">
+                      <span style={{ fontSize: 13, color: 'var(--hrms-text-muted)' }}>{data?.meta?.total ?? 0} holidays</span>
+                    </div>
+                  </div>
 
-        <Table
-          columns={columns}
-          dataSource={data?.data}
-          rowKey="id"
-          loading={isLoading}
-          pagination={{
-            current: page,
-            defaultPageSize: 10,
-            pageSize: limit,
-            total: data?.meta?.total ?? 0,
-            onChange: (p, size) => { setPage(p); setLimit(size ?? 10); },
-            showSizeChanger: true,
-            pageSizeOptions: ['10', '20', '50', '100'],
-            showTotal: (total, range) => `${range[0]}–${range[1]} of ${total}`,
-          }}
+                  <Table
+                    columns={columns}
+                    dataSource={data?.data}
+                    rowKey="id"
+                    loading={isLoading}
+                    pagination={{
+                      current: page,
+                      defaultPageSize: 10,
+                      pageSize: limit,
+                      total: data?.meta?.total ?? 0,
+                      onChange: (p, size) => { setPage(p); setLimit(size ?? 10); },
+                      showSizeChanger: true,
+                      pageSizeOptions: ['10', '20', '50', '100'],
+                      showTotal: (total, range) => `${range[0]}–${range[1]} of ${total}`,
+                    }}
+                  />
+                </>
+              ),
+            },
+            {
+              key: 'calendar',
+              label: <span><CalendarOutlined /> Calendar</span>,
+              children: (
+                <>
+                  <div className="hrms-table-toolbar" style={{ marginBottom: 12 }}>
+                    <div className="hrms-table-toolbar-left">
+                      <Select
+                        value={yearFilter}
+                        onChange={(val) => setYearFilter(val)}
+                        style={{ width: 120 }}
+                        options={[
+                          { label: '2024', value: 2024 },
+                          { label: '2025', value: 2025 },
+                          { label: '2026', value: 2026 },
+                          { label: '2027', value: 2027 },
+                          { label: '2028', value: 2028 },
+                        ]}
+                      />
+                      <div style={{ display: 'flex', gap: 16, marginLeft: 16, alignItems: 'center' }}>
+                        {Object.entries(typeColors).map(([type, color]) => (
+                          <span key={type} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
+                            <span style={{ width: 10, height: 10, borderRadius: 3, background: color }} />
+                            {type.charAt(0).toUpperCase() + type.slice(1)}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="hrms-table-toolbar-right">
+                      <span style={{ fontSize: 13, color: 'var(--hrms-text-muted)' }}>{calendarYearQuery.data?.meta?.total ?? 0} holidays in {yearFilter}</span>
+                    </div>
+                  </div>
+                  <HolidayCalendar holidays={calendarYearQuery.data?.data || []} year={yearFilter} />
+                </>
+              ),
+            },
+          ]}
         />
       </div>
 

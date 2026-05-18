@@ -1,8 +1,10 @@
 import Employee from '../../models/Employee.model.js';
+import User from '../../models/User.model.js';
 import { AppError } from '../../core/errors/AppError.js';
 import { AuditService } from '../../core/audit/AuditService.js';
 import { PaginationUtil, PaginationMeta } from '../../core/utils/PaginationUtil.js';
 import { encryptBankDetails, decryptBankDetails } from '../../core/utils/EncryptionUtil.js';
+import { NotificationService } from '../../core/notification/NotificationService.js';
 
 const SALARY_ACCESS_ROLES = ['super-admin', 'hr-admin', 'hr-staff', 'accounts'];
 
@@ -40,6 +42,7 @@ export class EmployeesService {
       filter.$or = [
         { employeeCode: { $regex: search, $options: 'i' } },
         { fullName: { $regex: search, $options: 'i' } },
+        { fatherName: { $regex: search, $options: 'i' } },
       ];
     }
 
@@ -53,6 +56,14 @@ export class EmployeesService {
 
     if (queryParams.department) {
       filter.department = queryParams.department;
+    }
+
+    if (queryParams.designation) {
+      filter.designation = queryParams.designation;
+    }
+
+    if (queryParams.shift) {
+      filter.shift = queryParams.shift;
     }
 
     const skip = PaginationUtil.getSkip(page, limit);
@@ -130,6 +141,18 @@ export class EmployeesService {
       targetId: emp._id.toString(),
       details: { employeeCode: data.employeeCode, fullName: data.fullName },
     });
+
+    const hrAdmins = await User.find({ role: { $in: ['super-admin', 'hr-admin', 'hr-staff'] } }).lean();
+    for (const admin of hrAdmins) {
+      await NotificationService.send({
+        title: 'New Employee Added',
+        message: `${data.fullName} (${data.employeeCode}) has been added to the system.`,
+        type: 'info',
+        recipient: admin._id.toString(),
+        module: 'employees',
+        link: `/employees/${emp._id.toString()}`,
+      });
+    }
 
     return this.getById(emp._id.toString(), userRole);
   }

@@ -9,6 +9,7 @@ import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import { errorHandler } from './core/errors/errorHandler.js';
 import { env } from './config/env.js';
+import { auditMiddleware } from './core/audit/AuditMiddleware.js';
 import authRoutes from './modules/auth/auth.routes.js';
 import userRoutes from './modules/users/users.routes.js';
 import departmentRoutes from './modules/departments/departments.routes.js';
@@ -71,16 +72,32 @@ const generalLimiter = rateLimit({
 app.use('/api/v1/auth', authLimiter);
 app.use('/api/v1', generalLimiter);
 
-app.get('/api/v1/health', (_req, res) => {
-  res.json({
-    success: true,
-    message: 'Server is healthy',
-    data: { uptime: process.uptime() },
-  });
+app.get('/api/v1/health', async (_req, res) => {
+  try {
+    const mongoose = await import('mongoose');
+    const dbState = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
+    const memUsage = process.memoryUsage();
+    res.json({
+      success: true,
+      message: 'Server is healthy',
+      data: {
+        uptime: process.uptime(),
+        database: dbState,
+        memory: {
+          rss: Math.round(memUsage.rss / 1024 / 1024) + ' MB',
+          heapUsed: Math.round(memUsage.heapUsed / 1024 / 1024) + ' MB',
+          heapTotal: Math.round(memUsage.heapTotal / 1024 / 1024) + ' MB',
+        },
+        timestamp: new Date().toISOString(),
+      },
+    });
+  } catch {
+    res.status(503).json({ success: false, message: 'Health check failed' });
+  }
 });
 
 app.use('/api/v1/auth', authRoutes);
-app.use('/api/v1/users', userRoutes);
+app.use('/api/v1/users', auditMiddleware, userRoutes);
 app.use('/api/v1/departments', departmentRoutes);
 app.use('/api/v1/designations', designationRoutes);
 app.use('/api/v1/shifts', shiftRoutes);

@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { Table, Button, Modal, Form, Input, Select, DatePicker, message, Tag, Row, Col, Tabs, Card } from 'antd';
+import { Table, Button, Modal, Form, Input, Select, DatePicker, message, Tag, Row, Col, Tabs, Card, Badge } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { SaveOutlined, CalendarOutlined } from '@ant-design/icons';
+import { SaveOutlined, CalendarOutlined, LeftOutlined, RightOutlined } from '@ant-design/icons';
 import { PageHeader } from '../../../core/components/PageHeader';
-import { attendanceService, AttendanceEntry, BulkAttendanceEntry } from '../services/attendanceService';
+import { attendanceService, AttendanceEntry, MonthlyAttendanceView } from '../services/attendanceService';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 
@@ -31,28 +31,46 @@ export function AttendancePage() {
   const [selectedDate, setSelectedDate] = useState(dayjs());
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(20);
+  const [departmentFilter, setDepartmentFilter] = useState<string>('');
+  const [selectedMonth, setSelectedMonth] = useState(dayjs());
   const queryClient = useQueryClient();
 
   const dateStr = selectedDate.format('YYYY-MM-DD');
+  const monthYear = { month: selectedMonth.month() + 1, year: selectedMonth.year() };
 
   const { data, isLoading } = useQuery({
-    queryKey: ['attendance', page, limit, dateStr],
-    queryFn: () => attendanceService.list({ page, limit, date: dateStr }),
+    queryKey: ['attendance', page, limit, dateStr, departmentFilter],
+    queryFn: () => attendanceService.list({ page, limit, date: dateStr, department: departmentFilter || undefined }),
+    refetchOnWindowFocus: false,
+  });
+
+  const { data: monthlyData, isLoading: monthlyLoading } = useQuery({
+    queryKey: ['attendance-monthly', monthYear.month, monthYear.year, departmentFilter],
+    queryFn: () => attendanceService.monthlyView({ ...monthYear, department: departmentFilter || undefined }),
     refetchOnWindowFocus: false,
   });
 
   const { data: employeeData } = useQuery({
-    queryKey: ['employees-active'],
+    queryKey: ['employees-active-with-shift'],
     queryFn: () => import('../../employees/services/employeeService').then(m => m.employeeService.list({ limit: 500, status: 'active' })),
   });
 
+  const { data: deptData } = useQuery({
+    queryKey: ['departments-attendance'],
+    queryFn: async () => {
+      const module = await import('../../departments/services/departmentService');
+      return module.departmentService.list({ limit: 100 });
+    },
+  });
+
   const bulkMutation = useMutation({
-    mutationFn: (payload: BulkAttendanceEntry) => attendanceService.bulkCreate(payload),
-    onSuccess: () => {
-      message.success('Attendance saved successfully');
+    mutationFn: (payload: Parameters<typeof attendanceService.bulkCreate>[0]) => attendanceService.bulkCreate(payload),
+    onSuccess: (res) => {
+      message.success(`Attendance saved: ${res.data.filter((r: any) => r.status === 'created').length} created, ${res.data.filter((r: any) => r.status === 'updated').length} updated`);
       setIsModalOpen(false);
       form.resetFields();
       queryClient.invalidateQueries({ queryKey: ['attendance'] });
+      queryClient.invalidateQueries({ queryKey: ['attendance-monthly'] });
     },
     onError: (err: any) => message.error(err?.response?.data?.message || 'Failed to save attendance'),
   });
@@ -64,11 +82,15 @@ export function AttendancePage() {
       status: emp.status || 'present',
       inTime: emp.inTime,
       outTime: emp.outTime,
-      overtimeHours: emp.overtimeHours || 0,
       remarks: emp.remarks,
     })) || [];
 
     bulkMutation.mutate({ date: dateStr, entries });
+  };
+
+  const getShiftDisplay = (shift: any) => {
+    if (!shift?.startTime || !shift?.endTime) return null;
+    return `${shift.startTime} - ${shift.endTime}`;
   };
 
   const columns: ColumnsType<AttendanceEntry> = [
@@ -83,14 +105,27 @@ export function AttendancePage() {
       ),
     },
     {
+      title: 'Shift',
+      key: 'shift',
+      width: 120,
+      render: (_: unknown, record: AttendanceEntry) => (
+        <span style={{ fontSize: 12, color: 'var(--hrms-text-secondary)' }}>
+          {getShiftDisplay(record.shift) || '-'}
+        </span>
+      ),
+    },
+    {
       title: 'Status',
       dataIndex: 'status',
       key: 'status',
       width: 120,
-      render: (status: string) => (
-        <Tag color={STATUS_COLORS[status]} style={{ textTransform: 'capitalize' }}>
-          {status.replace('-', ' ')}
-        </Tag>
+      render: (status: string, record: AttendanceEntry) => (
+        <div>
+          <Tag color={STATUS_COLORS[status]} style={{ textTransform: 'capitalize' }}>
+            {status.replace('-', ' ')}
+          </Tag>
+          {record.isLate && <Tag color="error" style={{ marginLeft: 4 }}>Late</Tag>}
+        </div>
       ),
     },
     {
@@ -108,19 +143,86 @@ export function AttendancePage() {
       render: (v: string) => v || '-',
     },
     {
-      title: 'Overtime',
-      dataIndex: 'overtimeHours',
-      key: 'overtimeHours',
-      width: 100,
-      render: (v: number) => v > 0 ? <Tag color="orange">{v}h</Tag> : '-',
-    },
-    {
       title: 'Remarks',
       dataIndex: 'remarks',
       key: 'remarks',
       render: (v: string) => v || '-',
     },
   ];
+
+  const MonthlyView = () => {
+    const daysInMonth = selectedMonth.daysInMonth();
+    const dayHeaders = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+
+    const monthlyColumns: ColumnsType<MonthlyAttendanceView> = [
+      {
+        title: 'Employee',
+        key: 'employee',
+        fixed: 'left',
+        width: 180,
+        render: (_: unknown, record: MonthlyAttendanceView) => (
+          <div>
+            <div style={{ fontWeight: 600 }}>{record.employee?.fullName}</div>
+            <div style={{ fontSize: 11, color: 'var(--hrms-text-muted)' }}>{record.employee?.employeeCode}</div>
+          </div>
+        ),
+      },
+      ...dayHeaders.map((day) => ({
+        title: String(day),
+        key: `day-${day}`,
+        width: 45,
+        align: 'center' as const,
+        render: (_: unknown, record: MonthlyAttendanceView) => {
+          const dayData = record.days?.[day];
+          if (!dayData) return <span style={{ color: '#ccc' }}>-</span>;
+          return (
+            <Badge 
+              color={STATUS_COLORS[dayData.status] || 'default'} 
+              text=""
+              style={{ fontSize: 8 }}
+            />
+          );
+        },
+      })),
+    ];
+
+    return (
+      <div className="hrms-table-card">
+        <div className="hrms-table-toolbar">
+          <div className="hrms-table-toolbar-left" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <Button 
+              icon={<LeftOutlined />} 
+              size="small" 
+              onClick={() => setSelectedMonth(selectedMonth.subtract(1, 'month'))}
+            />
+            <span style={{ fontWeight: 600, minWidth: 120, textAlign: 'center' }}>
+              {selectedMonth.format('MMMM YYYY')}
+            </span>
+            <Button 
+              icon={<RightOutlined />} 
+              size="small" 
+              onClick={() => setSelectedMonth(selectedMonth.add(1, 'month'))}
+              disabled={selectedMonth.isAfter(dayjs(), 'month')}
+            />
+          </div>
+          <div className="hrms-table-toolbar-right">
+            <span style={{ fontSize: 13, color: 'var(--hrms-text-muted)' }}>
+              {monthlyData?.length ?? 0} employees
+            </span>
+          </div>
+        </div>
+        <Table
+          columns={monthlyColumns}
+          dataSource={monthlyData}
+          rowKey={(record) => record.employee?.id || ''}
+          loading={monthlyLoading}
+          scroll={{ x: daysInMonth * 45 + 180 }}
+          size="small"
+          pagination={false}
+        />
+      </div>
+    );
+  };
 
   return (
     <div style={{ padding: '0 4px' }}>
@@ -140,6 +242,7 @@ export function AttendancePage() {
                       value={selectedDate} 
                       onChange={(date) => setSelectedDate(date || dayjs())}
                       format="DD MMMM YYYY"
+                      disabledDate={(current) => current && current > dayjs().endOf('day')}
                     />
                   </Col>
                   <Col>
@@ -157,11 +260,20 @@ export function AttendancePage() {
             children: (
               <div className="hrms-table-card">
                 <div className="hrms-table-toolbar">
-                  <div className="hrms-table-toolbar-left">
+                  <div className="hrms-table-toolbar-left" style={{ display: 'flex', gap: 8 }}>
                     <DatePicker 
                       value={selectedDate} 
                       onChange={(date) => setSelectedDate(date || dayjs())}
                       style={{ width: 150 }}
+                      disabledDate={(current) => current && current > dayjs().endOf('day')}
+                    />
+                    <Select
+                      placeholder="Department"
+                      allowClear
+                      style={{ width: 150 }}
+                      value={departmentFilter || undefined}
+                      onChange={(val) => { setDepartmentFilter(val || ''); setPage(1); }}
+                      options={deptData?.data?.map((d: any) => ({ label: d.name, value: d.id })) || []}
                     />
                   </div>
                   <div className="hrms-table-toolbar-right">
@@ -187,6 +299,27 @@ export function AttendancePage() {
               </div>
             ),
           },
+          {
+            key: 'monthly',
+            label: <span><CalendarOutlined /> Monthly View</span>,
+            children: (
+              <div className="hrms-table-card">
+                <div className="hrms-table-toolbar">
+                  <div className="hrms-table-toolbar-left" style={{ display: 'flex', gap: 8 }}>
+                    <Select
+                      placeholder="Department"
+                      allowClear
+                      style={{ width: 150 }}
+                      value={departmentFilter || undefined}
+                      onChange={(val) => setDepartmentFilter(val || '')}
+                      options={deptData?.data?.map((d: any) => ({ label: d.name, value: d.id })) || []}
+                    />
+                  </div>
+                </div>
+                <MonthlyView />
+              </div>
+            ),
+          },
         ]}
       />
 
@@ -194,7 +327,7 @@ export function AttendancePage() {
         title={`Mark Attendance - ${selectedDate.format('DD MMMM YYYY')}`}
         open={isModalOpen}
         onCancel={() => { setIsModalOpen(false); form.resetFields(); }}
-        width={900}
+        width={1000}
         footer={[
           <Button key="cancel" onClick={() => setIsModalOpen(false)}>Cancel</Button>,
           <Button key="save" type="primary" icon={<SaveOutlined />} onClick={handleBulkSave} loading={bulkMutation.isPending}>
@@ -203,22 +336,36 @@ export function AttendancePage() {
         ]}
       >
         <Form form={form} layout="vertical">
-          <div style={{ maxHeight: 400, overflowY: 'auto' }}>
+          <div style={{ maxHeight: 500, overflowY: 'auto' }}>
             <Table
               dataSource={employeeData?.data || []}
               rowKey="id"
               pagination={false}
               size="small"
+              scroll={{ y: 400 }}
               columns={[
                 {
                   title: 'Employee',
                   dataIndex: 'fullName',
                   key: 'fullName',
+                  width: 160,
                   render: (name: string, record: any) => (
                     <div>
                       <div style={{ fontWeight: 500 }}>{name}</div>
                       <div style={{ fontSize: 11, color: 'var(--hrms-text-muted)' }}>{record.employeeCode}</div>
                     </div>
+                  ),
+                },
+                {
+                  title: 'Shift',
+                  key: 'shift',
+                  width: 120,
+                  render: (_: unknown, record: any) => (
+                    <span style={{ fontSize: 11, color: 'var(--hrms-text-secondary)' }}>
+                      {record.shift?.startTime && record.shift?.endTime 
+                        ? `${record.shift.startTime} - ${record.shift.endTime}` 
+                        : 'No shift'}
+                    </span>
                   ),
                 },
                 {
@@ -256,12 +403,12 @@ export function AttendancePage() {
                   ),
                 },
                 {
-                  title: 'OT (hrs)',
-                  key: 'overtimeHours',
-                  width: 80,
+                  title: 'Remarks',
+                  key: 'remarks',
+                  width: 150,
                   render: (_: unknown, _record: any, index: number) => (
-                    <Form.Item name={['employees', index, 'overtimeHours']} noStyle>
-                      <Input type="number" min={0} placeholder="0" style={{ width: '100%' }} />
+                    <Form.Item name={['employees', index, 'remarks']} noStyle>
+                      <Input placeholder="Optional remarks" style={{ width: '100%' }} />
                     </Form.Item>
                   ),
                 },

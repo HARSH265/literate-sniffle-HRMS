@@ -9,6 +9,13 @@ const list = asyncHandler(async (req: Request, res: Response) => {
   ResponseHandler.paginated(res, result.data, result.meta as PaginationMeta, 'Attendance records fetched successfully');
 });
 
+const getByEmployee = asyncHandler(async (req: Request, res: Response) => {
+  const { employeeId } = req.params;
+  const { startDate, endDate } = req.query;
+  const result = await AttendanceService.getByEmployee(employeeId, startDate as string, endDate as string);
+  ResponseHandler.success(res, result, 'Employee attendance fetched successfully');
+});
+
 const monthlyView = asyncHandler(async (req: Request, res: Response) => {
   const result = await AttendanceService.monthlyView(req.query as Record<string, unknown>);
   ResponseHandler.success(res, result, 'Monthly view fetched successfully');
@@ -34,4 +41,4 @@ const remove = asyncHandler(async (req: Request, res: Response) => {
   ResponseHandler.noContent(res);
 });
 
-export const attendanceController = { list, monthlyView, bulkCreate, create, update, remove };
+export const attendanceController = { list, getByEmployee, monthlyView, bulkCreate, create, update, remove };

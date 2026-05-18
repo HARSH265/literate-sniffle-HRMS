@@ -124,4 +124,8 @@ export const employeeService = {
     const { data } = await apiClient.delete(`/employees/${employeeId}/documents/${docId}`);
     return data;
   },
+
+  getDocumentUrl(employeeId: string, docId: string): string {
+    return `/employees/${employeeId}/documents/${docId}`;
+  },
 };

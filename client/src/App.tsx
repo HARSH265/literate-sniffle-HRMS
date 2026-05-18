@@ -3,7 +3,11 @@ import { AppLayout } from './layout/AppLayout';
 import { ProtectedRoute } from './layout/ProtectedRoute';
 import { ErrorBoundary } from './core/components/ErrorBoundary';
 
-import { LoginPage } from './features/auth/pages/LoginPage';
+import { lazy, Suspense } from 'react';
+import { Spin } from 'antd';
+
+const LoginPage = lazy(() => import('./features/auth/pages/LoginPage').then(m => ({ default: m.LoginPage })));
+
 import { DashboardPage } from './features/auth/pages/DashboardPage';
 import { EmployeesPage } from './features/employees/pages/EmployeesPage';
 import { EmployeeNewPage } from './features/employees/pages/EmployeeNewPage';
@@ -12,56 +16,73 @@ import { EmployeeDetailPage } from './features/employees/pages/EmployeeDetailPag
 import { DepartmentsPage } from './features/departments/pages/DepartmentsPage';
 import { DesignationsPage } from './features/designations/pages/DesignationsPage';
 import { ShiftsPage } from './features/shifts/pages/ShiftsPage';
+import { HolidaysPage } from './features/holidays/pages/HolidaysPage';
 import { AttendancePage } from './features/attendance/pages/AttendancePage';
-
 import { OvertimePage } from './features/overtime/pages/OvertimePage';
 import { PayrollPage } from './features/payroll/pages/PayrollPage';
+import { PayrollDetailsPage } from './features/payroll/pages/PayrollDetailsPage';
 import { SalarySlipsPage } from './features/payroll/pages/SalarySlipsPage';
+import { SalarySlipDetailsPage } from './features/payroll/pages/SalarySlipDetailsPage';
 import { ReportsPage } from './features/reports/pages/ReportsPage';
 import { SettingsPage } from './features/settings/pages/SettingsPage';
 import { UsersPage } from './features/users/pages/UsersPage';
 import { UserNewPage } from './features/users/pages/UserNewPage';
 import { UserEditPage } from './features/users/pages/UserEditPage';
+import { UserActivityPage } from './features/users/pages/UserActivityPage';
 import { AuditLogsPage } from './features/audit/pages/AuditLogsPage';
+import { NotificationsPage } from './features/notifications/pages/NotificationsPage';
 import { RuleBookPage } from './features/rule-book/pages/RuleBookPage';
+
+const PageLoader = () => (
+  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
+    <Spin size="large" />
+  </div>
+);
 
 function App() {
   return (
     <ErrorBoundary>
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route
-          path="/*"
-          element={
-            <ProtectedRoute>
-              <AppLayout />
-            </ProtectedRoute>
-          }
-        >
-          <Route index element={<Navigate to="/dashboard" replace />} />
-          <Route path="dashboard" element={<DashboardPage />} />
-          <Route path="employees" element={<EmployeesPage />} />
-          <Route path="employees/new" element={<EmployeeNewPage />} />
-          <Route path="employees/:id" element={<EmployeeDetailPage />} />
-          <Route path="employees/:id/edit" element={<EmployeeEditPage />} />
-          <Route path="departments" element={<DepartmentsPage />} />
-          <Route path="designations" element={<DesignationsPage />} />
-          <Route path="shifts" element={<ShiftsPage />} />
-          
-          <Route path="attendance" element={<AttendancePage />} />
-          <Route path="overtime" element={<OvertimePage />} />
-          <Route path="payroll" element={<PayrollPage />} />
-          <Route path="salary-slips" element={<SalarySlipsPage />} />
-          <Route path="reports" element={<ReportsPage />} />
-          <Route path="settings" element={<SettingsPage />} />
-          <Route path="rule-book" element={<RuleBookPage />} />
-          <Route path="users" element={<UsersPage />} />
-          <Route path="users/new" element={<UserNewPage />} />
-          <Route path="users/:id/edit" element={<UserEditPage />} />
-          <Route path="audit-logs" element={<AuditLogsPage />} />
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
-        </Route>
-      </Routes>
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route
+            path="/*"
+            element={
+              <ProtectedRoute>
+                <AppLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<Navigate to="/dashboard" replace />} />
+            <Route path="dashboard" element={<DashboardPage />} />
+            <Route path="employees" element={<EmployeesPage />} />
+            <Route path="employees/new" element={<EmployeeNewPage />} />
+            <Route path="employees/:id" element={<EmployeeDetailPage />} />
+            <Route path="employees/:id/edit" element={<EmployeeEditPage />} />
+            <Route path="departments" element={<DepartmentsPage />} />
+            <Route path="designations" element={<DesignationsPage />} />
+            <Route path="shifts" element={<ShiftsPage />} />
+            <Route path="holidays" element={<HolidaysPage />} />
+            <Route path="attendance" element={<AttendancePage />} />
+            <Route path="overtime" element={<OvertimePage />} />
+            <Route path="payroll" element={<PayrollPage />} />
+            <Route path="payroll/:id" element={<PayrollDetailsPage />} />
+            <Route path="salary-slips" element={<SalarySlipsPage />} />
+            <Route path="salary-slips/:id" element={<SalarySlipDetailsPage />} />
+            <Route path="reports" element={<ReportsPage />} />
+            <Route path="settings" element={<SettingsPage />} />
+            <Route path="rule-book" element={<RuleBookPage />} />
+            <Route path="users" element={<UsersPage />} />
+            <Route path="users/new" element={<UserNewPage />} />
+            <Route path="users/:id" element={<UsersPage />} />
+            <Route path="users/:id/edit" element={<UserEditPage />} />
+            <Route path="users/:id/activity" element={<UserActivityPage />} />
+            <Route path="audit-logs" element={<AuditLogsPage />} />
+            <Route path="notifications" element={<NotificationsPage />} />
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          </Route>
+        </Routes>
+      </Suspense>
     </ErrorBoundary>
   );
 }

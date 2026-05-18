@@ -41,4 +41,11 @@ export class ResponseHandler {
   static noContent(res: Response): void {
     res.status(204).send();
   }
+
+  static error(res: Response, message = 'Error', statusCode = 400): void {
+    res.status(statusCode).json({
+      success: false,
+      message,
+    });
+  }
 }

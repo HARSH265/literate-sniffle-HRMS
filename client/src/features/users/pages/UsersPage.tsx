@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Table, Button, Input, message, Modal, Form, Select, Tooltip } from 'antd';
+import { Table, Button, Input, message, Modal, Form, Select, Tooltip, Popconfirm, Upload, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, SearchOutlined, DownloadOutlined, UploadOutlined, LockOutlined, CheckCircleOutlined, EyeOutlined } from '@ant-design/icons';
 import { PageHeader } from '../../../core/components/PageHeader';
 import { userService, User, CreateUser } from '../services/userService';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import dayjs from 'dayjs';
+import * as XLSX from 'xlsx';
 
 const ROLE_OPTIONS = [
   { label: 'Super Admin', value: 'super-admin' },
@@ -39,11 +41,14 @@ export function UsersPage() {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [importFile, setImportFile] = useState<any>(null);
   const queryClient = useQueryClient();
 
-const { data, isLoading, isFetching } = useQuery({
-    queryKey: ['users', page, limit, search],
-    queryFn: () => userService.list({ page, limit, search }),
+  const { data, isLoading, isFetching } = useQuery({
+    queryKey: ['users', page, limit, search, statusFilter],
+    queryFn: () => userService.list({ page, limit, search, ...(statusFilter ? { status: statusFilter } : {}) }),
     staleTime: 5 * 60 * 1000,
   });
 
@@ -59,11 +64,72 @@ const { data, isLoading, isFetching } = useQuery({
     onError: (err: any) => message.error(err?.response?.data?.message || 'Failed to update'),
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: (id: string) => userService.delete(id),
-    onSuccess: () => { message.success('User deleted'); queryClient.invalidateQueries({ queryKey: ['users'] }); },
-    onError: (err: any) => message.error(err?.response?.data?.message || 'Failed to delete'),
+  const deactivateMutation = useMutation({
+    mutationFn: (id: string) => userService.deactivate(id),
+    onSuccess: () => { message.success('User deactivated'); queryClient.invalidateQueries({ queryKey: ['users'] }); },
+    onError: (err: any) => message.error(err?.response?.data?.message || 'Failed to deactivate'),
   });
+
+  const activateMutation = useMutation({
+    mutationFn: (id: string) => userService.activate(id),
+    onSuccess: () => { message.success('User activated'); queryClient.invalidateQueries({ queryKey: ['users'] }); },
+    onError: (err: any) => message.error(err?.response?.data?.message || 'Failed to activate'),
+  });
+
+  const handleExport = async () => {
+    try {
+      const result = await userService.exportUsers();
+      if (result.data?.length) {
+        const ws = XLSX.utils.json_to_sheet(result.data);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Users');
+        XLSX.writeFile(wb, `users-export-${dayjs().format('YYYY-MM-DD')}.xlsx`);
+        message.success(`Exported ${result.data.length} users`);
+      }
+    } catch {
+      message.error('Failed to export users');
+    }
+  };
+
+  const handleImport = async () => {
+    if (!importFile) {
+      message.warning('Please select a file first');
+      return;
+    }
+    try {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const data = new Uint8Array(e.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const json = XLSX.utils.sheet_to_json(sheet) as any[];
+
+        const users = json.map(row => ({
+          name: row.Name || row.name,
+          email: row.Email || row.email,
+          password: row.Password || row.password || 'TempPass123',
+          role: row.Role || row.role || 'hr-staff',
+        })).filter(u => u.name && u.email);
+
+        if (users.length === 0) {
+          message.warning('No valid users found in file');
+          return;
+        }
+
+        const result = await userService.importUsers(users);
+        message.success(`Imported: ${result.data.created} created, ${result.data.updated} updated`);
+        if (result.data.errors.length > 0) {
+          message.warning(`${result.data.errors.length} errors occurred`);
+        }
+        setImportModalOpen(false);
+        setImportFile(null);
+        queryClient.invalidateQueries({ queryKey: ['users'] });
+      };
+      reader.readAsArrayBuffer(importFile);
+    } catch {
+      message.error('Failed to import users');
+    }
+  };
 
   const RoleTag = ({ role }: { role: string }) => (
     <span style={{ display: 'inline-flex', alignItems: 'center', padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: roleBg[role] || '#f1f5f9', color: roleColor[role] || '#64748b', textTransform: 'capitalize' }}>
@@ -75,6 +141,7 @@ const { data, isLoading, isFetching } = useQuery({
     {
       title: 'User',
       key: 'user',
+      width: 220,
       render: (_: unknown, r: User) => (
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={{ width: 36, height: 36, borderRadius: 8, background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: 13, fontWeight: 700 }}>
@@ -87,23 +154,51 @@ const { data, isLoading, isFetching } = useQuery({
         </div>
       ),
     },
-    { title: 'Role', dataIndex: 'role', key: 'role', render: (role: string) => <RoleTag role={role} /> },
+    { title: 'Role', dataIndex: 'role', key: 'role', width: 140, render: (role: string) => <RoleTag role={role} /> },
     {
       title: 'Status',
       dataIndex: 'isActive',
       key: 'isActive',
-      width: 110,
-      render: (a: boolean) => <span className={`status-badge ${a ? 'status-active' : 'status-inactive'}`}>{a ? 'Active' : 'Inactive'}</span>,
+      width: 100,
+      render: (a: boolean) => (
+        <Tag color={a ? 'green' : 'default'} style={{ borderRadius: 12, padding: '0 8px' }}>
+          {a ? 'Active' : 'Inactive'}
+        </Tag>
+      ),
     },
-{
+    {
+      title: 'Last Login',
+      key: 'lastLogin',
+      width: 140,
+      render: (_: unknown, r: User) => (
+        <span style={{ fontSize: 12, color: 'var(--hrms-text-muted)' }}>
+          {r.lastLogin ? dayjs(r.lastLogin).format('DD MMM YY, HH:mm') : 'Never'}
+        </span>
+      ),
+    },
+    {
       title: '',
       key: 'actions',
-      width: 100,
-      fixed: 'right',
+      width: 140,
       render: (_: unknown, r: User) => (
         <div className="action-group">
-          <Tooltip title="Edit"><Button type="text" size="small" icon={<EditOutlined />} onClick={() => { setEditingId(r.id); form.setFieldsValue({ name: r.name, email: r.email, role: r.role }); setIsModalOpen(true); }} style={{ color: 'var(--hrms-text-muted)', borderRadius: 6 }} /></Tooltip>
-          <Tooltip title="Delete"><Button type="text" size="small" icon={<DeleteOutlined />} onClick={() => deleteMutation.mutate(r.id)} style={{ color: '#ef4444', borderRadius: 6 }} /></Tooltip>
+          <Tooltip title="View Activity">
+            <Button type="text" size="small" icon={<EyeOutlined />} onClick={() => navigate(`/users/${r.id}/activity`)} style={{ color: 'var(--hrms-text-muted)', borderRadius: 6 }} />
+          </Tooltip>
+          <Tooltip title="Edit">
+            <Button type="text" size="small" icon={<EditOutlined />} onClick={() => { setEditingId(r.id); form.setFieldsValue({ name: r.name, email: r.email, role: r.role }); setIsModalOpen(true); }} style={{ color: 'var(--hrms-text-muted)', borderRadius: 6 }} />
+          </Tooltip>
+          {r.isActive ? (
+            <Tooltip title="Deactivate">
+              <Popconfirm title="Deactivate this user?" onConfirm={() => deactivateMutation.mutate(r.id)}>
+                <Button type="text" size="small" icon={<LockOutlined />} style={{ color: '#f59e0b', borderRadius: 6 }} />
+              </Popconfirm>
+            </Tooltip>
+          ) : (
+            <Tooltip title="Activate">
+              <Button type="text" size="small" icon={<CheckCircleOutlined />} onClick={() => activateMutation.mutate(r.id)} style={{ color: '#22c55e', borderRadius: 6 }} />
+            </Tooltip>
+          )}
         </div>
       ),
     },
@@ -111,19 +206,30 @@ const { data, isLoading, isFetching } = useQuery({
 
   return (
     <div style={{ padding: '0 4px' }}>
-      <PageHeader title="Users" subtitle="Manage system users and their access roles" actions={<Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/users/new')}>Add User</Button>} />
+      <PageHeader
+        title="Users"
+        subtitle="Manage system users and their access roles"
+        actions={
+          <div style={{ display: 'flex', gap: 8 }}>
+            <Button icon={<DownloadOutlined />} onClick={handleExport}>Export</Button>
+            <Button icon={<UploadOutlined />} onClick={() => setImportModalOpen(true)}>Import</Button>
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/users/new')}>Add User</Button>
+          </div>
+        }
+      />
 
       <div className="hrms-table-card">
         <div className="hrms-table-toolbar">
           <div className="hrms-table-toolbar-left">
             <Input.Search placeholder="Search users..." onSearch={(val) => { setSearch(val); setPage(1); }} style={{ width: 260 }} allowClear prefix={<SearchOutlined style={{ color: 'var(--hrms-text-muted)' }} />} enterButton={false} loading={isFetching} />
+            <Select placeholder="Status" allowClear style={{ width: 120 }} value={statusFilter || undefined} onChange={(val) => { setStatusFilter(val || ''); setPage(1); }} options={[{ label: 'Active', value: 'active' }, { label: 'Inactive', value: 'inactive' }]} />
           </div>
           <div className="hrms-table-toolbar-right">
             <span style={{ fontSize: 13, color: 'var(--hrms-text-muted)' }}>{data?.meta?.total ?? 0} users</span>
           </div>
         </div>
 
-        <Table columns={columns} dataSource={data?.data} rowKey="id" loading={isLoading} scroll={{ x: 700 }}
+        <Table columns={columns} dataSource={data?.data} rowKey="id" loading={isLoading} size="small" scroll={{ x: 800 }}
           pagination={{ current: page, defaultPageSize: 10, pageSize: limit, total: data?.meta?.total ?? 0, onChange: (p, size) => { setPage(p); setLimit(size ?? 10); }, showSizeChanger: true, pageSizeOptions: ['10', '20', '50', '100'], showTotal: (t, r) => `${r[0]}–${r[1]} of ${t}` }}
         />
       </div>
@@ -149,6 +255,23 @@ const { data, isLoading, isFetching } = useQuery({
             <Select placeholder="Select role" options={ROLE_OPTIONS} style={{ height: 40 }} />
           </Form.Item>
         </Form>
+      </Modal>
+
+      <Modal title="Import Users" open={importModalOpen} onOk={handleImport} onCancel={() => { setImportModalOpen(false); setImportFile(null); }} okText="Import">
+        <div style={{ padding: '16px 0' }}>
+          <p style={{ marginBottom: 16, color: 'var(--hrms-text-secondary)' }}>
+            Upload an Excel file with columns: <strong>Name, Email, Role, Password</strong>
+          </p>
+          <Upload beforeUpload={(file) => { setImportFile(file); return false; }} accept=".xlsx,.xls">
+            <Button icon={<UploadOutlined />}>Select Excel File</Button>
+          </Upload>
+          {importFile && <p style={{ marginTop: 8, fontSize: 12 }}>Selected: {importFile.name}</p>}
+          <div style={{ marginTop: 16, padding: 12, background: '#f5f5f5', borderRadius: 8 }}>
+            <p style={{ fontSize: 12, margin: 0, color: 'var(--hrms-text-muted)' }}>
+              <strong>Note:</strong> Existing users (matched by email) will be updated. New users will be created with temporary password.
+            </p>
+          </div>
+        </div>
       </Modal>
     </div>
   );

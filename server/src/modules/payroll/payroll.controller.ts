@@ -3,9 +3,9 @@ import { PayrollService } from './payroll.service.js';
 import { ResponseHandler } from '../../core/response/ResponseHandler.js';
 import { asyncHandler } from '../../core/errors/asyncHandler.js';
 
-const listRuns = asyncHandler(async (_req: Request, res: Response) => {
-  const result = await PayrollService.listRuns();
-  ResponseHandler.success(res, result, 'Payroll runs fetched successfully');
+const listRuns = asyncHandler(async (req: Request, res: Response) => {
+  const result = await PayrollService.listRuns(req.query);
+  ResponseHandler.paginated(res, result.data, result.meta, 'Payroll runs fetched successfully');
 });
 
 const runPayroll = asyncHandler(async (req: Request, res: Response) => {
@@ -27,4 +27,34 @@ const getRunDetails = asyncHandler(async (req: Request, res: Response) => {
   ResponseHandler.success(res, result, 'Payroll details fetched successfully');
 });
 
-export const payrollController = { listRuns, runPayroll, finalizeRun, getRunDetails };
+const unfinalizeRun = asyncHandler(async (req: Request, res: Response) => {
+  const result = await PayrollService.unfinalizeRun(req.params.id, req.user!.id, req.body.reason);
+  ResponseHandler.success(res, result, 'Payroll unfinalized successfully');
+});
+
+const updatePayrollItem = asyncHandler(async (req: Request, res: Response) => {
+  const result = await PayrollService.updatePayrollItem(req.params.id, req.body, req.user!.id);
+  ResponseHandler.success(res, result, 'Payroll item updated successfully');
+});
+
+const deleteRun = asyncHandler(async (req: Request, res: Response) => {
+  await PayrollService.deleteRun(req.params.id, req.user!.id);
+  ResponseHandler.noContent(res);
+});
+
+const getByEmployee = asyncHandler(async (req: Request, res: Response) => {
+  const { employeeId } = req.params;
+  const result = await PayrollService.getByEmployee(employeeId);
+  ResponseHandler.success(res, result, 'Employee payroll history fetched successfully');
+});
+
+export const payrollController = { 
+  listRuns, 
+  runPayroll, 
+  finalizeRun, 
+  getRunDetails,
+  unfinalizeRun,
+  updatePayrollItem,
+  deleteRun,
+  getByEmployee,
+};

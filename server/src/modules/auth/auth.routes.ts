@@ -9,6 +9,7 @@ const router = Router();
 router.post('/login', validate(loginSchema), authController.login);
 router.post('/refresh', validate(refreshTokenSchema), authController.refreshToken);
 router.post('/logout', authenticate, authController.logout);
+router.post('/logout-all-devices', authenticate, authController.logoutAllDevices);
 router.get('/me', authenticate, authController.getMe);
 router.post('/change-password', authenticate, validate(changePasswordSchema), authController.changePassword);
 

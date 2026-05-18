@@ -15,8 +15,13 @@ export const salarySlipService = {
     return data;
   },
 
-  async generatePdf(runId: string): Promise<{ success: boolean; data: any }> {
-    const { data } = await apiClient.get(`/salary-slips/${runId}/pdf`);
+  async generatePdf(runId: string, employeeId?: string): Promise<{ success: boolean; data: any }> {
+    const { data } = await apiClient.get(`/salary-slips/${runId}/pdf`, { params: employeeId ? { employeeId } : undefined });
+    return data;
+  },
+
+  async preview(runId: string, employeeId?: string): Promise<{ success: boolean; data: any }> {
+    const { data } = await apiClient.get(`/salary-slips/${runId}/preview`, { params: employeeId ? { employeeId } : undefined });
     return data;
   },
 };

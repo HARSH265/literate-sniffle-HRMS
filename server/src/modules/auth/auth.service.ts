@@ -3,6 +3,25 @@ import User from '../../models/User.model.js';
 import { AppError } from '../../core/errors/AppError.js';
 import { env } from '../../config/env.js';
 import { AuditService } from '../../core/audit/AuditService.js';
+import CompanySettings from '../../models/CompanySettings.model.js';
+
+async function getTokenExpiry(): Promise<string> {
+  try {
+    const settings = await CompanySettings.findOne().lean() as any;
+    return settings?.authConfig?.tokenExpiry || '24h';
+  } catch {
+    return '24h';
+  }
+}
+
+async function getRefreshTokenExpiry(): Promise<string> {
+  try {
+    const settings = await CompanySettings.findOne().lean() as any;
+    return settings?.authConfig?.refreshTokenExpiry || '7d';
+  } catch {
+    return '7d';
+  }
+}
 
 export class AuthService {
   static async login(email: string, password: string, ipAddress?: string, userAgent?: string) {
@@ -41,16 +60,19 @@ export class AuthService {
       lockUntil: null,
     });
 
+    const tokenExpiry = await getTokenExpiry();
+    const refreshTokenExpiry = await getRefreshTokenExpiry();
+
     const token = jwt.sign(
       { id: user._id.toString(), email: user.email, name: user.name, role: user.role },
       env.JWT_SECRET,
-      { expiresIn: '24h', algorithm: 'HS256' },
+      { expiresIn: tokenExpiry as jwt.SignOptions['expiresIn'], algorithm: 'HS256' },
     );
 
     const refreshToken = jwt.sign(
       { id: user._id.toString() },
       env.JWT_SECRET,
-      { expiresIn: '7d', algorithm: 'HS256' },
+      { expiresIn: refreshTokenExpiry as jwt.SignOptions['expiresIn'], algorithm: 'HS256' },
     );
 
     await User.findByIdAndUpdate(user._id, { refreshToken });
@@ -111,7 +133,21 @@ export class AuthService {
       throw new AppError('Current password is incorrect', 400);
     }
 
+    if (await user.isPasswordInHistory(newPassword)) {
+      throw new AppError('Cannot reuse any of your last 5 passwords. Please choose a different password.', 400);
+    }
+
+    const settings = await CompanySettings.findOne().lean() as any;
+    const passwordHistoryCount = settings?.authConfig?.passwordHistoryCount || 5;
+    
+    const previousPasswords = user.passwordHistory || [];
+    previousPasswords.unshift(user.password);
+    if (previousPasswords.length > passwordHistoryCount) {
+      previousPasswords.pop();
+    }
+
     user.password = newPassword;
+    user.passwordHistory = previousPasswords;
     await user.save();
 
     await AuditService.log({
@@ -140,16 +176,19 @@ export class AuthService {
       throw new AppError('Account is deactivated', 401);
     }
 
+    const tokenExpiry = await getTokenExpiry();
+    const refreshTokenExpiry = await getRefreshTokenExpiry();
+
     const newToken = jwt.sign(
       { id: user._id.toString(), email: user.email, name: user.name, role: user.role },
       env.JWT_SECRET,
-      { expiresIn: '24h', algorithm: 'HS256' },
+      { expiresIn: tokenExpiry as jwt.SignOptions['expiresIn'], algorithm: 'HS256' },
     );
 
     const newRefreshToken = jwt.sign(
       { id: user._id.toString() },
       env.JWT_SECRET,
-      { expiresIn: '7d', algorithm: 'HS256' },
+      { expiresIn: refreshTokenExpiry as jwt.SignOptions['expiresIn'], algorithm: 'HS256' },
     );
 
     await User.findByIdAndUpdate(user._id, { refreshToken: newRefreshToken });
@@ -162,5 +201,20 @@ export class AuthService {
 
   static async logout(userId: string) {
     await User.findByIdAndUpdate(userId, { refreshToken: null });
+  }
+
+  static async logoutAllDevices(userId: string, ipAddress?: string, userAgent?: string) {
+    await User.findByIdAndUpdate(userId, { refreshToken: null });
+
+    await AuditService.log({
+      action: 'logout-all-devices',
+      module: 'auth',
+      userId,
+      details: { action: 'logged out from all devices' },
+      ipAddress,
+      userAgent,
+    });
+
+    return { message: 'Logged out from all devices successfully' };
   }
 }

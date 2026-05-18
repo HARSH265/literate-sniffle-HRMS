@@ -6,6 +6,67 @@ import { CACHE_KEYS } from '../../core/cache/cache.keys.js';
 import { AuditService } from '../../core/audit/AuditService.js';
 import { PaginationUtil, PaginationMeta } from '../../core/utils/PaginationUtil.js';
 
+function parseTime(time: string): number {
+  const [h, m] = time.split(':').map(Number);
+  return h * 60 + m;
+}
+
+function rangesOverlap(start1: number, end1: number, start2: number, end2: number): boolean {
+  if (start1 < start2) {
+    return end1 > start2;
+  } else {
+    return end2 > start1;
+  }
+}
+
+function checkShiftOverlap(
+  newStart: string,
+  newEnd: string,
+  newId?: string,
+  isNightShift: boolean = false
+): Promise<{ hasOverlap: boolean; conflictingShifts: string[] }> {
+  return new Promise(async (resolve) => {
+    const newStartMin = parseTime(newStart);
+    const newEndMin = parseTime(newEnd);
+
+    const allShifts = await Shift.find({ isActive: true }).lean();
+    const conflicting: string[] = [];
+
+    for (const shift of allShifts) {
+      if (newId && String((shift as any)._id) === newId) continue;
+
+      const existingStart = parseTime(String(shift.startTime));
+      const existingEnd = parseTime(String(shift.endTime));
+      const existingIsNight = String(shift.startTime) > String(shift.endTime);
+
+      let overlap = false;
+
+      if (isNightShift && existingIsNight) {
+        const newStartAfterMidnight = newStartMin;
+        const newEndAfterMidnight = newEndMin > newStartMin ? newEndMin : newEndMin + 24 * 60;
+        const existingStartAfterMidnight = existingStart;
+        const existingEndAfterMidnight = existingEnd > existingStart ? existingEnd : existingEnd + 24 * 60;
+
+        overlap = rangesOverlap(newStartAfterMidnight, newEndAfterMidnight, existingStartAfterMidnight, existingEndAfterMidnight);
+      } else if (isNightShift) {
+        const newEndAfterMidnight = newEndMin > newStartMin ? newEndMin : newEndMin + 24 * 60;
+        overlap = newStartMin < existingEnd || newEndAfterMidnight > existingStart;
+      } else if (existingIsNight) {
+        const existingEndAfterMidnight = existingEnd > existingStart ? existingEnd : existingEnd + 24 * 60;
+        overlap = existingStart < newEndMin || existingEndAfterMidnight > newStartMin;
+      } else {
+        overlap = rangesOverlap(newStartMin, newEndMin, existingStart, existingEnd);
+      }
+
+      if (overlap) {
+        conflicting.push(shift.name);
+      }
+    }
+
+    resolve({ hasOverlap: conflicting.length > 0, conflictingShifts: conflicting });
+  });
+}
+
 export class ShiftsService {
   static async list(queryParams: Record<string, unknown>): Promise<{ data: unknown[]; meta: PaginationMeta }> {
     const { page, limit, sort, order, search } = PaginationUtil.parseFromObject(queryParams);
@@ -65,6 +126,19 @@ export class ShiftsService {
       throw new AppError('Shift name already exists', 400);
     }
 
+    const startTime = data.startTime as string;
+    const endTime = data.endTime as string;
+
+    const isNightShift = startTime > endTime;
+    if (!isNightShift && startTime >= endTime) {
+      throw new AppError('End time must be greater than start time', 400);
+    }
+
+    const overlapCheck = await checkShiftOverlap(startTime, endTime);
+    if (overlapCheck.hasOverlap) {
+      throw new AppError(`Shift timing overlaps with: ${overlapCheck.conflictingShifts.join(', ')}`, 400);
+    }
+
     const shift = await Shift.create({
       ...data,
       isActive: true,
@@ -97,6 +171,13 @@ export class ShiftsService {
       const isNightShift = startTime > endTime;
       if (!isNightShift && startTime >= endTime) {
         throw new AppError('End time must be greater than start time', 400);
+      }
+    }
+
+    if (data.startTime || data.endTime) {
+      const overlapCheck = await checkShiftOverlap(startTime, endTime, id);
+      if (overlapCheck.hasOverlap) {
+        throw new AppError(`Shift timing overlaps with: ${overlapCheck.conflictingShifts.join(', ')}`, 400);
       }
     }
 

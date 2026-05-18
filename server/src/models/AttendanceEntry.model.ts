@@ -7,7 +7,8 @@ export interface IAttendanceEntry extends Document {
   status: 'present' | 'absent' | 'half-day' | 'leave' | 'weekly-off' | 'holiday';
   inTime?: string;
   outTime?: string;
-  overtimeHours: number;
+  isLate?: boolean;
+  isLateCount?: number;
   remarks?: string;
   source: 'manual-register-entry';
   enteredBy: mongoose.Types.ObjectId;
@@ -28,7 +29,8 @@ const AttendanceEntrySchema = new Schema<IAttendanceEntry>(
     },
     inTime: { type: String },
     outTime: { type: String },
-    overtimeHours: { type: Number, default: 0, min: 0 },
+    isLate: { type: Boolean, default: false },
+    isLateCount: { type: Number, default: 0 },
     remarks: { type: String },
     source: { type: String, default: 'manual-register-entry' },
     enteredBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },

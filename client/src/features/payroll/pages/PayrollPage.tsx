@@ -1,7 +1,8 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '../../../core/components/PageHeader';
-import { Table, Button, Modal, Form, DatePicker, message, Tag, Card, Row, Col, Statistic } from 'antd';
-import { PlayCircleOutlined, CheckCircleOutlined, EyeOutlined } from '@ant-design/icons';
+import { Table, Button, Modal, Form, DatePicker, message, Tag, Popconfirm } from 'antd';
+import { PlayCircleOutlined, CheckCircleOutlined, EyeOutlined, DeleteOutlined, UndoOutlined } from '@ant-design/icons';
 import { payrollService, PayrollRun } from '../services/payrollService';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
@@ -12,15 +13,16 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export function PayrollPage() {
+  const navigate = useNavigate();
   const [isRunModalOpen, setIsRunModalOpen] = useState(false);
-  const [selectedRun, setSelectedRun] = useState<any>(null);
-  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [form] = Form.useForm();
   const queryClient = useQueryClient();
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
 
   const { data: runsData, isLoading } = useQuery({
-    queryKey: ['payroll-runs'],
-    queryFn: () => payrollService.listRuns(),
+    queryKey: ['payroll-runs', page, limit],
+    queryFn: () => payrollService.listRuns({ page, limit }),
     refetchOnWindowFocus: false,
   });
 
@@ -31,8 +33,7 @@ export function PayrollPage() {
       setIsRunModalOpen(false);
       form.resetFields();
       queryClient.invalidateQueries({ queryKey: ['payroll-runs'] });
-      setSelectedRun(res.data);
-      setIsDetailsOpen(true);
+      navigate(`/payroll/${res.data.id}`);
     },
     onError: (err: any) => message.error(err?.response?.data?.message || 'Failed to run payroll'),
   });
@@ -46,6 +47,24 @@ export function PayrollPage() {
     onError: (err: any) => message.error(err?.response?.data?.message || 'Failed to finalize'),
   });
 
+  const unfinalizeMutation = useMutation({
+    mutationFn: (id: string) => payrollService.unfinalizeRun(id),
+    onSuccess: () => {
+      message.success('Payroll unfinalized successfully');
+      queryClient.invalidateQueries({ queryKey: ['payroll-runs'] });
+    },
+    onError: (err: any) => message.error(err?.response?.data?.message || 'Failed to unfinalize'),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => payrollService.deleteRun(id),
+    onSuccess: () => {
+      message.success('Payroll run deleted');
+      queryClient.invalidateQueries({ queryKey: ['payroll-runs'] });
+    },
+    onError: (err: any) => message.error(err?.response?.data?.message || 'Failed to delete'),
+  });
+
   const handleRun = () => {
     form.validateFields().then((values) => {
       const { monthYear } = values;
@@ -55,10 +74,26 @@ export function PayrollPage() {
     });
   };
 
-  const handleViewDetails = async (run: PayrollRun) => {
-    const result = await payrollService.getRunDetails(run.id);
-    setSelectedRun(result.data);
-    setIsDetailsOpen(true);
+  const handleFinalize = (id: string) => {
+    Modal.confirm({
+      title: 'Finalize Payroll',
+      content: 'Are you sure you want to finalize this payroll? This action cannot be undone.',
+      okText: 'Finalize',
+      onOk: () => finalizeMutation.mutate(id),
+    });
+  };
+
+  const handleUnfinalize = (id: string) => {
+    Modal.confirm({
+      title: 'Unfinalize Payroll',
+      content: 'Are you sure you want to unfinalize this payroll?',
+      okText: 'Unfinalize',
+      onOk: () => unfinalizeMutation.mutate(id),
+    });
+  };
+
+  const handleDelete = (id: string) => {
+    deleteMutation.mutate(id);
   };
 
   const columns = [
@@ -86,32 +121,29 @@ export function PayrollPage() {
       render: (v: number) => <span style={{ fontWeight: 600, color: 'var(--hrms-success)' }}>₹{v.toLocaleString()}</span>,
     },
     {
-      title: '',
+      title: 'Actions',
       key: 'actions',
       render: (_: unknown, record: PayrollRun) => (
         <div style={{ display: 'flex', gap: 8 }}>
-          <Button size="small" icon={<EyeOutlined />} onClick={() => handleViewDetails(record)}>View</Button>
+          <Button size="small" icon={<EyeOutlined />} onClick={() => navigate(`/payroll/${record.id}`)}>View</Button>
           {record.status === 'draft' && (
-            <Button size="small" type="primary" icon={<CheckCircleOutlined />} onClick={() => finalizeMutation.mutate(record.id)}>
-              Finalize
+            <>
+              <Button size="small" type="primary" icon={<CheckCircleOutlined />} onClick={() => handleFinalize(record.id)}>
+                Finalize
+              </Button>
+              <Popconfirm title="Delete this payroll run?" onConfirm={() => handleDelete(record.id)} okText="Delete" okButtonProps={{ danger: true }}>
+                <Button size="small" danger icon={<DeleteOutlined />} />
+              </Popconfirm>
+            </>
+          )}
+          {record.status === 'finalized' && (
+            <Button size="small" icon={<UndoOutlined />} onClick={() => handleUnfinalize(record.id)}>
+              Unfinalize
             </Button>
           )}
         </div>
       ),
     },
-  ];
-
-  const detailColumns = [
-    { title: 'Employee', key: 'employee', render: (_: any, r: any) => <div><div style={{ fontWeight: 500 }}>{r.employee.name}</div><div style={{ fontSize: 11, color: '#888' }}>{r.employee.code}</div></div> },
-    { title: 'Present', dataIndex: 'presentDays', key: 'presentDays' },
-    { title: 'Absent', dataIndex: 'absentDays', key: 'absentDays' },
-    { title: 'Half Day', dataIndex: 'halfDays', key: 'halfDays' },
-    { title: 'OT Hours', dataIndex: 'overtimeHours', key: 'overtimeHours' },
-    { title: 'Basic', dataIndex: 'basicEarnings', key: 'basicEarnings', render: (v: number) => `₹${v.toLocaleString()}` },
-    { title: 'Allowances', dataIndex: 'allowancesTotal', key: 'allowancesTotal', render: (v: number) => `₹${v.toLocaleString()}` },
-    { title: 'OT Pay', dataIndex: 'overtimeAmount', key: 'overtimeAmount', render: (v: number) => `₹${v.toLocaleString()}` },
-    { title: 'Deductions', dataIndex: 'totalDeductions', key: 'totalDeductions', render: (v: number) => `₹${v.toLocaleString()}` },
-    { title: 'Net Pay', dataIndex: 'netPay', key: 'netPay', render: (v: number) => <span style={{ fontWeight: 600, color: 'var(--hrms-success)' }}>₹{v.toLocaleString()}</span> },
   ];
 
   return (
@@ -128,10 +160,16 @@ export function PayrollPage() {
 
       <Table
         columns={columns}
-        dataSource={runsData?.data}
+        dataSource={(runsData as any)?.data || []}
         rowKey="id"
         loading={isLoading}
-        pagination={{ pageSize: 10 }}
+        pagination={{
+          current: page,
+          pageSize: limit,
+          total: (runsData as any)?.meta?.total ?? 0,
+          onChange: (p, size) => { setPage(p); setLimit(size ?? 10); },
+          showSizeChanger: true,
+        }}
       />
 
       <Modal
@@ -150,37 +188,6 @@ export function PayrollPage() {
             This will process payroll for all active employees based on their attendance and overtime records.
           </p>
         </Form>
-      </Modal>
-
-      <Modal
-        title={`Payroll Details - ${selectedRun ? dayjs(selectedRun.month + '-01').format('MMMM YYYY') : ''}`}
-        open={isDetailsOpen}
-        onCancel={() => setIsDetailsOpen(false)}
-        footer={null}
-        width={900}
-      >
-        {selectedRun && (
-          <>
-            <Row gutter={16} style={{ marginBottom: 16 }}>
-              <Col span={6}>
-                <Card size="small"><Statistic title="Employees" value={selectedRun.totalEmployees} /></Card>
-              </Col>
-              <Col span={6}>
-                <Card size="small"><Statistic title="Total Net Pay" value={selectedRun.totalNetPay} prefix="₹" /></Card>
-              </Col>
-              <Col span={6}>
-                <Card size="small"><Statistic title="Status" value={selectedRun.status} /></Card>
-              </Col>
-            </Row>
-            <Table
-              columns={detailColumns}
-              dataSource={selectedRun.items}
-              rowKey={(r: any) => r.employee?.id || Math.random()}
-              size="small"
-              pagination={false}
-            />
-          </>
-        )}
       </Modal>
     </div>
   );

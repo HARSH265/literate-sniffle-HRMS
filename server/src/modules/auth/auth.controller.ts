@@ -53,9 +53,18 @@ const logout = asyncHandler(async (req: Request, res: Response) => {
   ResponseHandler.success(res, null, 'Logout successful');
 });
 
+const logoutAllDevices = asyncHandler(async (req: Request, res: Response) => {
+  const ipAddress = req.ip || req.socket.remoteAddress;
+  const userAgent = req.headers['user-agent'];
+  const result = await AuthService.logoutAllDevices(req.user!.id, ipAddress, userAgent);
+  res.clearCookie('jwt');
+  ResponseHandler.success(res, null, result.message);
+});
+
 export const authController = {
   login,
   logout,
+  logoutAllDevices,
   getMe,
   changePassword,
   refreshToken,

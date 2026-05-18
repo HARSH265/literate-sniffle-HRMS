@@ -1,6 +1,27 @@
 import CompanySettings from '../../models/CompanySettings.model.js';
 import { AuditService } from '../../core/audit/AuditService.js';
 
+function getChangedFields(oldObj: any, newObj: any, prefix = ''): Record<string, { old: any; new: any }> {
+  const changes: Record<string, { old: any; new: any }> = {};
+  
+  if (!oldObj) oldObj = {};
+  if (!newObj) newObj = {};
+  
+  const allKeys = new Set([...Object.keys(oldObj || {}), ...Object.keys(newObj || {})]);
+  
+  for (const key of allKeys) {
+    const oldVal = oldObj[key];
+    const newVal = newObj[key];
+    
+    if (JSON.stringify(oldVal) !== JSON.stringify(newVal)) {
+      const fieldName = prefix ? `${prefix}.${key}` : key;
+      changes[fieldName] = { old: oldVal, new: newVal };
+    }
+  }
+  
+  return changes;
+}
+
 export class SettingsService {
   static async get(): Promise<Record<string, unknown>> {
     let settings = await CompanySettings.findOne().lean() as any;
@@ -19,35 +40,127 @@ export class SettingsService {
       settings = await CompanySettings.create({});
     }
 
+    const oldSettings = settings.toObject();
+    const changes: Record<string, { old: any; new: any }> = {};
+
     if (data.companyInfo) {
-      (settings as any).companyInfo = { ...(settings as any).companyInfo.toObject(), ...data.companyInfo };
+      const companyChanges = getChangedFields(oldSettings.companyInfo, data.companyInfo, 'companyInfo');
+      Object.assign(changes, companyChanges);
+      (settings as any).companyInfo = { ...(settings as any).companyInfo?.toObject?.() || {}, ...data.companyInfo };
     }
     if (data.payrollConfig) {
-      (settings as any).payrollConfig = { ...(settings as any).payrollConfig.toObject(), ...data.payrollConfig };
+      const payrollChanges = getChangedFields(oldSettings.payrollConfig, data.payrollConfig, 'payrollConfig');
+      Object.assign(changes, payrollChanges);
+      (settings as any).payrollConfig = { ...(settings as any).payrollConfig?.toObject?.() || {}, ...data.payrollConfig };
     }
     if (data.attendanceConfig) {
-      (settings as any).attendanceConfig = { ...(settings as any).attendanceConfig.toObject(), ...data.attendanceConfig };
+      const attendanceChanges = getChangedFields(oldSettings.attendanceConfig, data.attendanceConfig, 'attendanceConfig');
+      Object.assign(changes, attendanceChanges);
+      (settings as any).attendanceConfig = { ...(settings as any).attendanceConfig?.toObject?.() || {}, ...data.attendanceConfig };
     }
     if (data.allowanceConfig) {
+      const allowanceChanges = getChangedFields(oldSettings.allowanceConfig, data.allowanceConfig, 'allowanceConfig');
+      Object.assign(changes, allowanceChanges);
       (settings as any).allowanceConfig = data.allowanceConfig;
     }
     if (data.deductionConfig) {
+      const deductionChanges = getChangedFields(oldSettings.deductionConfig, data.deductionConfig, 'deductionConfig');
+      Object.assign(changes, deductionChanges);
       (settings as any).deductionConfig = data.deductionConfig;
     }
     if (data.emailConfig) {
-      (settings as any).emailConfig = { ...(settings as any).emailConfig?.toObject(), ...data.emailConfig };
+      const emailChanges = getChangedFields(oldSettings.emailConfig, data.emailConfig, 'emailConfig');
+      Object.assign(changes, emailChanges);
+      (settings as any).emailConfig = { ...(settings as any).emailConfig?.toObject?.() || {}, ...data.emailConfig };
     }
 
     (settings as any).updatedBy = userId;
     await (settings as any).save();
 
+    const changedFields = Object.keys(changes);
+    const changeSummary = changedFields.length > 0 
+      ? changedFields.join(', ') 
+      : 'No changes';
+
     await AuditService.log({
       action: 'update',
       module: 'settings',
       userId,
-      details: { sections: Object.keys(data) },
+      details: { 
+        sections: Object.keys(data),
+        changedFields: changes,
+        summary: changeSummary,
+      },
     });
 
     return { ...(settings as any).toObject(), id: String(settings._id), _id: undefined };
+  }
+
+  static async testEmail(toEmail: string): Promise<{ success: boolean; message?: string }> {
+    const settings = await CompanySettings.findOne().lean() as any;
+    const emailConfig = settings?.emailConfig;
+    
+    if (!emailConfig?.host || !emailConfig?.fromEmail) {
+      return { success: false, message: 'Email not configured. Please configure SMTP settings first.' };
+    }
+    
+    try {
+      const nodemailer = await import('nodemailer');
+      
+      const transporter = nodemailer.createTransport({
+        host: emailConfig.host,
+        port: emailConfig.port || 587,
+        secure: emailConfig.secure || false,
+        auth: emailConfig.user ? {
+          user: emailConfig.user,
+          pass: emailConfig.password,
+        } : undefined,
+      });
+      
+      await transporter.sendMail({
+        from: emailConfig.fromEmail,
+        to: toEmail,
+        subject: 'HRMS - Test Email',
+        text: 'This is a test email from HRMS. If you received this, your email configuration is working correctly.',
+        html: '<p>This is a test email from <strong>HRMS</strong>.</p><p>If you received this, your email configuration is working correctly.</p>',
+      });
+      
+      return { success: true };
+    } catch (error: any) {
+      return { success: false, message: error.message || 'Failed to send test email' };
+    }
+  }
+
+  static async uploadLogo(file: any, userId: string): Promise<{ success: boolean; logoUrl?: string; message?: string }> {
+    if (!file) {
+      return { success: false, message: 'No file uploaded' };
+    }
+    
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.mimetype)) {
+      return { success: false, message: 'Invalid file type. Allowed: JPG, PNG, GIF, WebP' };
+    }
+    
+    const maxSize = 2 * 1024 * 1024;
+    if (file.size > maxSize) {
+      return { success: false, message: 'File too large. Maximum size: 2MB' };
+    }
+    
+    const settings = await CompanySettings.findOne() as any;
+    const logoUrl = `/uploads/logos/${file.filename}`;
+    
+    (settings as any).companyInfo = settings.companyInfo || {};
+    (settings as any).companyInfo.logo = logoUrl;
+    (settings as any).updatedBy = userId;
+    await (settings as any).save();
+    
+    await AuditService.log({
+      action: 'upload-logo',
+      module: 'settings',
+      userId,
+      details: { logoUrl, originalName: file.originalname },
+    });
+    
+    return { success: true, logoUrl };
   }
 }

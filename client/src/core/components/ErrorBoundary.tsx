@@ -1,4 +1,6 @@
 import { Component, ReactNode } from 'react';
+import { Button, Result } from 'antd';
+import { ReloadOutlined, HomeOutlined } from '@ant-design/icons';
 
 interface Props {
   children: ReactNode;
@@ -7,6 +9,7 @@ interface Props {
 
 interface State {
   hasError: boolean;
+  errorMessage?: string;
 }
 
 export class ErrorBoundary extends Component<Props, State> {
@@ -15,17 +18,39 @@ export class ErrorBoundary extends Component<Props, State> {
     this.state = { hasError: false };
   }
 
-  static getDerivedStateFromError(): State {
-    return { hasError: true };
+  static getDerivedStateFromError(error: Error): State {
+    return { hasError: true, errorMessage: error.message };
   }
+
+  handleRetry = () => {
+    this.setState({ hasError: false, errorMessage: undefined });
+  };
 
   render(): ReactNode {
     if (this.state.hasError) {
       return (
         this.props.fallback || (
-          <div style={{ padding: 24, textAlign: 'center' }}>
-            <h2>Something went wrong</h2>
-            <button onClick={() => this.setState({ hasError: false })}>Retry</button>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            minHeight: '100vh',
+            background: '#f5f5f5',
+            padding: 24,
+          }}>
+            <Result
+              status="error"
+              title="Something went wrong"
+              subTitle="We're sorry, something unexpected happened. Please try again or return to the dashboard."
+              extra={[
+                <Button key="retry" type="primary" icon={<ReloadOutlined />} onClick={this.handleRetry}>
+                  Try Again
+                </Button>,
+                <a href="/dashboard" key="home">
+                  <Button icon={<HomeOutlined />}>Go to Dashboard</Button>
+                </a>,
+              ]}
+            />
           </div>
         )
       );

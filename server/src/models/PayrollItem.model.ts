@@ -12,6 +12,11 @@ export interface IPayrollItem extends Document {
   holidays: number;
   effectiveWorkingDays: number;
   overtimeHours: number;
+  overtimeHoursAllowed?: number;
+  overtimeRuleApplied?: {
+    name: string;
+    multiplier: number;
+  };
   overtimeAmount: number;
   basicEarnings: number;
   allowances: {
@@ -47,6 +52,11 @@ const PayrollItemSchema = new Schema<IPayrollItem>(
     holidays: { type: Number, required: true },
     effectiveWorkingDays: { type: Number, required: true },
     overtimeHours: { type: Number, default: 0 },
+    overtimeHoursAllowed: { type: Number, default: 0 },
+    overtimeRuleApplied: {
+      name: { type: String },
+      multiplier: { type: Number },
+    },
     overtimeAmount: { type: Number, default: 0 },
     basicEarnings: { type: Number, required: true },
     allowances: [

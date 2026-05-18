@@ -13,7 +13,9 @@ export interface IUser extends Document {
   failedLoginAttempts?: number;
   lockUntil?: Date;
   refreshToken?: string;
+  passwordHistory?: string[];
   comparePassword(candidatePassword: string): Promise<boolean>;
+  isPasswordInHistory(candidatePassword: string): Promise<boolean>;
 }
 
 interface UserModel extends Model<IUser> {}
@@ -35,18 +37,40 @@ const UserSchema = new Schema<IUser>(
     failedLoginAttempts: { type: Number, default: 0 },
     lockUntil: { type: Date },
     refreshToken: { type: String },
+    passwordHistory: { type: [String], default: [] },
   },
   { timestamps: true },
 );
 
 UserSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
+  
+  const previousPasswords = this.passwordHistory || [];
+  previousPasswords.unshift(this.password);
+  if (previousPasswords.length > 5) {
+    previousPasswords.pop();
+  }
+  this.passwordHistory = previousPasswords;
+  
   this.password = await bcrypt.hash(this.password, 10);
   next();
 });
 
 UserSchema.methods.comparePassword = async function (candidatePassword: string): Promise<boolean> {
   return bcrypt.compare(candidatePassword, this.password);
+};
+
+UserSchema.methods.isPasswordInHistory = async function (candidatePassword: string): Promise<boolean> {
+  if (!this.passwordHistory || this.passwordHistory.length === 0) {
+    return false;
+  }
+  
+  for (const oldPassword of this.passwordHistory) {
+    if (await bcrypt.compare(candidatePassword, oldPassword)) {
+      return true;
+    }
+  }
+  return false;
 };
 
 const User = mongoose.model<IUser, UserModel>('User', UserSchema);

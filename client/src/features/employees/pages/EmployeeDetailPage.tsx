@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Row, Col, Avatar, Button, Spin, Card, Descriptions, Tag, message, Upload, Select, Popconfirm, Modal } from 'antd';
-import { ArrowLeftOutlined, EditOutlined, UserOutlined, CheckCircleOutlined, CloseCircleOutlined, DeleteOutlined, UploadOutlined, FileTextOutlined, EyeOutlined } from '@ant-design/icons';
+import { Row, Col, Avatar, Button, Spin, Card, Descriptions, Tag, message, Upload, Select, Popconfirm, Modal, Tabs, Table } from 'antd';
+import { ArrowLeftOutlined, EditOutlined, UserOutlined, CheckCircleOutlined, CloseCircleOutlined, DeleteOutlined, UploadOutlined, FileTextOutlined, EyeOutlined, CalendarOutlined, DollarOutlined } from '@ant-design/icons';
 import { PageHeader } from '../../../core/components/PageHeader';
 import { employeeService } from '../services/employeeService';
+import { attendanceService } from '../../attendance/services/attendanceService';
+import { payrollService } from '../../payroll/services/payrollService';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 
@@ -55,6 +57,18 @@ export function EmployeeDetailPage() {
       queryClient.invalidateQueries({ queryKey: ['employee', id] });
     },
     onError: () => message.error('Delete failed'),
+  });
+
+  const { data: attendanceData } = useQuery({
+    queryKey: ['employee-attendance', id],
+    queryFn: () => attendanceService.getByEmployee(id!, undefined, undefined),
+    enabled: !!id && id !== 'new',
+  });
+
+  const { data: payrollData } = useQuery({
+    queryKey: ['employee-payroll', id],
+    queryFn: () => payrollService.getByEmployee(id!),
+    enabled: !!id && id !== 'new',
   });
 
   useEffect(() => {
@@ -287,6 +301,88 @@ export function EmployeeDetailPage() {
                   No documents uploaded yet
                 </div>
               )}
+            </Card>
+
+            <Card style={{ borderRadius: 12, marginTop: 24 }}>
+              <Tabs
+                defaultActiveKey="overview"
+                items={[
+                  {
+                    key: 'overview',
+                    label: <span><FileTextOutlined /> Documents</span>,
+                    children: (
+                      <div>
+                        <Button type="primary" icon={<UploadOutlined />} onClick={() => setUploadModalOpen(true)} style={{ marginBottom: 16 }}>
+                          Add Document
+                        </Button>
+                        {employee.documents && employee.documents.length > 0 ? (
+                          <Row gutter={16}>
+                            {employee.documents.map((doc: any) => (
+                              <Col xs={24} sm={12} md={8} key={doc._id}>
+                                <Card size="small" style={{ marginBottom: 12 }}
+                                  actions={[
+                                    <EyeOutlined key="view" onClick={() => window.open(doc.filePath, '_blank')} />,
+                                    <Popconfirm key="delete" title="Delete this document?" onConfirm={() => deleteMutation.mutate(doc._id)}>
+                                      <DeleteOutlined style={{ color: '#ff4d4f' }} />
+                                    </Popconfirm>
+                                  ]}
+                                >
+                                  <Card.Meta avatar={<FileTextOutlined style={{ fontSize: 24, color: '#4f46e5' }} />} title={docTypeLabels[doc.type] || doc.type} description={doc.fileName} />
+                                </Card>
+                              </Col>
+                            ))}
+                          </Row>
+                        ) : (
+                          <div style={{ textAlign: 'center', color: 'var(--hrms-text-muted)', padding: 24 }}>No documents uploaded yet</div>
+                        )}
+                      </div>
+                    ),
+                  },
+                  {
+                    key: 'attendance',
+                    label: <span><CalendarOutlined /> Attendance History</span>,
+                    children: (
+                      <Table
+                        dataSource={attendanceData || []}
+                        rowKey="id"
+                        size="small"
+                        pagination={{ pageSize: 10 }}
+                        columns={[
+                          { title: 'Date', dataIndex: 'date', key: 'date', render: (d: string) => dayjs(d).format('DD MMM YYYY') },
+                          { title: 'Status', dataIndex: 'status', key: 'status', render: (s: string) => <Tag color={s === 'present' ? 'green' : s === 'absent' ? 'red' : 'default'}>{s}</Tag> },
+                          { title: 'In Time', dataIndex: 'inTime', key: 'inTime' },
+                          { title: 'Out Time', dataIndex: 'outTime', key: 'outTime' },
+                          { title: 'Shift', dataIndex: ['shift', 'name'], key: 'shift' },
+                          { title: 'Late', dataIndex: 'isLate', key: 'isLate', render: (late: boolean) => late ? <Tag color="orange">Late</Tag> : '-' },
+                        ]}
+                        locale={{ emptyText: 'No attendance records found' }}
+                      />
+                    ),
+                  },
+                  {
+                    key: 'payroll',
+                    label: <span><DollarOutlined /> Payroll History</span>,
+                    children: (
+                      <Table
+                        dataSource={payrollData || []}
+                        rowKey="id"
+                        size="small"
+                        pagination={{ pageSize: 10 }}
+                        columns={[
+                          { title: 'Month', dataIndex: 'month', key: 'month', render: (m: string) => dayjs(m + '-01').format('MMM YYYY') },
+                          { title: 'Present Days', dataIndex: 'presentDays', key: 'presentDays' },
+                          { title: 'Basic', dataIndex: 'basicEarnings', key: 'basicEarnings', render: (v: number) => `₹${v?.toLocaleString()}` },
+                          { title: 'Allowances', dataIndex: 'allowancesTotal', key: 'allowancesTotal', render: (v: number) => `₹${v?.toLocaleString()}` },
+                          { title: 'Deductions', dataIndex: 'totalDeductions', key: 'totalDeductions', render: (v: number) => `₹${v?.toLocaleString()}` },
+                          { title: 'Net Pay', dataIndex: 'netPay', key: 'netPay', render: (v: number) => <span style={{ fontWeight: 600, color: 'var(--hrms-success)' }}>₹{v?.toLocaleString()}</span> },
+                          { title: 'Status', dataIndex: 'status', key: 'status', render: (s: string) => <Tag color={s === 'finalized' ? 'green' : 'orange'}>{s}</Tag> },
+                        ]}
+                        locale={{ emptyText: 'No payroll records found' }}
+                      />
+                    ),
+                  },
+                ]}
+              />
             </Card>
           </Col>
         </Row>
