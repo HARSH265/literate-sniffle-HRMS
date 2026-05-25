@@ -656,8 +656,8 @@ export class ReportsService {
       if (filters.salaryType) query.salaryType = filters.salaryType;
       if (filters.search) {
         query.$or = [
-          { fullName: { $regex: filters.search, $options: 'i' } },
-          { employeeCode: { $regex: filters.search, $options: 'i' } },
+          { fullName: { $regex: filters.search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $options: 'i' } },
+          { employeeCode: { $regex: filters.search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $options: 'i' } },
         ];
       }
     }

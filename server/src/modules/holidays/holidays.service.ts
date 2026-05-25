@@ -10,7 +10,8 @@ export class HolidaysService {
     const filter: Record<string, unknown> = {};
 
     if (search) {
-      filter.name = { $regex: search, $options: 'i' };
+      const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      filter.name = { $regex: escaped, $options: 'i' };
     }
 
     if (queryParams.year) {
@@ -119,30 +120,7 @@ export class HolidaysService {
     if (data.type) (holiday as any).type = data.type;
     if (data.applicableTo) (holiday as any).applicableTo = data.applicableTo;
     if (data.isPaid !== undefined) (holiday as any).isPaid = data.isPaid;
-
-    const nameConflict = await Holiday.findOne({
-      name: (holiday as any).name,
-      year,
-      _id: { $ne: id },
-    });
-    if (nameConflict) {
-      throw new AppError('Holiday with this name already exists for the year', 400);
-    }
-
-    const dateConflict = await Holiday.findOne({
-      date: {
-        $gte: new Date(year, 0, 1),
-        $lte: new Date(year, 11, 31),
-      },
-      _id: { $ne: id },
-    });
-    if (dateConflict) {
-      const existingDateStr = new Date(dateConflict.date).toISOString().split('T')[0];
-      const currentDateStr = new Date((holiday as any).date).toISOString().split('T')[0];
-      if (existingDateStr === currentDateStr) {
-        throw new AppError(`A holiday already exists on ${currentDateStr}`, 400);
-      }
-    }
+    (holiday as any).updatedBy = updatedById;
 
     await (holiday as any).save();
 

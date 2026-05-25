@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { authenticate } from '../../core/permissions/authenticate.middleware.js';
 import { authorize } from '../../core/permissions/authorize.middleware.js';
 import { validate } from '../../core/validation/validate.middleware.js';
 import {
@@ -22,6 +23,8 @@ import {
 } from './statutory.validation.js';
 
 const router = Router();
+
+router.use(authenticate);
 
 router.get('/defaults', authorize('view-statutory'), getDefaultsHandler);
 

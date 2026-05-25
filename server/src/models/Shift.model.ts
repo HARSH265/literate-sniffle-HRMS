@@ -8,6 +8,7 @@ export interface IShift extends Document {
   applicableTo: 'all' | 'worker' | 'office-staff';
   isActive: boolean;
   createdBy?: mongoose.Types.ObjectId;
+  updatedBy?: mongoose.Types.ObjectId;
 }
 
 interface ShiftModel extends Model<IShift> {}
@@ -25,6 +26,7 @@ const ShiftSchema = new Schema<IShift>(
     },
     isActive: { type: Boolean, default: true },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    updatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
   },
   { timestamps: true },
 );

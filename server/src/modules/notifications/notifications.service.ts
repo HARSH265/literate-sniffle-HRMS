@@ -45,8 +45,8 @@ export class NotificationsService {
     return Notification.countDocuments({ recipient: userId, isRead: false });
   }
 
-  static async markAsRead(notificationId: string) {
-    return Notification.findByIdAndUpdate(notificationId, { isRead: true }, { new: true });
+  static async markAsRead(notificationId: string, userId: string) {
+    return Notification.findOneAndUpdate({ _id: notificationId, recipient: userId }, { isRead: true }, { new: true });
   }
 
   static async markAllAsRead(userId: string) {

@@ -13,8 +13,8 @@ export class UsersService {
 
     if (search) {
       filter.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } },
+        { name: { $regex: search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $options: 'i' } },
+        { email: { $regex: search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $options: 'i' } },
       ];
     }
 
@@ -105,7 +105,7 @@ export class UsersService {
       }
     }
 
-    Object.assign(user, data);
+    Object.assign(user, data, { updatedBy: updatedById });
     await user.save();
 
     await AuditService.log({
@@ -138,6 +138,7 @@ export class UsersService {
 
     user.isActive = false;
     user.refreshToken = undefined;
+    user.updatedBy = deactivatedById as any;
     await user.save();
 
     await AuditService.log({
@@ -159,6 +160,7 @@ export class UsersService {
     }
 
     user.isActive = true;
+    user.updatedBy = activatedById as any;
     await user.save();
 
     await AuditService.log({
@@ -241,6 +243,7 @@ export class UsersService {
           existing.name = userData.name;
           existing.role = userData.role as any;
           existing.isActive = true;
+          existing.updatedBy = createdById as any;
           await existing.save();
           results.updated++;
         } else {

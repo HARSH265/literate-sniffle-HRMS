@@ -52,7 +52,7 @@ export class OvertimeRulesService {
     const rule = await OvertimeRule.findById(id);
     if (!rule) throw new AppError('Overtime rule not found or already deleted', 404);
 
-    Object.assign(rule, data);
+    Object.assign(rule, data, { updatedBy: userId });
     await rule.save();
 
     await AuditService.log({

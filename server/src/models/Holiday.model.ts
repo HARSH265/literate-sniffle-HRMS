@@ -8,6 +8,7 @@ export interface IHoliday extends Document {
   year: number;
   isPaid: boolean;
   createdBy?: mongoose.Types.ObjectId;
+  updatedBy?: mongoose.Types.ObjectId;
 }
 
 interface HolidayModel extends Model<IHoliday> {}
@@ -29,6 +30,7 @@ const HolidaySchema = new Schema<IHoliday>(
     year: { type: Number, required: true },
     isPaid: { type: Boolean, default: true },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    updatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
   },
   { timestamps: true },
 );

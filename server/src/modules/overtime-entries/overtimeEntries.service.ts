@@ -155,7 +155,7 @@ export class OvertimeEntriesService {
       }
     }
 
-    Object.assign(entry, data);
+    Object.assign(entry, data, { updatedBy: userId });
     await entry.save();
 
     await AuditService.log({

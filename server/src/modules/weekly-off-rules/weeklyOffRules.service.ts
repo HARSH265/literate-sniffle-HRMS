@@ -76,6 +76,7 @@ export class WeeklyOffRulesService {
     if (data.offDays) (rule as any).offDays = data.offDays;
     if (data.isActive !== undefined) (rule as any).isActive = data.isActive;
 
+    (rule as any).updatedBy = updatedById;
     await (rule as any).save();
 
     await AuditService.log({

@@ -8,6 +8,7 @@ export interface IOvertimeRule extends Document {
   maxHoursPerMonth: number;
   isActive: boolean;
   createdBy?: mongoose.Types.ObjectId;
+  updatedBy?: mongoose.Types.ObjectId;
 }
 
 interface OvertimeRuleModel extends Model<IOvertimeRule> {}
@@ -25,6 +26,7 @@ const OvertimeRuleSchema = new Schema<IOvertimeRule>(
     maxHoursPerMonth: { type: Number, required: true, min: 0 },
     isActive: { type: Boolean, default: true },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    updatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
   },
   { timestamps: true },
 );

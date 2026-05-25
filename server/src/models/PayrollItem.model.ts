@@ -42,6 +42,8 @@ export interface IPayrollItem extends Document {
   loanEmiDeduction: number;
   netPay: number;
   status: 'draft' | 'submitted' | 'approved' | 'finalized';
+  createdBy?: mongoose.Types.ObjectId;
+  updatedBy?: mongoose.Types.ObjectId;
 }
 
 interface PayrollItemModel extends Model<IPayrollItem> {}
@@ -97,6 +99,9 @@ const PayrollItemSchema = new Schema<IPayrollItem>(
       enum: ['draft', 'submitted', 'approved', 'finalized'],
       default: 'draft',
     },
+  },
+    createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    updatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
   },
   { timestamps: true },
 );

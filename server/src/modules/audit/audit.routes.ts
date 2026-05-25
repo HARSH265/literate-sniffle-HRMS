@@ -8,14 +8,13 @@ import { authorize } from '../../core/permissions/authorize.middleware.js';
 const router = Router();
 
 router.use(authenticate);
-router.use(authorize('view-audit'));
 
-router.get('/', validate(auditListSchema), auditController.list);
-router.get('/modules', auditController.getModules);
-router.get('/actions', auditController.getActions);
-router.get('/export', auditController.exportLogs);
-router.get('/stats', auditController.getStats);
-router.get('/retention', auditController.getRetentionInfo);
-router.post('/cleanup', auditController.deleteOldLogs);
+router.get('/', authorize('view-audit'), validate(auditListSchema), auditController.list);
+router.get('/modules', authorize('view-audit'), auditController.getModules);
+router.get('/actions', authorize('view-audit'), auditController.getActions);
+router.get('/export', authorize('view-audit'), validate(auditListSchema), auditController.exportLogs);
+router.get('/stats', authorize('view-audit'), auditController.getStats);
+router.get('/retention', authorize('view-audit'), auditController.getRetentionInfo);
+router.post('/cleanup', authorize('manage-audit'), validate(auditListSchema), auditController.deleteOldLogs);
 
 export default router;

@@ -41,9 +41,9 @@ export class EmployeesService {
 
     if (search) {
       filter.$or = [
-        { employeeCode: { $regex: search, $options: 'i' } },
-        { fullName: { $regex: search, $options: 'i' } },
-        { fatherName: { $regex: search, $options: 'i' } },
+        { employeeCode: { $regex: search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $options: 'i' } },
+        { fullName: { $regex: search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $options: 'i' } },
+        { fatherName: { $regex: search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $options: 'i' } },
       ];
     }
 

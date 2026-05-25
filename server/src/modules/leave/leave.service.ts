@@ -86,7 +86,7 @@ export class LeaveService {
   static async createLeaveType(data: Record<string, unknown>, userId: string): Promise<any> {
     const existing = await LeaveType.findOne({
       $or: [
-        { name: { $regex: new RegExp(`^${data.name}$`, 'i') } },
+        { name: { $regex: new RegExp(`^${String(data.name).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') } },
         { code: String(data.code).toUpperCase() },
       ],
     });

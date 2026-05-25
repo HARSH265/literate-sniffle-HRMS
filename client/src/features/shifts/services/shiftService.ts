@@ -34,7 +34,7 @@ export const shiftService = {
   },
 
   async update(id: string, payload: Partial<Shift>): Promise<{ success: boolean; data: Shift }> {
-    const { data } = await apiClient.put(`/shifts/${id}`, payload);
+    const { data } = await apiClient.patch(`/shifts/${id}`, payload);
     return data;
   },
 

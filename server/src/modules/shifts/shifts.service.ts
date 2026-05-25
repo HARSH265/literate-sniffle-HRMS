@@ -19,52 +19,50 @@ function rangesOverlap(start1: number, end1: number, start2: number, end2: numbe
   }
 }
 
-function checkShiftOverlap(
+async function checkShiftOverlap(
   newStart: string,
   newEnd: string,
   newId?: string,
   isNightShift: boolean = false
 ): Promise<{ hasOverlap: boolean; conflictingShifts: string[] }> {
-  return new Promise(async (resolve) => {
-    const newStartMin = parseTime(newStart);
-    const newEndMin = parseTime(newEnd);
+  const newStartMin = parseTime(newStart);
+  const newEndMin = parseTime(newEnd);
 
-    const allShifts = await Shift.find({ isActive: true }).lean();
-    const conflicting: string[] = [];
+  const allShifts = await Shift.find({ isActive: true }).lean();
+  const conflicting: string[] = [];
 
-    for (const shift of allShifts) {
-      if (newId && String((shift as any)._id) === newId) continue;
+  for (const shift of allShifts) {
+    if (newId && String((shift as any)._id) === newId) continue;
 
-      const existingStart = parseTime(String(shift.startTime));
-      const existingEnd = parseTime(String(shift.endTime));
-      const existingIsNight = String(shift.startTime) > String(shift.endTime);
+    const existingStart = parseTime(String(shift.startTime));
+    const existingEnd = parseTime(String(shift.endTime));
+    const existingIsNight = String(shift.startTime) > String(shift.endTime);
 
-      let overlap = false;
+    let overlap = false;
 
-      if (isNightShift && existingIsNight) {
-        const newStartAfterMidnight = newStartMin;
-        const newEndAfterMidnight = newEndMin > newStartMin ? newEndMin : newEndMin + 24 * 60;
-        const existingStartAfterMidnight = existingStart;
-        const existingEndAfterMidnight = existingEnd > existingStart ? existingEnd : existingEnd + 24 * 60;
+    if (isNightShift && existingIsNight) {
+      const newStartAfterMidnight = newStartMin;
+      const newEndAfterMidnight = newEndMin > newStartMin ? newEndMin : newEndMin + 24 * 60;
+      const existingStartAfterMidnight = existingStart;
+      const existingEndAfterMidnight = existingEnd > existingStart ? existingEnd : existingEnd + 24 * 60;
 
-        overlap = rangesOverlap(newStartAfterMidnight, newEndAfterMidnight, existingStartAfterMidnight, existingEndAfterMidnight);
-      } else if (isNightShift) {
-        const newEndAfterMidnight = newEndMin > newStartMin ? newEndMin : newEndMin + 24 * 60;
-        overlap = newStartMin < existingEnd || newEndAfterMidnight > existingStart;
-      } else if (existingIsNight) {
-        const existingEndAfterMidnight = existingEnd > existingStart ? existingEnd : existingEnd + 24 * 60;
-        overlap = existingStart < newEndMin || existingEndAfterMidnight > newStartMin;
-      } else {
-        overlap = rangesOverlap(newStartMin, newEndMin, existingStart, existingEnd);
-      }
-
-      if (overlap) {
-        conflicting.push(shift.name);
-      }
+      overlap = rangesOverlap(newStartAfterMidnight, newEndAfterMidnight, existingStartAfterMidnight, existingEndAfterMidnight);
+    } else if (isNightShift) {
+      const newEndAfterMidnight = newEndMin > newStartMin ? newEndMin : newEndMin + 24 * 60;
+      overlap = newStartMin < existingEnd || newEndAfterMidnight > existingStart;
+    } else if (existingIsNight) {
+      const existingEndAfterMidnight = existingEnd > existingStart ? existingEnd : existingEnd + 24 * 60;
+      overlap = existingStart < newEndMin || existingEndAfterMidnight > newStartMin;
+    } else {
+      overlap = rangesOverlap(newStartMin, newEndMin, existingStart, existingEnd);
     }
 
-    resolve({ hasOverlap: conflicting.length > 0, conflictingShifts: conflicting });
-  });
+    if (overlap) {
+      conflicting.push(shift.name);
+    }
+  }
+
+  return { hasOverlap: conflicting.length > 0, conflictingShifts: conflicting };
 }
 
 export class ShiftsService {
@@ -74,7 +72,8 @@ export class ShiftsService {
     const filter: Record<string, unknown> = {};
 
     if (search) {
-      filter.name = { $regex: search, $options: 'i' };
+      const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      filter.name = { $regex: escaped, $options: 'i' };
     }
 
     if (queryParams.status) {
@@ -187,6 +186,7 @@ export class ShiftsService {
     if (data.workingHours) shift.workingHours = data.workingHours as number;
     if (data.applicableTo) shift.applicableTo = data.applicableTo as 'all' | 'worker' | 'office-staff';
     if (data.isActive !== undefined) shift.isActive = data.isActive as boolean;
+    shift.updatedBy = updatedById as any;
 
     await shift.save();
     CacheService.invalidateShifts();

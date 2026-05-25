@@ -7,6 +7,7 @@ export interface IOvertimeEntry extends Document {
   overtimeRule?: mongoose.Types.ObjectId;
   remarks?: string;
   enteredBy: mongoose.Types.ObjectId;
+  updatedBy?: mongoose.Types.ObjectId;
 }
 
 interface OvertimeEntryModel extends Model<IOvertimeEntry> {}
@@ -19,6 +20,7 @@ const OvertimeEntrySchema = new Schema<IOvertimeEntry>(
     overtimeRule: { type: Schema.Types.ObjectId, ref: 'OvertimeRule' },
     remarks: { type: String },
     enteredBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    updatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
   },
   { timestamps: true },
 );

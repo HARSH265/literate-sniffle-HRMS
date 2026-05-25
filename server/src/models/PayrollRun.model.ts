@@ -22,6 +22,7 @@ export interface IPayrollRun extends Document {
   finalizedAt?: Date;
   remarks?: string;
   revisions: PayrollRevision[];
+  updatedBy?: mongoose.Types.ObjectId;
 }
 
 interface PayrollRunModel extends Model<IPayrollRun> {}
@@ -56,6 +57,8 @@ const PayrollRunSchema = new Schema<IPayrollRun>(
     finalizedAt: { type: Date },
     remarks: { type: String },
     revisions: { type: [revisionSchema], default: [] },
+  },
+    updatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
   },
   { timestamps: true },
 );
