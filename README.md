@@ -189,6 +189,10 @@ npm run lint   # Run linter
 | Audit Logs | GET /audit-logs |
 | Notifications | GET /notifications, PATCH /notifications/:id/read |
 
+## V1 Release
+
+All 12 phases of V1 are complete. See [V1-COMPLETE.md](./V1-COMPLETE.md) for the full journey, architecture details, schema documentation, and compliance information.
+
 ## License
 
 MIT

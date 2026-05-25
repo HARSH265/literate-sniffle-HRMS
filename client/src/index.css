@@ -298,15 +298,122 @@ body {
 .hrms-stat-card {
   background: var(--hrms-surface);
   border-radius: var(--hrms-radius-lg);
-  padding: 20px 24px;
+  padding: 24px;
   box-shadow: var(--hrms-shadow-sm);
   border: 1px solid var(--hrms-border-light);
   transition: all var(--hrms-transition);
+  position: relative;
+  overflow: hidden;
+  height: 148px;
+  display: flex;
+  flex-direction: column;
 }
-.hrms-stat-card:hover { box-shadow: var(--hrms-shadow-md); transform: translateY(-2px); }
-.hrms-stat-card .stat-label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--hrms-text-muted); margin-bottom: 8px; }
-.hrms-stat-card .stat-value { font-size: 28px; font-weight: 700; color: var(--hrms-text-primary); line-height: 1.2; }
-.hrms-stat-card .stat-sub { font-size: 12px; color: var(--hrms-text-muted); margin-top: 4px; }
+.hrms-stat-card:hover {
+  box-shadow: var(--hrms-shadow-md);
+  transform: translateY(-2px);
+  border-color: var(--hrms-primary-border);
+}
+.hrms-stat-card .stat-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.hrms-stat-card .stat-label {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--hrms-text-muted);
+  margin-bottom: 4px;
+}
+.hrms-stat-card .stat-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--hrms-text-primary);
+  line-height: 1.2;
+  margin-bottom: 4px;
+}
+.hrms-stat-card .stat-sub { font-size: 13px; color: var(--hrms-text-secondary); }
+.hrms-stat-card .stat-trend {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  margin-top: auto;
+  padding-top: 8px;
+}
+.hrms-stat-card .stat-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+/* Dashboard activity timeline */
+.hrms-activity-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--hrms-border-light);
+  transition: background var(--hrms-transition);
+}
+.hrms-activity-item:last-child { border-bottom: none; }
+.hrms-activity-item:hover { background: none; }
+.hrms-activity-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 5px;
+  border: 2px solid transparent;
+  position: relative;
+  opacity: 0.7;
+}
+.hrms-activity-dot::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 14px;
+  bottom: -15px;
+  width: 1px;
+  background: var(--hrms-border);
+  transform: translateX(-50%);
+}
+.hrms-activity-item:last-child .hrms-activity-dot::after { display: none; }
+
+/* Quick action items */
+.hrms-quick-action {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--hrms-border);
+  cursor: pointer;
+  transition: all var(--hrms-transition);
+  min-height: 60px;
+}
+.hrms-quick-action:hover {
+  border-color: var(--hrms-primary-border);
+  background: var(--hrms-primary-light);
+  transform: translateX(3px);
+}
+.hrms-quick-action-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 17px;
+}
 
 /* Status badge */
 .status-badge {
@@ -359,31 +466,226 @@ body {
 .hrms-login-wrapper {
   min-height: 100vh;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: 24px;
+  background: var(--hrms-surface);
+  position: relative;
 }
+.hrms-login-left {
+  flex: 0 0 44%;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 40px;
+  background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 50%, #f8fafc 100%);
+  position: relative;
+  overflow: hidden;
+}
+.hrms-login-left::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(circle at 30% 50%, rgba(79,70,229,0.06) 0%, transparent 50%),
+    radial-gradient(circle at 70% 20%, rgba(79,70,229,0.04) 0%, transparent 40%);
+  pointer-events: none;
+}
+.hrms-login-right {
+  flex: 0 0 56%;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 40px;
+  position: relative;
+}
+
 .hrms-login-card {
   background: white;
-  border-radius: var(--hrms-radius-xl);
-  box-shadow: var(--hrms-shadow-xl);
-  padding: 48px;
+  border-radius: 20px;
+  box-shadow:
+    0 1px 3px rgba(0,0,0,0.04),
+    0 20px 60px rgba(79,70,229,0.10),
+    0 8px 20px rgba(0,0,0,0.05);
+  padding: 32px 44px;
   width: 100%;
-  max-width: 420px;
+  max-width: 460px;
+  position: relative;
+  border: 1px solid rgba(226,232,240,0.7);
 }
 .hrms-login-logo {
   text-align: center;
-  margin-bottom: 32px;
+  margin-bottom: 28px;
 }
 .hrms-login-logo h2 {
-  font-size: 24px;
+  font-size: 26px;
   font-weight: 800;
   color: var(--hrms-text-primary);
   letter-spacing: -0.03em;
+  margin-top: 16px;
+  line-height: 1.2;
 }
 .hrms-login-logo p {
+  font-size: 14px;
+  color: var(--hrms-text-secondary);
+  margin-top: 6px;
+  font-weight: 400;
+}
+
+/* Brand panel */
+.hrms-brand-panel {
+  max-width: 460px;
+  padding: 20px 0;
+}
+.hrms-brand-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 32px;
+}
+.hrms-brand-logo-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--hrms-primary) 0%, #7c3aed 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -1;
+  box-shadow: 0 4px 12px rgba(79,70,229,0.3);
+}
+.hrms-brand-logo-text {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--hrms-text-primary);
+  letter-spacing: -0.03em;
+}
+.hrms-brand-title {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--hrms-text-primary);
+  line-height: 1.25;
+  letter-spacing: -0.04em;
+  margin-bottom: 16px;
+}
+.hrms-brand-title em {
+  font-style: normal;
+  background: linear-gradient(135deg, var(--hrms-primary), #7c3aed);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.hrms-brand-subtitle {
+  font-size: 15px;
+  color: var(--hrms-text-secondary);
+  line-height: 1.6;
+  margin-bottom: 40px;
+}
+.hrms-brand-features {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.hrms-brand-feature {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+.hrms-brand-feature-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--hrms-primary-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--hrms-primary);
+  font-size: 14px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.hrms-brand-feature-text h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--hrms-text-primary);
+  margin: 0;
+}
+.hrms-brand-feature-text p {
   font-size: 13px;
   color: var(--hrms-text-muted);
-  margin-top: 4px;
+  margin: 2px 0 0;
+  line-height: 1.5;
+}
+
+.hrms-login-defaults {
+  margin-top: 24px;
+  padding: 10px 14px;
+  background: #f8fafc;
+  border: 1px dashed #d1d5db;
+  border-radius: var(--hrms-radius-md);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--hrms-text-muted);
+  line-height: 1.4;
+}
+.hrms-login-defaults svg {
+  flex-shrink: 0;
+  opacity: 0.5;
+}
+.hrms-login-defaults .hrms-login-defaults-label {
+  color: var(--hrms-text-muted);
+  margin-right: 4px;
+}
+.hrms-login-defaults .hrms-login-defaults-codes {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.hrms-login-defaults code {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--hrms-text-secondary);
+  background: white;
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid #e2e8f0;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  white-space: nowrap;
+}
+.hrms-login-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin: 20px 0 0;
+  color: var(--hrms-text-muted);
+  font-size: 13px;
+}
+.hrms-login-divider button {
+  font-size: 13px;
+  color: var(--hrms-text-secondary) !important;
+  padding: 0 !important;
+  height: auto !important;
+}
+.hrms-login-divider button:hover {
+  color: var(--hrms-primary) !important;
+}
+.hrms-login-footer {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .hrms-login-wrapper { flex-direction: column; }
+  .hrms-login-left {
+    justify-content: center;
+    padding: 32px 24px;
+  }
+  .hrms-login-right {
+    justify-content: center;
+    padding: 0 24px 32px;
+  }
+  .hrms-brand-panel { display: none; }
 }
