@@ -14,9 +14,10 @@ export class DepartmentsService {
     const filter: Record<string, unknown> = {};
 
     if (search) {
+      const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       filter.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { code: { $regex: search, $options: 'i' } },
+        { name: { $regex: escaped, $options: 'i' } },
+        { code: { $regex: escaped, $options: 'i' } },
       ];
     }
 
@@ -144,6 +145,7 @@ export class DepartmentsService {
     if (data.code) dept.code = (data.code as string).toUpperCase();
     if (data.description !== undefined) dept.description = data.description as string;
     if (data.isActive !== undefined) dept.isActive = data.isActive as boolean;
+    dept.updatedBy = updatedById as any;
 
     await dept.save();
 

@@ -57,7 +57,7 @@ export const departmentService = {
   },
 
   async update(id: string, payload: UpdateDepartment): Promise<{ success: boolean; data: Department }> {
-    const { data } = await apiClient.put(`/departments/${id}`, payload);
+    const { data } = await apiClient.patch(`/departments/${id}`, payload);
     return data;
   },
 

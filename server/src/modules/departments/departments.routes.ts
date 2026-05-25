@@ -9,7 +9,7 @@ const router = Router();
 
 router.use(authenticate);
 
-router.get('/next-code', departmentsController.generateNextCode);
+router.get('/next-code', authorize('manage-departments'), departmentsController.generateNextCode);
 router.get('/', authorize('view-departments'), departmentsController.list);
 router.get('/:id', authorize('view-departments'), departmentsController.getById);
 router.post('/', authorize('manage-departments'), validate(createDepartmentSchema), departmentsController.create);

@@ -184,7 +184,7 @@ export function DepartmentsPage() {
           scroll={{ x: 600 }}
           pagination={{
             current: page,
-            defaultPageSize: 10,
+            defaultPageSize: 20,
             pageSize: limit,
             total: data?.meta?.total ?? 0,
             onChange: (p, size) => { setPage(p); setLimit(size ?? 10); },
