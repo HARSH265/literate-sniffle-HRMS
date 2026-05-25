@@ -5,16 +5,36 @@ import { asyncHandler } from '../../core/errors/asyncHandler.js';
 
 const listRuns = asyncHandler(async (req: Request, res: Response) => {
   const result = await PayrollService.listRuns(req.query);
-  ResponseHandler.paginated(res, result.data, result.meta, 'Payroll runs fetched successfully');
+  ResponseHandler.paginated(res, result.data, result.meta as any, 'Payroll runs fetched successfully');
 });
 
 const runPayroll = asyncHandler(async (req: Request, res: Response) => {
   const { month, year } = req.body;
-  if (!month || !year) {
-    throw new Error('Month and year are required');
-  }
+  if (!month || !year) throw new Error('Month and year are required');
   const result = await PayrollService.runPayroll(month, year, req.user!.id);
   ResponseHandler.created(res, result, 'Payroll processed successfully');
+});
+
+const previewRun = asyncHandler(async (req: Request, res: Response) => {
+  const { month, year } = req.body;
+  if (!month || !year) throw new Error('Month and year are required');
+  const result = await PayrollService.previewRun(month, year);
+  ResponseHandler.success(res, result, 'Payroll preview generated');
+});
+
+const submitRun = asyncHandler(async (req: Request, res: Response) => {
+  const result = await PayrollService.submitRun(req.params.id, req.user!.id);
+  ResponseHandler.success(res, result, 'Payroll submitted for approval');
+});
+
+const approveRun = asyncHandler(async (req: Request, res: Response) => {
+  const result = await PayrollService.approveRun(req.params.id, req.user!.id);
+  ResponseHandler.success(res, result, 'Payroll approved');
+});
+
+const rejectRun = asyncHandler(async (req: Request, res: Response) => {
+  const result = await PayrollService.rejectRun(req.params.id, req.user!.id, req.body.reason);
+  ResponseHandler.success(res, result, 'Payroll rejected');
 });
 
 const finalizeRun = asyncHandler(async (req: Request, res: Response) => {
@@ -33,8 +53,15 @@ const unfinalizeRun = asyncHandler(async (req: Request, res: Response) => {
 });
 
 const updatePayrollItem = asyncHandler(async (req: Request, res: Response) => {
-  const result = await PayrollService.updatePayrollItem(req.params.id, req.body, req.user!.id);
+  const result = await PayrollService.updatePayrollItem(req.params.itemId, req.body, req.user!.id);
   ResponseHandler.success(res, result, 'Payroll item updated successfully');
+});
+
+const batchUpdateItems = asyncHandler(async (req: Request, res: Response) => {
+  const { items } = req.body;
+  if (!items || !Array.isArray(items)) throw new Error('Items array is required');
+  const result = await PayrollService.batchUpdateItems(req.params.id, items, req.user!.id);
+  ResponseHandler.success(res, result, 'Payroll items updated in batch');
 });
 
 const deleteRun = asyncHandler(async (req: Request, res: Response) => {
@@ -48,13 +75,8 @@ const getByEmployee = asyncHandler(async (req: Request, res: Response) => {
   ResponseHandler.success(res, result, 'Employee payroll history fetched successfully');
 });
 
-export const payrollController = { 
-  listRuns, 
-  runPayroll, 
-  finalizeRun, 
-  getRunDetails,
-  unfinalizeRun,
-  updatePayrollItem,
-  deleteRun,
-  getByEmployee,
+export const payrollController = {
+  listRuns, runPayroll, previewRun, submitRun, approveRun, rejectRun,
+  finalizeRun, getRunDetails, unfinalizeRun,
+  updatePayrollItem, batchUpdateItems, deleteRun, getByEmployee,
 };

@@ -11,6 +11,7 @@ import { AppError } from '../../core/errors/AppError.js';
 import { AuditService } from '../../core/audit/AuditService.js';
 import { PaginationUtil, PaginationMeta } from '../../core/utils/PaginationUtil.js';
 import { NotificationService } from '../../core/notification/NotificationService.js';
+import dayjs from 'dayjs';
 
 function getDaysInMonth(year: number, month: number): number {
   return new Date(year, month, 0).getDate();
@@ -111,6 +112,142 @@ function calculateDeductions(baseEarnings: number, grossEarnings: number, employ
   return appliedDeductions;
 }
 
+async function addRevision(run: any, action: string, userId: string, changes?: Record<string, unknown>): Promise<void> {
+  const user = await User.findById(userId).select('name').lean();
+  run.revisions.push({
+    action,
+    userId: userId as any,
+    userName: user?.name || 'Unknown',
+    changes,
+    timestamp: new Date(),
+  });
+}
+
+async function calculatePayrollForEmployee(
+  emp: any, _month: number, _year: number, config: any, allowances: any[], deductions: any[],
+  startDate: Date, endDate: Date, totalDays: number, workingDays: number, standardHours: number,
+): Promise<any> {
+  const category = emp.category || 'worker';
+  const employmentType = emp.employmentType || 'permanent';
+
+  const attendances = await AttendanceEntry.find({
+    employee: emp._id,
+    date: { $gte: startDate, $lte: endDate },
+  }).lean();
+
+  const overtimes = await OvertimeEntry.find({
+    employee: emp._id,
+    date: { $gte: startDate, $lte: endDate },
+  }).lean();
+
+  const leaveApplications = await LeaveApplication.find({
+    employee: emp._id,
+    status: 'approved',
+    startDate: { $lte: endDate },
+    endDate: { $gte: startDate },
+  }).populate('leaveType', 'isPaid deductionMethod name').lean();
+
+  let presentDays = 0, absentDays = 0, halfDays = 0, leaveDays = 0, weeklyOffs = 0, holidaysCount = 0;
+  let paidLeaveDays = 0, unpaidLeaveDays = 0;
+  let totalOvertimeHours = 0;
+
+  const leaveDayMap: Record<string, { isPaid: boolean; deductionMethod: string }> = {};
+  for (const app of leaveApplications as any[]) {
+    const appStart = new Date(Math.max(startDate.getTime(), new Date(app.startDate).getTime()));
+    const appEnd = new Date(Math.min(endDate.getTime(), new Date(app.endDate).getTime()));
+    const lt = app.leaveType;
+    if (!lt) continue;
+    for (let d = new Date(appStart); d <= appEnd; d.setDate(d.getDate() + 1)) {
+      const key = formatDate(d);
+      leaveDayMap[key] = { isPaid: lt.isPaid, deductionMethod: lt.deductionMethod || 'none' };
+    }
+  }
+
+  for (const att of attendances) {
+    switch (att.status) {
+      case 'present': presentDays++; break;
+      case 'absent': absentDays++; break;
+      case 'half-day': halfDays++; break;
+      case 'leave': {
+        leaveDays++;
+        const dateKey = formatDate(new Date(att.date));
+        const ld = leaveDayMap[dateKey];
+        if (ld && ld.isPaid) paidLeaveDays++;
+        else unpaidLeaveDays++;
+        break;
+      }
+      case 'weekly-off': weeklyOffs++; break;
+      case 'holiday': holidaysCount++; break;
+    }
+  }
+
+  for (const ot of overtimes) totalOvertimeHours += ot.hours || 0;
+
+  const overtimeRule = await getApplicableOvertimeRule(category);
+  const allowedOvertimeHours = applyOvertimeRules(totalOvertimeHours, overtimeRule);
+
+  const baseSalary = emp.baseSalary || 0;
+  const dailyWage = emp.dailyWage || 0;
+  const isMonthly = emp.salaryType === 'monthly';
+
+  const paidWeeklyOffs = config.paidWeeklyOff ? weeklyOffs : 0;
+  const paidHolidays = config.paidHolidays ? holidaysCount : 0;
+
+  const effectiveWorkingDays = presentDays + (halfDays * (1 - (config.halfDayDeductionPercent || 50) / 100)) + paidWeeklyOffs + paidHolidays;
+
+  const basicEarnings = isMonthly
+    ? Math.round(baseSalary * (effectiveWorkingDays / workingDays))
+    : dailyWage * presentDays;
+
+  const appliedAllowances = calculateAllowances(basicEarnings, category, employmentType, allowances);
+  const allowancesTotal = appliedAllowances.reduce((sum, a) => sum + a.calculatedValue, 0);
+
+  const overtimeRate = isMonthly
+    ? (config.overtimeBase === 'basicPlusAllowances' ? (baseSalary + allowancesTotal) : baseSalary) / workingDays / standardHours
+    : dailyWage / standardHours;
+
+  const otMultiplier = overtimeRule?.multiplier || config.overtimeMultiplier || 2;
+  const overtimeAmount = allowedOvertimeHours > 0
+    ? Math.round(overtimeRate * otMultiplier * allowedOvertimeHours)
+    : 0;
+
+  const halfDayDeduction = halfDays > 0
+    ? Math.round((isMonthly ? baseSalary / workingDays : dailyWage) * (config.halfDayDeductionPercent || 50) / 100 * halfDays)
+    : 0;
+  const lateDeduction = absentDays > 0 ? (config.lateDeductionPerDay || 0) * absentDays : 0;
+
+  let unpaidLeaveDeduction = 0;
+  if (unpaidLeaveDays > 0) {
+    const dailyRate = isMonthly ? baseSalary / workingDays : dailyWage;
+    const unpaidLeaveType = leaveApplications.find((app: any) => app.leaveType && !app.leaveType.isPaid) as any;
+    const deductionMethod = unpaidLeaveType?.leaveType?.deductionMethod || 'basic-only';
+    switch (deductionMethod) {
+      case 'none': unpaidLeaveDeduction = 0; break;
+      case 'basic-only': unpaidLeaveDeduction = Math.round(dailyRate * unpaidLeaveDays); break;
+      case 'basic-plus-allowances':
+      case 'gross':
+        unpaidLeaveDeduction = Math.round((dailyRate + (allowancesTotal / Math.max(1, workingDays))) * unpaidLeaveDays);
+        break;
+    }
+  }
+
+  const grossEarnings = basicEarnings + allowancesTotal + overtimeAmount;
+  const appliedDeductions = calculateDeductions(basicEarnings, grossEarnings, category, employmentType, deductions);
+  const totalDeductionsValue = appliedDeductions.reduce((sum, d) => sum + d.calculatedValue, 0) + halfDayDeduction + lateDeduction + unpaidLeaveDeduction;
+  const netPay = grossEarnings - totalDeductionsValue;
+
+  return {
+    totalDays, presentDays, absentDays, halfDays, paidLeaveDays, unpaidLeaveDays,
+    weeklyOffs: paidWeeklyOffs, holidays: paidHolidays,
+    effectiveWorkingDays: Math.round(effectiveWorkingDays * 100) / 100,
+    overtimeHours: totalOvertimeHours, overtimeHoursAllowed: allowedOvertimeHours,
+    overtimeRuleApplied: overtimeRule ? { name: overtimeRule.name, multiplier: overtimeRule.multiplier } : null,
+    overtimeAmount, basicEarnings, allowances: appliedAllowances, allowancesTotal,
+    grossEarnings, deductions: appliedDeductions, totalDeductions: totalDeductionsValue, netPay,
+    employee: { id: String(emp._id), name: emp.fullName, code: emp.employeeCode },
+  };
+}
+
 export class PayrollService {
   static async listRuns(queryParams: Record<string, unknown>): Promise<{ data: unknown[]; meta: PaginationMeta }> {
     const { page, limit, sort, order } = PaginationUtil.parseFromObject(queryParams);
@@ -147,160 +284,15 @@ export class PayrollService {
     const workingDays = config.defaultWorkingDays || 26;
     const standardHours = config.standardHoursPerDay || 8;
 
-    const employees = await Employee.find({ status: 'active' })
-      .populate('department')
-      .lean();
+    const employees = await Employee.find({ status: 'active' }).lean();
 
     let totalNetPay = 0;
     const payrollItems = [];
 
     for (const emp of employees) {
-      const empAny = emp as any;
-      const category = empAny.category || 'worker';
-      const employmentType = empAny.employmentType || 'permanent';
-
-      const attendances = await AttendanceEntry.find({
-        employee: emp._id,
-        date: { $gte: startDate, $lte: endDate },
-      }).lean();
-
-      const overtimes = await OvertimeEntry.find({
-        employee: emp._id,
-        date: { $gte: startDate, $lte: endDate },
-      }).lean();
-
-      const leaveApplications = await LeaveApplication.find({
-        employee: emp._id,
-        status: 'approved',
-        startDate: { $lte: endDate },
-        endDate: { $gte: startDate },
-      }).populate('leaveType', 'isPaid deductionMethod name').lean();
-
-      let presentDays = 0, absentDays = 0, halfDays = 0, leaveDays = 0, weeklyOffs = 0, holidaysCount = 0;
-      let paidLeaveDays = 0, unpaidLeaveDays = 0;
-      let totalOvertimeHours = 0;
-
-      const leaveDayMap: Record<string, { isPaid: boolean; deductionMethod: string }> = {};
-      for (const app of leaveApplications as any[]) {
-        const appStart = new Date(Math.max(startDate.getTime(), new Date(app.startDate).getTime()));
-        const appEnd = new Date(Math.min(endDate.getTime(), new Date(app.endDate).getTime()));
-        const lt = app.leaveType;
-        if (!lt) continue;
-        for (let d = new Date(appStart); d <= appEnd; d.setDate(d.getDate() + 1)) {
-          const key = formatDate(d);
-          leaveDayMap[key] = { isPaid: lt.isPaid, deductionMethod: lt.deductionMethod || 'none' };
-        }
-      }
-
-      for (const att of attendances) {
-        switch (att.status) {
-          case 'present': presentDays++; break;
-          case 'absent': absentDays++; break;
-          case 'half-day': halfDays++; break;
-          case 'leave': {
-            leaveDays++;
-            const dateKey = formatDate(new Date(att.date));
-            const ld = leaveDayMap[dateKey];
-            if (ld && ld.isPaid) {
-              paidLeaveDays++;
-            } else {
-              unpaidLeaveDays++;
-            }
-            break;
-          }
-          case 'weekly-off': weeklyOffs++; break;
-          case 'holiday': holidaysCount++; break;
-        }
-      }
-
-      for (const ot of overtimes) totalOvertimeHours += ot.hours || 0;
-
-      const overtimeRule = await getApplicableOvertimeRule(category);
-      const allowedOvertimeHours = applyOvertimeRules(totalOvertimeHours, overtimeRule);
-
-      const baseSalary = empAny.baseSalary || 0;
-      const dailyWage = empAny.dailyWage || 0;
-      const isMonthly = empAny.salaryType === 'monthly';
-
-      const paidWeeklyOffs = config.paidWeeklyOff ? weeklyOffs : 0;
-      const paidHolidays = config.paidHolidays ? holidaysCount : 0;
-      
-      const effectiveWorkingDays = presentDays + (halfDays * (1 - (config.halfDayDeductionPercent || 50) / 100)) + paidWeeklyOffs + paidHolidays;
-      
-      const basicEarnings = isMonthly 
-        ? Math.round(baseSalary * (effectiveWorkingDays / workingDays))
-        : dailyWage * presentDays;
-
-      const appliedAllowances = calculateAllowances(basicEarnings, category, employmentType, allowances);
-      const allowancesTotal = appliedAllowances.reduce((sum, a) => sum + a.calculatedValue, 0);
-
-      const overtimeRate = isMonthly 
-        ? (config.overtimeBase === 'basicPlusAllowances' ? (baseSalary + allowancesTotal) : baseSalary) / workingDays / standardHours
-        : dailyWage / standardHours;
-      
-      const otMultiplier = overtimeRule?.multiplier || config.overtimeMultiplier || 2;
-      const overtimeAmount = allowedOvertimeHours > 0 
-        ? Math.round(overtimeRate * otMultiplier * allowedOvertimeHours)
-        : 0;
-
-      const halfDayDeduction = halfDays > 0 
-        ? Math.round((isMonthly ? baseSalary / workingDays : dailyWage) * (config.halfDayDeductionPercent || 50) / 100 * halfDays) 
-        : 0;
-      const lateDeduction = absentDays > 0 ? (config.lateDeductionPerDay || 0) * absentDays : 0;
-
-      let unpaidLeaveDeduction = 0;
-      if (unpaidLeaveDays > 0) {
-        const dailyRate = isMonthly ? baseSalary / workingDays : dailyWage;
-        const unpaidLeaveType = leaveApplications.find((app: any) => app.leaveType && !app.leaveType.isPaid) as any;
-        const deductionMethod = unpaidLeaveType?.leaveType?.deductionMethod || 'basic-only';
-
-        switch (deductionMethod) {
-          case 'none':
-            unpaidLeaveDeduction = 0;
-            break;
-          case 'basic-only':
-            unpaidLeaveDeduction = Math.round(dailyRate * unpaidLeaveDays);
-            break;
-          case 'basic-plus-allowances':
-            unpaidLeaveDeduction = Math.round((dailyRate + (allowancesTotal / Math.max(1, workingDays))) * unpaidLeaveDays);
-            break;
-          case 'gross':
-            unpaidLeaveDeduction = Math.round(((dailyRate + (allowancesTotal / Math.max(1, workingDays))) * unpaidLeaveDays));
-            break;
-        }
-      }
-
-      const grossEarnings = basicEarnings + allowancesTotal + overtimeAmount;
-      
-      const appliedDeductions = calculateDeductions(basicEarnings, grossEarnings, category, employmentType, deductions);
-      const totalDeductionsValue = appliedDeductions.reduce((sum, d) => sum + d.calculatedValue, 0) + halfDayDeduction + lateDeduction + unpaidLeaveDeduction;
-
-      const netPay = grossEarnings - totalDeductionsValue;
-      totalNetPay += netPay;
-
-      payrollItems.push({
-        employee: { id: String(emp._id), name: empAny.fullName, code: empAny.employeeCode },
-        totalDays,
-        presentDays,
-        absentDays,
-        halfDays,
-        paidLeaveDays,
-        unpaidLeaveDays,
-        weeklyOffs: paidWeeklyOffs,
-        holidays: paidHolidays,
-        effectiveWorkingDays: Math.round(effectiveWorkingDays * 100) / 100,
-        overtimeHours: totalOvertimeHours,
-        overtimeHoursAllowed: allowedOvertimeHours,
-        overtimeRuleApplied: overtimeRule ? { name: overtimeRule.name, multiplier: overtimeRule.multiplier } : null,
-        basicEarnings,
-        allowances: appliedAllowances,
-        allowancesTotal,
-        overtimeAmount,
-        grossEarnings,
-        deductions: appliedDeductions,
-        totalDeductions: totalDeductionsValue,
-        netPay,
-      });
+      const result = await calculatePayrollForEmployee(emp, month, year, config, allowances, deductions, startDate, endDate, totalDays, workingDays, standardHours);
+      totalNetPay += result.netPay;
+      payrollItems.push(result);
     }
 
     const run = await PayrollRun.create({
@@ -357,6 +349,91 @@ export class PayrollService {
     };
   }
 
+  static async previewRun(month: number, year: number): Promise<Record<string, unknown>> {
+    const monthStr = `${year}-${String(month).padStart(2, '0')}`;
+
+    const settings = await CompanySettings.findOne().lean();
+    const config = (settings?.payrollConfig as any) || {};
+    const allowances = (settings?.allowanceConfig as any[]) || [];
+    const deductions = (settings?.deductionConfig as any[]) || [];
+
+    const startDate = new Date(year, month - 1, 1);
+    const endDate = new Date(year, month, 0);
+    const totalDays = getDaysInMonth(year, month);
+    const workingDays = config.defaultWorkingDays || 26;
+    const standardHours = config.standardHoursPerDay || 8;
+
+    const employees = await Employee.find({ status: 'active' }).lean();
+
+    let totalNetPay = 0;
+    const payrollItems = [];
+
+    for (const emp of employees) {
+      const result = await calculatePayrollForEmployee(emp, month, year, config, allowances, deductions, startDate, endDate, totalDays, workingDays, standardHours);
+      totalNetPay += result.netPay;
+      payrollItems.push(result);
+    }
+
+    return {
+      month: monthStr,
+      totalEmployees: employees.length,
+      totalNetPay,
+      items: payrollItems,
+    };
+  }
+
+  static async submitRun(id: string, userId: string): Promise<Record<string, unknown>> {
+    const run = await PayrollRun.findById(id);
+    if (!run) throw new AppError('Payroll run not found', 404);
+    if (run.status !== 'draft') throw new AppError('Only draft payroll can be submitted', 400);
+
+    run.status = 'submitted';
+    run.submittedBy = userId as any;
+    run.submittedAt = new Date();
+    await addRevision(run, 'Submitted for approval', userId);
+    await run.save();
+
+    await PayrollItem.updateMany({ payrollRun: id }, { status: 'submitted' });
+    await AuditService.log({ action: 'update', module: 'payroll', userId, targetId: id, details: { status: 'submitted' } });
+
+    return { id: String(run._id), status: run.status };
+  }
+
+  static async approveRun(id: string, userId: string): Promise<Record<string, unknown>> {
+    const run = await PayrollRun.findById(id);
+    if (!run) throw new AppError('Payroll run not found', 404);
+    if (run.status !== 'submitted') throw new AppError('Only submitted payroll can be approved', 400);
+
+    run.status = 'approved';
+    run.approvedBy = userId as any;
+    run.approvedAt = new Date();
+    await addRevision(run, 'Approved', userId);
+    await run.save();
+
+    await PayrollItem.updateMany({ payrollRun: id }, { status: 'approved' });
+    await AuditService.log({ action: 'approve', module: 'payroll', userId, targetId: id, details: { status: 'approved' } });
+
+    return { id: String(run._id), status: run.status };
+  }
+
+  static async rejectRun(id: string, userId: string, reason?: string): Promise<Record<string, unknown>> {
+    const run = await PayrollRun.findById(id);
+    if (!run) throw new AppError('Payroll run not found', 404);
+    if (run.status !== 'submitted') throw new AppError('Only submitted payroll can be rejected', 400);
+
+    run.status = 'draft';
+    run.submittedBy = undefined;
+    run.submittedAt = undefined;
+    if (reason) run.remarks = `Rejected: ${reason}`;
+    await addRevision(run, 'Rejected, returned to draft', userId, { reason });
+    await run.save();
+
+    await PayrollItem.updateMany({ payrollRun: id }, { status: 'draft' });
+    await AuditService.log({ action: 'reject', module: 'payroll', userId, targetId: id, details: { reason } });
+
+    return { id: String(run._id), status: run.status };
+  }
+
   static async finalizeRun(id: string, userId: string, remarks?: string): Promise<Record<string, unknown>> {
     const run = await PayrollRun.findById(id);
     if (!run) throw new AppError('Payroll run not found', 404);
@@ -364,7 +441,9 @@ export class PayrollService {
 
     run.status = 'finalized';
     run.finalizedBy = userId as any;
+    run.finalizedAt = new Date();
     if (remarks) run.remarks = remarks;
+    await addRevision(run, 'Finalized', userId);
     await run.save();
 
     await PayrollItem.updateMany(
@@ -400,9 +479,24 @@ export class PayrollService {
     if (!run) throw new AppError('Payroll run not found', 404);
     if (run.status !== 'finalized') throw new AppError('Can only unfinalize finalized payroll', 400);
 
+    const settings = await CompanySettings.findOne().lean();
+    const config = (settings?.payrollConfig as any) || {};
+    const windowDays = config.unfinalizeWindowDays ?? 7;
+    if (run.finalizedAt) {
+      const elapsed = dayjs().diff(dayjs(run.finalizedAt), 'day');
+      if (elapsed >= windowDays) {
+        throw new AppError(
+          `Cannot unfinalize: the ${windowDays}-day unfinalize window has expired (finalized on ${dayjs(run.finalizedAt).format('DD-MMM-YYYY')})`,
+          400,
+        );
+      }
+    }
+
     run.status = 'draft';
     run.finalizedBy = undefined;
+    run.finalizedAt = undefined;
     if (reason) run.remarks = `Unfinalized: ${reason}`;
+    await addRevision(run, 'Unfinalized (returned to draft)', userId, { reason });
     await run.save();
 
     await PayrollItem.updateMany(
@@ -424,6 +518,11 @@ export class PayrollService {
   static async getRunDetails(id: string): Promise<Record<string, unknown>> {
     const run = await PayrollRun.findById(id).lean();
     if (!run) throw new AppError('Payroll run not found', 404);
+
+    const settings = await CompanySettings.findOne().lean();
+    const config = (settings?.payrollConfig as any) || {};
+    const unfinalizeWindowDays = config.unfinalizeWindowDays ?? 7;
+    const unfinalizeLocked = !!(run.finalizedAt && dayjs().diff(dayjs(run.finalizedAt), 'day') >= unfinalizeWindowDays);
 
     const items = await PayrollItem.find({ payrollRun: id })
       .populate('employee', 'fullName employeeCode')
@@ -457,7 +556,7 @@ export class PayrollService {
       status: item.status,
     }));
 
-    return { ...run, id: String(run._id), _id: undefined, items: itemsData };
+    return { ...run, id: String(run._id), _id: undefined, items: itemsData, unfinalizeWindowDays, unfinalizeLocked };
   }
 
   static async updatePayrollItem(id: string, data: Record<string, unknown>, userId: string): Promise<Record<string, unknown>> {
@@ -468,12 +567,80 @@ export class PayrollService {
     if (!run) throw new AppError('Payroll run not found', 404);
     if (run.status === 'finalized') throw new AppError('Cannot edit finalized payroll', 400);
 
-    if (data.basicEarnings !== undefined) item.basicEarnings = data.basicEarnings as number;
-    if (data.allowances !== undefined) item.allowances = data.allowances as any;
-    if (data.deductions !== undefined) item.deductions = data.deductions as any;
-    if (data.netPay !== undefined) item.netPay = data.netPay as number;
+    const changes: Record<string, unknown> = {};
+    if (data.basicEarnings !== undefined && item.basicEarnings !== data.basicEarnings) {
+      changes.basicEarnings = { from: item.basicEarnings, to: data.basicEarnings };
+      item.basicEarnings = data.basicEarnings as number;
+    }
+    if (data.allowances !== undefined) {
+      changes.allowances = { updated: true };
+      item.allowances = data.allowances as any;
+    }
+    if (data.deductions !== undefined) {
+      changes.deductions = { updated: true };
+      item.deductions = data.deductions as any;
+    }
+    if (data.netPay !== undefined && item.netPay !== data.netPay) {
+      changes.netPay = { from: item.netPay, to: data.netPay };
+      item.netPay = data.netPay as number;
+    }
 
     await item.save();
+
+    if (Object.keys(changes).length > 0) {
+      await addRevision(run, 'Payroll item updated', userId, { itemId: id, employee: item.employee.toString(), changes });
+
+      await PayrollRun.findByIdAndUpdate(run._id, {
+        totalNetPay: await PayrollItem.aggregate([
+          { $match: { payrollRun: run._id } },
+          { $group: { _id: null, total: { $sum: '$netPay' } } }
+        ]).then(result => result[0]?.total || 0)
+      });
+    }
+
+    await AuditService.log({
+      action: 'update',
+      module: 'payroll',
+      userId,
+      targetId: id,
+      details: { field: 'payroll_item', changes },
+    });
+
+    const { _id, ...rest } = item.toObject();
+    return { ...rest, id: String(_id), _id: undefined };
+  }
+
+  static async batchUpdateItems(id: string, items: Array<{ itemId: string; data: Record<string, unknown> }>, userId: string): Promise<Record<string, unknown>> {
+    const run = await PayrollRun.findById(id);
+    if (!run) throw new AppError('Payroll run not found', 404);
+    if (run.status === 'finalized') throw new AppError('Cannot edit finalized payroll', 400);
+
+    const results = [];
+    for (const entry of items) {
+      try {
+        const item = await PayrollItem.findById(entry.itemId);
+        if (!item) {
+          results.push({ itemId: entry.itemId, status: 'failed', error: 'Item not found' });
+          continue;
+        }
+        if (entry.data.basicEarnings !== undefined) item.basicEarnings = entry.data.basicEarnings as number;
+        if (entry.data.netPay !== undefined) item.netPay = entry.data.netPay as number;
+        if (entry.data.allowances !== undefined) item.allowances = entry.data.allowances as any;
+        if (entry.data.deductions !== undefined) item.deductions = entry.data.deductions as any;
+        if (entry.data.presentDays !== undefined) item.presentDays = entry.data.presentDays as number;
+        if (entry.data.absentDays !== undefined) item.absentDays = entry.data.absentDays as number;
+        if (entry.data.halfDays !== undefined) item.halfDays = entry.data.halfDays as number;
+        if (entry.data.paidLeaveDays !== undefined) item.paidLeaveDays = entry.data.paidLeaveDays as number;
+        if (entry.data.unpaidLeaveDays !== undefined) item.unpaidLeaveDays = entry.data.unpaidLeaveDays as number;
+        if (entry.data.overtimeHours !== undefined) item.overtimeHours = entry.data.overtimeHours as number;
+        if (entry.data.overtimeAmount !== undefined) item.overtimeAmount = entry.data.overtimeAmount as number;
+        if (entry.data.totalDeductions !== undefined) item.totalDeductions = entry.data.totalDeductions as number;
+        await item.save();
+        results.push({ itemId: entry.itemId, status: 'updated' });
+      } catch (error) {
+        results.push({ itemId: entry.itemId, status: 'failed', error: (error as Error).message });
+      }
+    }
 
     await PayrollRun.findByIdAndUpdate(run._id, {
       totalNetPay: await PayrollItem.aggregate([
@@ -482,16 +649,15 @@ export class PayrollService {
       ]).then(result => result[0]?.total || 0)
     });
 
+    await addRevision(run, 'Batch update items', userId, { itemsCount: items.length });
+    await run.save();
+
     await AuditService.log({
-      action: 'update',
-      module: 'payroll',
-      userId,
-      targetId: id,
-      details: { field: 'payroll_item', changes: data },
+      action: 'bulk-update', module: 'payroll', userId,
+      targetId: id, details: { items: items.length, results },
     });
 
-    const { _id, ...rest } = item.toObject();
-    return { ...rest, id: String(_id), _id: undefined };
+    return { updated: results.filter((r: any) => r.status === 'updated').length, failed: results.filter((r: any) => r.status === 'failed').length, results };
   }
 
   static async deleteRun(id: string, userId: string): Promise<void> {

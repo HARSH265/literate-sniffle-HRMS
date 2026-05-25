@@ -62,6 +62,8 @@ export const ATTENDANCE_STATUSES = {
 
 export const PAYROLL_RUN_STATUSES = {
   DRAFT: 'draft',
+  SUBMITTED: 'submitted',
+  APPROVED: 'approved',
   FINALIZED: 'finalized',
 } as const;
 

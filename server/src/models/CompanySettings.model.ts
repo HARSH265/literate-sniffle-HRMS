@@ -35,6 +35,7 @@ export interface ICompanySettings extends Document {
     defaultWorkingDays: number;
     standardHoursPerDay: number;
     payrollLockDays: number;
+    unfinalizeWindowDays: number;
   };
   attendanceConfig: {
     pastEntryLimitDays: number;
@@ -153,6 +154,7 @@ const CompanySettingsSchema = new Schema<ICompanySettings>(
       defaultWorkingDays: { type: Number, default: 26 },
       standardHoursPerDay: { type: Number, default: 8 },
       payrollLockDays: { type: Number, default: 10 },
+      unfinalizeWindowDays: { type: Number, default: 7 },
     },
     attendanceConfig: {
       pastEntryLimitDays: { type: Number, default: 7 },

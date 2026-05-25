@@ -36,7 +36,7 @@ export interface IPayrollItem extends Document {
   }[];
   totalDeductions: number;
   netPay: number;
-  status: 'draft' | 'finalized';
+  status: 'draft' | 'submitted' | 'approved' | 'finalized';
 }
 
 interface PayrollItemModel extends Model<IPayrollItem> {}
@@ -84,7 +84,7 @@ const PayrollItemSchema = new Schema<IPayrollItem>(
     netPay: { type: Number, required: true },
     status: {
       type: String,
-      enum: ['draft', 'finalized'],
+      enum: ['draft', 'submitted', 'approved', 'finalized'],
       default: 'draft',
     },
   },

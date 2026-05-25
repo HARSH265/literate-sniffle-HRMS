@@ -3,11 +3,18 @@ import apiClient from '../../../core/api/apiClient';
 export interface PayrollRun {
   id: string;
   month: string;
-  status: 'draft' | 'finalized';
+  status: 'draft' | 'submitted' | 'approved' | 'finalized';
   totalEmployees: number;
   totalNetPay: number;
   createdAt: string;
   remarks?: string;
+  revisions?: Array<{
+    action: string;
+    userId: string;
+    userName: string;
+    changes?: any;
+    timestamp: string;
+  }>;
 }
 
 export interface PayrollItem {
@@ -17,6 +24,8 @@ export interface PayrollItem {
   presentDays: number;
   absentDays: number;
   halfDays: number;
+  paidLeaveDays: number;
+  unpaidLeaveDays: number;
   weeklyOffs: number;
   holidays: number;
   effectiveWorkingDays: number;
@@ -29,7 +38,7 @@ export interface PayrollItem {
   deductions: { name: string; type: string; value: number; calculatedValue: number }[];
   totalDeductions: number;
   netPay: number;
-  status: 'draft' | 'finalized';
+  status: string;
 }
 
 export const payrollService = {
@@ -43,13 +52,38 @@ export const payrollService = {
     return data;
   },
 
+  async previewRun(month: number, year: number): Promise<{ success: boolean; data: any }> {
+    const { data } = await apiClient.post('/payroll/preview', { month, year });
+    return data;
+  },
+
   async getRunDetails(id: string): Promise<{ success: boolean; data: any }> {
     const { data } = await apiClient.get(`/payroll/run/${id}`);
     return data;
   },
 
+  async submitRun(id: string): Promise<{ success: boolean; data: any }> {
+    const { data } = await apiClient.post(`/payroll/run/${id}/submit`);
+    return data;
+  },
+
+  async approveRun(id: string): Promise<{ success: boolean; data: any }> {
+    const { data } = await apiClient.post(`/payroll/run/${id}/approve`);
+    return data;
+  },
+
+  async rejectRun(id: string, reason?: string): Promise<{ success: boolean; data: any }> {
+    const { data } = await apiClient.post(`/payroll/run/${id}/reject`, { reason });
+    return data;
+  },
+
   async updatePayrollItem(runId: string, itemId: string, payload: Partial<PayrollItem>): Promise<{ success: boolean; data: any }> {
     const { data } = await apiClient.patch(`/payroll/run/${runId}/item/${itemId}`, payload);
+    return data;
+  },
+
+  async batchUpdateItems(runId: string, items: Array<{ itemId: string; data: Record<string, unknown> }>): Promise<{ success: boolean; data: any }> {
+    const { data } = await apiClient.patch(`/payroll/run/${runId}/items/batch`, { items });
     return data;
   },
 
