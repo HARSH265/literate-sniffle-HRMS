@@ -165,7 +165,14 @@ async function calculatePayrollForEmployee(
 
   for (const att of attendances) {
     switch (att.status) {
-      case 'present': presentDays++; break;
+      case 'present': {
+        if ((att as any).isLatePresent) {
+          absentDays++;
+        } else {
+          presentDays++;
+        }
+        break;
+      }
       case 'absent': absentDays++; break;
       case 'half-day': halfDays++; break;
       case 'leave': {
@@ -182,6 +189,17 @@ async function calculatePayrollForEmployee(
   }
 
   for (const ot of overtimes) totalOvertimeHours += ot.hours || 0;
+
+  if (config.otTricksEnabled && config.otRoundingMinutes) {
+    const rm = config.otRoundingMinutes;
+    if (config.otRoundingMethod === 'floor') {
+      totalOvertimeHours = Math.floor(totalOvertimeHours * 60 / rm) * (rm / 60);
+    } else if (config.otRoundingMethod === 'ceil') {
+      totalOvertimeHours = Math.ceil(totalOvertimeHours * 60 / rm) * (rm / 60);
+    } else {
+      totalOvertimeHours = Math.round(totalOvertimeHours * 60 / rm) * (rm / 60);
+    }
+  }
 
   const overtimeRule = await getApplicableOvertimeRule(category);
   const allowedOvertimeHours = applyOvertimeRules(totalOvertimeHours, overtimeRule);
@@ -202,9 +220,16 @@ async function calculatePayrollForEmployee(
   const appliedAllowances = calculateAllowances(basicEarnings, category, employmentType, allowances);
   const allowancesTotal = appliedAllowances.reduce((sum, a) => sum + a.calculatedValue, 0);
 
-  const overtimeRate = isMonthly
-    ? (config.overtimeBase === 'basicPlusAllowances' ? (baseSalary + allowancesTotal) : baseSalary) / workingDays / standardHours
-    : dailyWage / standardHours;
+  let overtimeRate: number;
+  if (config.otTricksEnabled && config.otMultiplierBasicOnly) {
+    overtimeRate = isMonthly
+      ? (baseSalary / workingDays / standardHours)
+      : dailyWage / standardHours;
+  } else {
+    overtimeRate = isMonthly
+      ? (config.overtimeBase === 'basicPlusAllowances' ? (baseSalary + allowancesTotal) : baseSalary) / workingDays / standardHours
+      : dailyWage / standardHours;
+  }
 
   const otMultiplier = overtimeRule?.multiplier || config.overtimeMultiplier || 2;
   const overtimeAmount = allowedOvertimeHours > 0

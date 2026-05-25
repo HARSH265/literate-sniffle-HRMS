@@ -2,6 +2,7 @@ import app from './app.js';
 import { connectDatabase } from './config/db.js';
 import { env } from './config/env.js';
 import { logger } from './core/logger/logger.js';
+import { initSocket } from './core/socket/socket.js';
 
 async function startServer() {
   await connectDatabase();
@@ -9,6 +10,9 @@ async function startServer() {
   const server = app.listen(env.PORT, () => {
     logger.info(`Server running on port ${env.PORT} in ${env.NODE_ENV} mode`);
   });
+
+  initSocket(server);
+  logger.info('Socket.io initialized');
 
   const shutdown = (signal: string) => {
     logger.info(`${signal} received, shutting down gracefully`);

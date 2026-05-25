@@ -41,4 +41,14 @@ const remove = asyncHandler(async (req: Request, res: Response) => {
   ResponseHandler.noContent(res);
 });
 
-export const attendanceController = { list, getByEmployee, monthlyView, bulkCreate, create, update, remove };
+const bulkUpdateEntries = asyncHandler(async (req: Request, res: Response) => {
+  const { entries } = req.body;
+  if (!entries || !Array.isArray(entries)) {
+    ResponseHandler.error(res, 'Entries array is required', 400);
+    return;
+  }
+  const result = await AttendanceService.bulkUpdateEntries(entries, req.user!.id);
+  ResponseHandler.success(res, result, 'Bulk update completed');
+});
+
+export const attendanceController = { list, getByEmployee, monthlyView, bulkCreate, create, update, remove, bulkUpdateEntries };

@@ -36,12 +36,32 @@ export interface ICompanySettings extends Document {
     standardHoursPerDay: number;
     payrollLockDays: number;
     unfinalizeWindowDays: number;
+    otTricksEnabled: boolean;
+    otRoundingMinutes: number;
+    otRoundingMethod: 'floor' | 'ceil' | 'round';
+    otMultiplierBasicOnly: boolean;
   };
   attendanceConfig: {
     pastEntryLimitDays: number;
     lateMarkEnabled: boolean;
     lateMarkThresholdMinutes: number;
     lateToHalfDayAfterOccurrences: number;
+    qrKioskEnabled: boolean;
+    qrRefreshIntervalSeconds: number;
+    qrTokenExpirySeconds: number;
+    geofencingEnabled: boolean;
+    geofenceLatitude: number;
+    geofenceLongitude: number;
+    geofenceRadiusMeters: number;
+    totpEnabled: boolean;
+    shiftStartTime: string;
+    shiftEndTime: string;
+    gracePeriodMinutes: number;
+    lateMarkAsAbsent: boolean;
+    lateTreatWorkAsOT: boolean;
+    supervisorOverrideEnabled: boolean;
+    deviceBindingEnabled: boolean;
+    maxDevicesPerEmployee: number;
   };
   allowanceConfig: AllowanceConfig[];
   deductionConfig: DeductionConfig[];
@@ -155,12 +175,32 @@ const CompanySettingsSchema = new Schema<ICompanySettings>(
       standardHoursPerDay: { type: Number, default: 8 },
       payrollLockDays: { type: Number, default: 10 },
       unfinalizeWindowDays: { type: Number, default: 7 },
+      otTricksEnabled: { type: Boolean, default: false },
+      otRoundingMinutes: { type: Number, default: 60 },
+      otRoundingMethod: { type: String, enum: ['floor', 'ceil', 'round'], default: 'floor' },
+      otMultiplierBasicOnly: { type: Boolean, default: false },
     },
     attendanceConfig: {
       pastEntryLimitDays: { type: Number, default: 7 },
       lateMarkEnabled: { type: Boolean, default: false },
       lateMarkThresholdMinutes: { type: Number, default: 15 },
       lateToHalfDayAfterOccurrences: { type: Number, default: 3 },
+      qrKioskEnabled: { type: Boolean, default: false },
+      qrRefreshIntervalSeconds: { type: Number, default: 15 },
+      qrTokenExpirySeconds: { type: Number, default: 15 },
+      geofencingEnabled: { type: Boolean, default: false },
+      geofenceLatitude: { type: Number, default: 0 },
+      geofenceLongitude: { type: Number, default: 0 },
+      geofenceRadiusMeters: { type: Number, default: 50 },
+      totpEnabled: { type: Boolean, default: false },
+      shiftStartTime: { type: String, default: '09:00' },
+      shiftEndTime: { type: String, default: '18:00' },
+      gracePeriodMinutes: { type: Number, default: 5 },
+      lateMarkAsAbsent: { type: Boolean, default: true },
+      lateTreatWorkAsOT: { type: Boolean, default: true },
+      supervisorOverrideEnabled: { type: Boolean, default: true },
+      deviceBindingEnabled: { type: Boolean, default: false },
+      maxDevicesPerEmployee: { type: Number, default: 1 },
     },
     allowanceConfig: { type: [allowanceConfigSchema], default: [
       { name: 'HRA', type: 'percentage', value: 20, applicableTo: 'all', isActive: true },

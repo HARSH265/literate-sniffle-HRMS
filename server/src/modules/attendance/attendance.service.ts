@@ -429,6 +429,41 @@ export class AttendanceService {
     return { ...rest, id: String(_id), _id: undefined, overtimeHours: undefined };
   }
 
+  static async bulkUpdateEntries(entries: Array<{ id: string; status?: string; inTime?: string; outTime?: string; remarks?: string }>, userId: string) {
+    if (!entries.length) throw new AppError('No entries provided', 400);
+
+    const results: Array<{ id: string; status: string }> = [];
+    for (const entry of entries) {
+      try {
+        const existing = await AttendanceEntry.findById(entry.id);
+        if (!existing) {
+          results.push({ id: entry.id, status: 'failed' });
+          continue;
+        }
+
+        if (entry.status) existing.status = entry.status as any;
+        if (entry.inTime !== undefined) existing.inTime = entry.inTime;
+        if (entry.outTime !== undefined) existing.outTime = entry.outTime;
+        if (entry.remarks !== undefined) existing.remarks = entry.remarks;
+        existing.updatedBy = userId as any;
+
+        await existing.save();
+        results.push({ id: entry.id, status: 'updated' });
+      } catch {
+        results.push({ id: entry.id, status: 'failed' });
+      }
+    }
+
+    await AuditService.log({
+      action: 'bulk-update',
+      module: 'attendance',
+      userId,
+      details: { total: entries.length, updated: results.filter(r => r.status === 'updated').length },
+    });
+
+    return { updated: results.filter(r => r.status === 'updated').length, failed: results.filter(r => r.status === 'failed').length, results };
+  }
+
   static async delete(id: string, userId: string) {
     const entry = await AttendanceEntry.findById(id);
     if (!entry) {

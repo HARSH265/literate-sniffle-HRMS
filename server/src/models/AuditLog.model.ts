@@ -11,7 +11,10 @@ export type AuditAction =
   | 'add-department' | 'edit-department' | 'delete-department'
   | 'add-holiday' | 'edit-holiday' | 'delete-holiday'
   | 'add-rule' | 'edit-rule' | 'delete-rule'
-  | 'approve' | 'reject' | 'download' | 'view';
+  | 'approve' | 'reject' | 'download' | 'view'
+  | 'attendance-checkin' | 'attendance-checkout'
+  | 'kiosk-register'
+  | 'totp-enroll' | 'totp-disable';
 
 export interface IAuditLog extends Document {
   action: AuditAction;

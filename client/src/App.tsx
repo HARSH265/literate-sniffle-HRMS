@@ -38,6 +38,9 @@ import { UserActivityPage } from './features/users/pages/UserActivityPage';
 import { AuditLogsPage } from './features/audit/pages/AuditLogsPage';
 import { NotificationsPage } from './features/notifications/pages/NotificationsPage';
 import { RuleBookPage } from './features/rule-book/pages/RuleBookPage';
+import { KioskPage } from './features/kiosk/pages/KioskPage';
+import { ScanPage } from './features/attendance-qr/pages/ScanPage';
+import { TOTPEnrollPage } from './features/totp/pages/TOTPEnrollPage';
 
 const PageLoader = () => (
   <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
@@ -55,6 +58,9 @@ function App() {
           <Routes>
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/kiosk" element={<KioskPage />} />
+            <Route path="/m/scan" element={<ScanPage />} />
+            <Route path="/m/confirm" element={<ScanPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>
@@ -91,6 +97,7 @@ function App() {
             <Route path="leave/applications" element={<LeaveApplicationsPage />} />
             <Route path="reports" element={<ReportsPage />} />
             <Route path="settings" element={<SettingsPage />} />
+            <Route path="settings/totp" element={<TOTPEnrollPage />} />
             <Route path="rule-book" element={<RuleBookPage />} />
             <Route path="users" element={<UsersPage />} />
             <Route path="users/new" element={<UserNewPage />} />

@@ -22,6 +22,7 @@ import {
   GiftOutlined,
   CalendarOutlined,
   CheckSquareOutlined,
+  SafetyCertificateOutlined,
 } from '@ant-design/icons';
 import { usePermission } from '../core/hooks/usePermission';
 import { useUIStore } from '../core/stores/uiStore';
@@ -133,7 +134,16 @@ export function Sidebar({ collapsed }: SidebarProps) {
     { key: '/audit-logs', icon: <FileDoneOutlined />, label: 'Audit Logs', permission: 'view-audit' },
     { key: '/notifications', icon: <BellOutlined />, label: 'Notifications', permission: undefined },
     { key: '/rule-book', icon: <BookOutlined />, label: 'User Guide' },
-    { key: '/settings', icon: <SettingOutlined />, label: 'Settings', permission: 'manage-settings' },
+    {
+      key: 'settings-menu',
+      icon: <SettingOutlined />,
+      label: 'Settings',
+      permission: 'manage-settings',
+      children: [
+        { key: '/settings', icon: <SettingOutlined />, label: 'General Settings' },
+        { key: '/settings/totp', icon: <SafetyCertificateOutlined />, label: 'TOTP Enrollment' },
+      ]
+    },
   ];
 
   const renderMenuItems = (items: typeof menuItems) => {

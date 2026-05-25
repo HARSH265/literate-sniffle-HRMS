@@ -12,7 +12,10 @@ export type AuditAction =
   | 'add-department' | 'edit-department' | 'delete-department'
   | 'add-holiday' | 'edit-holiday' | 'delete-holiday'
   | 'add-rule' | 'edit-rule' | 'delete-rule'
-  | 'approve' | 'reject' | 'download' | 'view' | 'activate' | 'deactivate';
+  | 'approve' | 'reject' | 'download' | 'view' | 'activate' | 'deactivate'
+  | 'attendance-checkin' | 'attendance-checkout'
+  | 'kiosk-register'
+  | 'totp-enroll' | 'totp-disable';
 
 export interface AuditData {
   action: AuditAction;

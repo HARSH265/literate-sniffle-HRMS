@@ -32,6 +32,9 @@ export interface IEmployee extends Document {
   }>;
   createdBy?: mongoose.Types.ObjectId;
   updatedBy?: mongoose.Types.ObjectId;
+  totpSecret?: string;
+  totpEnabled: boolean;
+  registeredDeviceId?: string;
 }
 
 interface EmployeeModel extends Model<IEmployee> {}
@@ -85,6 +88,9 @@ const EmployeeSchema = new Schema<IEmployee>(
     }],
     createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    totpSecret: { type: String, select: false },
+    totpEnabled: { type: Boolean, default: false },
+    registeredDeviceId: { type: String },
   },
   { timestamps: true },
 );

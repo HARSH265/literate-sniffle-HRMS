@@ -1,0 +1,19 @@
+{
+  "name": "Orian HRMS Attendance",
+  "short_name": "Orian",
+  "description": "Employee attendance check-in/out system",
+  "start_url": "/m/scan",
+  "scope": "/m/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f5f5f5",
+  "theme_color": "#1a1a2e",
+  "icons": [
+    {
+      "src": "/orian.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
