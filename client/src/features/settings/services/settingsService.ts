@@ -59,6 +59,16 @@ export interface CompanySettings {
     defaultSalaryType: 'monthly' | 'daily';
     defaultWorkingDays: number;
   };
+  leaveConfig: {
+    financialYearStartMonth: number;
+    accrualDayOfMonth: number;
+    defaultApprovalLevels: number;
+    allowCancelAfterApproval: boolean;
+    cancelAfterApprovalDaysLimit: number;
+    deductionPriority: string;
+    allowanceProRateMode: string;
+    deductionProRateMode: string;
+  };
 }
 
 export const settingsService = {

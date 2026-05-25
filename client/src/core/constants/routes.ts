@@ -34,6 +34,14 @@ export const ROUTES = {
   salarySlips: '/salary-slips',
   salarySlipDetails: (id: string) => `/salary-slips/${id}`,
 
+  leave: {
+    types: '/leave/types',
+    applications: '/leave/applications',
+    myApplications: '/leave/my-applications',
+    approvals: '/leave/approvals',
+    balances: '/leave/balances',
+    calendar: '/leave/calendar',
+  },
   reports: {
     attendance: '/reports/attendance',
     payroll: '/reports/payroll',

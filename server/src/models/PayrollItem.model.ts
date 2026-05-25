@@ -8,6 +8,8 @@ export interface IPayrollItem extends Document {
   presentDays: number;
   absentDays: number;
   halfDays: number;
+  paidLeaveDays: number;
+  unpaidLeaveDays: number;
   weeklyOffs: number;
   holidays: number;
   effectiveWorkingDays: number;
@@ -48,6 +50,8 @@ const PayrollItemSchema = new Schema<IPayrollItem>(
     presentDays: { type: Number, required: true },
     absentDays: { type: Number, required: true },
     halfDays: { type: Number, required: true },
+    paidLeaveDays: { type: Number, default: 0 },
+    unpaidLeaveDays: { type: Number, default: 0 },
     weeklyOffs: { type: Number, required: true },
     holidays: { type: Number, required: true },
     effectiveWorkingDays: { type: Number, required: true },

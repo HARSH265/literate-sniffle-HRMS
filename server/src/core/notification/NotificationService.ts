@@ -57,6 +57,12 @@ export class NotificationService {
         case 'attendance':
           shouldEmail = notifConfig.notifyOnAttendanceEntry === true;
           break;
+        case 'leave':
+          shouldEmail = notifConfig.notifyOnLeaveApplied === true;
+          break;
+        case 'leave-approval':
+          shouldEmail = notifConfig.notifyOnLeaveApproved === true;
+          break;
       }
 
       if (!shouldEmail) return;

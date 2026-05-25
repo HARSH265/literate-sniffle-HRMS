@@ -5,6 +5,7 @@ import AttendanceEntry from '../../models/AttendanceEntry.model.js';
 import OvertimeEntry from '../../models/OvertimeEntry.model.js';
 import OvertimeRule from '../../models/OvertimeRule.model.js';
 import CompanySettings from '../../models/CompanySettings.model.js';
+import LeaveApplication from '../../models/LeaveApplication.model.js';
 import User from '../../models/User.model.js';
 import { AppError } from '../../core/errors/AppError.js';
 import { AuditService } from '../../core/audit/AuditService.js';
@@ -13,6 +14,13 @@ import { NotificationService } from '../../core/notification/NotificationService
 
 function getDaysInMonth(year: number, month: number): number {
   return new Date(year, month, 0).getDate();
+}
+
+function formatDate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 
 async function getApplicableOvertimeRule(category: string): Promise<any | null> {
@@ -161,15 +169,45 @@ export class PayrollService {
         date: { $gte: startDate, $lte: endDate },
       }).lean();
 
+      const leaveApplications = await LeaveApplication.find({
+        employee: emp._id,
+        status: 'approved',
+        startDate: { $lte: endDate },
+        endDate: { $gte: startDate },
+      }).populate('leaveType', 'isPaid deductionMethod name').lean();
+
       let presentDays = 0, absentDays = 0, halfDays = 0, leaveDays = 0, weeklyOffs = 0, holidaysCount = 0;
+      let paidLeaveDays = 0, unpaidLeaveDays = 0;
       let totalOvertimeHours = 0;
+
+      const leaveDayMap: Record<string, { isPaid: boolean; deductionMethod: string }> = {};
+      for (const app of leaveApplications as any[]) {
+        const appStart = new Date(Math.max(startDate.getTime(), new Date(app.startDate).getTime()));
+        const appEnd = new Date(Math.min(endDate.getTime(), new Date(app.endDate).getTime()));
+        const lt = app.leaveType;
+        if (!lt) continue;
+        for (let d = new Date(appStart); d <= appEnd; d.setDate(d.getDate() + 1)) {
+          const key = formatDate(d);
+          leaveDayMap[key] = { isPaid: lt.isPaid, deductionMethod: lt.deductionMethod || 'none' };
+        }
+      }
 
       for (const att of attendances) {
         switch (att.status) {
           case 'present': presentDays++; break;
           case 'absent': absentDays++; break;
           case 'half-day': halfDays++; break;
-          case 'leave': leaveDays++; break;
+          case 'leave': {
+            leaveDays++;
+            const dateKey = formatDate(new Date(att.date));
+            const ld = leaveDayMap[dateKey];
+            if (ld && ld.isPaid) {
+              paidLeaveDays++;
+            } else {
+              unpaidLeaveDays++;
+            }
+            break;
+          }
           case 'weekly-off': weeklyOffs++; break;
           case 'holiday': holidaysCount++; break;
         }
@@ -210,10 +248,32 @@ export class PayrollService {
         : 0;
       const lateDeduction = absentDays > 0 ? (config.lateDeductionPerDay || 0) * absentDays : 0;
 
+      let unpaidLeaveDeduction = 0;
+      if (unpaidLeaveDays > 0) {
+        const dailyRate = isMonthly ? baseSalary / workingDays : dailyWage;
+        const unpaidLeaveType = leaveApplications.find((app: any) => app.leaveType && !app.leaveType.isPaid) as any;
+        const deductionMethod = unpaidLeaveType?.leaveType?.deductionMethod || 'basic-only';
+
+        switch (deductionMethod) {
+          case 'none':
+            unpaidLeaveDeduction = 0;
+            break;
+          case 'basic-only':
+            unpaidLeaveDeduction = Math.round(dailyRate * unpaidLeaveDays);
+            break;
+          case 'basic-plus-allowances':
+            unpaidLeaveDeduction = Math.round((dailyRate + (allowancesTotal / Math.max(1, workingDays))) * unpaidLeaveDays);
+            break;
+          case 'gross':
+            unpaidLeaveDeduction = Math.round(((dailyRate + (allowancesTotal / Math.max(1, workingDays))) * unpaidLeaveDays));
+            break;
+        }
+      }
+
       const grossEarnings = basicEarnings + allowancesTotal + overtimeAmount;
       
       const appliedDeductions = calculateDeductions(basicEarnings, grossEarnings, category, employmentType, deductions);
-      const totalDeductionsValue = appliedDeductions.reduce((sum, d) => sum + d.calculatedValue, 0) + halfDayDeduction + lateDeduction;
+      const totalDeductionsValue = appliedDeductions.reduce((sum, d) => sum + d.calculatedValue, 0) + halfDayDeduction + lateDeduction + unpaidLeaveDeduction;
 
       const netPay = grossEarnings - totalDeductionsValue;
       totalNetPay += netPay;
@@ -224,6 +284,8 @@ export class PayrollService {
         presentDays,
         absentDays,
         halfDays,
+        paidLeaveDays,
+        unpaidLeaveDays,
         weeklyOffs: paidWeeklyOffs,
         holidays: paidHolidays,
         effectiveWorkingDays: Math.round(effectiveWorkingDays * 100) / 100,
@@ -257,6 +319,8 @@ export class PayrollService {
       presentDays: item.presentDays,
       absentDays: item.absentDays,
       halfDays: item.halfDays,
+      paidLeaveDays: item.paidLeaveDays,
+      unpaidLeaveDays: item.unpaidLeaveDays,
       weeklyOffs: item.weeklyOffs,
       holidays: item.holidays,
       effectiveWorkingDays: item.effectiveWorkingDays,
@@ -376,6 +440,8 @@ export class PayrollService {
       presentDays: item.presentDays,
       absentDays: item.absentDays,
       halfDays: item.halfDays,
+      paidLeaveDays: item.paidLeaveDays,
+      unpaidLeaveDays: item.unpaidLeaveDays,
       weeklyOffs: item.weeklyOffs,
       holidays: item.holidays,
       effectiveWorkingDays: item.effectiveWorkingDays,
@@ -463,6 +529,8 @@ export class PayrollService {
       presentDays: item.presentDays,
       absentDays: item.absentDays,
       halfDays: item.halfDays,
+      paidLeaveDays: item.paidLeaveDays,
+      unpaidLeaveDays: item.unpaidLeaveDays,
       weeklyOffs: item.weeklyOffs,
       holidays: item.holidays,
       effectiveWorkingDays: item.effectiveWorkingDays,

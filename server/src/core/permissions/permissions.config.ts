@@ -14,6 +14,10 @@ export const permissions: Record<string, Permission[]> = {
     'manage-users',
     'view-reports',
     'view-audit',
+    'manage-leave-types',
+    'manage-leave-applications',
+    'approve-leave',
+    'view-leave',
   ],
   [ROLES.HR_ADMIN]: [
     'manage-employees',
@@ -27,6 +31,10 @@ export const permissions: Record<string, Permission[]> = {
     'manage-users',
     'view-reports',
     'view-audit',
+    'manage-leave-types',
+    'manage-leave-applications',
+    'approve-leave',
+    'view-leave',
   ],
   [ROLES.HR_STAFF]: [
     'view-employees',
@@ -34,14 +42,20 @@ export const permissions: Record<string, Permission[]> = {
     'manage-attendance',
     'manage-overtime',
     'view-reports',
+    'manage-leave-applications',
+    'approve-leave',
+    'view-leave',
   ],
   [ROLES.ACCOUNTS]: [
     'view-departments',
     'process-payroll',
     'view-reports',
+    'view-leave',
   ],
   [ROLES.MANAGER]: [
     'view-departments',
     'view-reports',
+    'approve-leave',
+    'view-leave',
   ],
 };

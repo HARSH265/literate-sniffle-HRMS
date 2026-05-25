@@ -25,6 +25,11 @@ import { PayrollDetailsPage } from './features/payroll/pages/PayrollDetailsPage'
 import { SalarySlipsPage } from './features/payroll/pages/SalarySlipsPage';
 import { SalarySlipDetailsPage } from './features/payroll/pages/SalarySlipDetailsPage';
 import { ReportsPage } from './features/reports/pages/ReportsPage';
+import { LeaveTypesPage } from './features/leave/pages/LeaveTypesPage';
+import { LeaveApplyPage } from './features/leave/pages/LeaveApplyPage';
+import { LeaveApprovalsPage } from './features/leave/pages/LeaveApprovalsPage';
+import { LeaveBalancesPage } from './features/leave/pages/LeaveBalancesPage';
+import { LeaveApplicationsPage } from './features/leave/pages/LeaveApplicationsPage';
 import { SettingsPage } from './features/settings/pages/SettingsPage';
 import { UsersPage } from './features/users/pages/UsersPage';
 import { UserNewPage } from './features/users/pages/UserNewPage';
@@ -79,6 +84,11 @@ function App() {
             <Route path="payroll/:id" element={<PayrollDetailsPage />} />
             <Route path="salary-slips" element={<SalarySlipsPage />} />
             <Route path="salary-slips/:id" element={<SalarySlipDetailsPage />} />
+            <Route path="leave/types" element={<LeaveTypesPage />} />
+            <Route path="leave/my-applications" element={<LeaveApplyPage />} />
+            <Route path="leave/approvals" element={<LeaveApprovalsPage />} />
+            <Route path="leave/balances" element={<LeaveBalancesPage />} />
+            <Route path="leave/applications" element={<LeaveApplicationsPage />} />
             <Route path="reports" element={<ReportsPage />} />
             <Route path="settings" element={<SettingsPage />} />
             <Route path="rule-book" element={<RuleBookPage />} />

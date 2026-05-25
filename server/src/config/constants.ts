@@ -75,6 +75,32 @@ export const OT_BASES = {
   BASIC_PLUS_ALLOWANCES: 'basicPlusAllowances',
 } as const;
 
+export const LEAVE_STATUSES = {
+  PENDING: 'pending',
+  APPROVED: 'approved',
+  REJECTED: 'rejected',
+  CANCELLED: 'cancelled',
+} as const;
+
+export const APPROVAL_STATUSES = {
+  PENDING: 'pending',
+  APPROVED: 'approved',
+  REJECTED: 'rejected',
+} as const;
+
+export const ACCRUAL_METHODS = {
+  YEARLY_LUMP: 'yearly-lump',
+  MONTHLY_PRO_RATA: 'monthly-pro-rata',
+  MANUAL: 'manual',
+} as const;
+
+export const DEDUCTION_METHODS = {
+  NONE: 'none',
+  BASIC_ONLY: 'basic-only',
+  BASIC_PLUS_ALLOWANCES: 'basic-plus-allowances',
+  GROSS: 'gross',
+} as const;
+
 export type Role = (typeof ROLES)[keyof typeof ROLES];
 export type Category = (typeof CATEGORIES)[keyof typeof CATEGORIES];
 export type EmploymentType = (typeof EMPLOYMENT_TYPES)[keyof typeof EMPLOYMENT_TYPES];

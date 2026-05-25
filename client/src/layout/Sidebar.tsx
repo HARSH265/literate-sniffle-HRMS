@@ -20,6 +20,8 @@ import {
   PlusOutlined,
   PlayCircleOutlined,
   GiftOutlined,
+  CalendarOutlined,
+  CheckSquareOutlined,
 } from '@ant-design/icons';
 import { usePermission } from '../core/hooks/usePermission';
 import { useUIStore } from '../core/stores/uiStore';
@@ -48,6 +50,13 @@ export function Sidebar({ collapsed }: SidebarProps) {
     if (path.includes('/holidays')) return '/holidays';
     if (path.includes('/weekly-off-rules')) return '/weekly-off-rules';
     if (path.includes('/attendance')) return '/attendance';
+    if (path.includes('/leave')) {
+      if (path.includes('/leave/types')) return '/leave/types';
+      if (path.includes('/leave/my-applications')) return '/leave/my-applications';
+      if (path.includes('/leave/approvals')) return '/leave/approvals';
+      if (path.includes('/leave/balances')) return '/leave/balances';
+      return '/leave';
+    }
     if (path.includes('/overtime')) {
     if (path.includes('/overtime-rules')) return '/overtime-rules';
     return '/overtime';
@@ -65,6 +74,7 @@ export function Sidebar({ collapsed }: SidebarProps) {
     const path = location.pathname;
     if (path === '/employees' || path === '/employees/new') return ['employees'];
     if (path.includes('/departments') || path.includes('/designations') || path.includes('/shifts') || path.includes('/holidays')) return ['organization'];
+    if (path.includes('/leave')) return ['leave'];
     if (path.includes('/overtime')) return ['overtime'];
     if (path.includes('/payroll') || path.includes('/salary-slips')) return ['payroll'];
     return [];
@@ -94,6 +104,19 @@ export function Sidebar({ collapsed }: SidebarProps) {
       ]
     },
     { key: '/attendance', icon: <FieldTimeOutlined />, label: 'Attendance', permission: 'manage-attendance' },
+    {
+      key: 'leave',
+      icon: <CalendarOutlined />,
+      label: 'Leave',
+      permission: 'view-leave',
+      children: [
+        { key: '/leave/my-applications', icon: <PlusOutlined />, label: 'Apply Leave' },
+        { key: '/leave/applications', icon: <UnorderedListOutlined />, label: 'Applications' },
+        { key: '/leave/approvals', icon: <CheckSquareOutlined />, label: 'Approvals' },
+        { key: '/leave/balances', icon: <BarChartOutlined />, label: 'Balances' },
+        { key: '/leave/types', icon: <SettingOutlined />, label: 'Leave Types' },
+      ]
+    },
     { key: '/overtime', icon: <PlayCircleOutlined />, label: 'Overtime', permission: 'manage-overtime' },
     { 
       key: 'payroll', 

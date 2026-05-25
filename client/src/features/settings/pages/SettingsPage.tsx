@@ -24,6 +24,7 @@ const SETTINGS_MENU = [
   { key: 'weeklyoff', label: 'Weekly Off', icon: <CalendarOutlined /> },
   { key: 'holidays', label: 'Holidays', icon: <GiftOutlined /> },
   { key: 'codeConfig', label: 'Code Configuration', icon: <CodeOutlined /> },
+  { key: 'leave', label: 'Leave Config', icon: <CalendarOutlined /> },
 ];
 
 export function SettingsPage() {
@@ -120,6 +121,8 @@ export function SettingsPage() {
         return <HolidaysSection onAdd={() => setHolidayModalOpen(true)} />;
       case 'codeConfig':
         return <CodeConfigSection form={companyForm} onSave={handleSaveCompany} />;
+      case 'leave':
+        return <LeaveSection form={companyForm} onSave={handleSaveCompany} />;
       default:
         return null;
     }
@@ -640,6 +643,16 @@ function EmailSection({ form, onSave, onTestEmail, isTesting }: { form: any; onS
               <Switch /> <span style={{ marginLeft: 8, fontSize: 13 }}>Notify on attendance entry</span>
             </Form.Item>
           </Col>
+          <Col span={12}>
+            <Form.Item name={['notificationConfig', 'notifyOnLeaveApplied']} valuePropName="checked" style={{ marginBottom: 8 }}>
+              <Switch /> <span style={{ marginLeft: 8, fontSize: 13 }}>Notify on leave applied</span>
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item name={['notificationConfig', 'notifyOnLeaveApproved']} valuePropName="checked" style={{ marginBottom: 8 }}>
+              <Switch /> <span style={{ marginLeft: 8, fontSize: 13 }}>Notify on leave approved</span>
+            </Form.Item>
+          </Col>
         </Row>
       </div>
 
@@ -896,6 +909,70 @@ function WeeklyOffSection({ onAdd }: { onAdd: () => void }) {
         ]}
       />
     </div>
+  );
+}
+
+function LeaveSection({ form, onSave }: { form: any; onSave: (values: any) => void }) {
+  return (
+    <Form form={form} layout="vertical" onFinish={onSave}>
+      <h3 style={{ marginBottom: 16 }}>Leave Configuration</h3>
+      <Row gutter={16}>
+        <Col span={8}>
+          <Form.Item name={['leaveConfig', 'financialYearStartMonth']} label="FY Start Month">
+            <InputNumber style={{ width: '100%', height: 40 }} min={1} max={12} />
+          </Form.Item>
+        </Col>
+        <Col span={8}>
+          <Form.Item name={['leaveConfig', 'accrualDayOfMonth']} label="Accrual Day of Month">
+            <InputNumber style={{ width: '100%', height: 40 }} min={1} max={28} />
+          </Form.Item>
+        </Col>
+        <Col span={8}>
+          <Form.Item name={['leaveConfig', 'defaultApprovalLevels']} label="Default Approval Levels">
+            <InputNumber style={{ width: '100%', height: 40 }} min={1} max={3} />
+          </Form.Item>
+        </Col>
+        <Col span={8}>
+          <Form.Item name={['leaveConfig', 'allowCancelAfterApproval']} label="Cancel After Approval" valuePropName="checked">
+            <Switch />
+          </Form.Item>
+        </Col>
+        <Col span={8}>
+          <Form.Item name={['leaveConfig', 'cancelAfterApprovalDaysLimit']} label="Cancel After Days Limit">
+            <InputNumber style={{ width: '100%', height: 40 }} min={0} />
+          </Form.Item>
+        </Col>
+        <Col span={8}>
+          <Form.Item name={['leaveConfig', 'deductionPriority']} label="Deduction Priority">
+            <Select options={[
+              { label: 'Unpaid First', value: 'unpaid-first' },
+              { label: 'Pro-rata', value: 'pro-rata' },
+            ]} />
+          </Form.Item>
+        </Col>
+        <Col span={8}>
+          <Form.Item name={['leaveConfig', 'allowanceProRateMode']} label="Allowance Pro-rate Mode">
+            <Select options={[
+              { label: 'None', value: 'none' },
+              { label: 'Days', value: 'days' },
+              { label: 'Calendar', value: 'calendar' },
+            ]} />
+          </Form.Item>
+        </Col>
+        <Col span={8}>
+          <Form.Item name={['leaveConfig', 'deductionProRateMode']} label="Deduction Pro-rate Mode">
+            <Select options={[
+              { label: 'None', value: 'none' },
+              { label: 'Days', value: 'days' },
+              { label: 'Calendar', value: 'calendar' },
+            ]} />
+          </Form.Item>
+        </Col>
+      </Row>
+      <Button type="primary" icon={<SaveOutlined />} htmlType="submit">
+        Save Leave Settings
+      </Button>
+    </Form>
   );
 }
 

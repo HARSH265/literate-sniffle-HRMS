@@ -14,7 +14,11 @@ export type Permission =
   | 'manage-settings'
   | 'manage-users'
   | 'view-reports'
-  | 'view-audit';
+  | 'view-audit'
+  | 'manage-leave-types'
+  | 'manage-leave-applications'
+  | 'approve-leave'
+  | 'view-leave';
 
 export function authorize(...allowedPermissions: Permission[]) {
   return (_req: Request, _res: Response, next: NextFunction): void => {

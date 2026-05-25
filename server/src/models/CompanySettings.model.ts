@@ -67,6 +67,8 @@ export interface ICompanySettings extends Document {
     notifyOnEmployeeAdded?: boolean;
     notifyOnUserCreated?: boolean;
     notifyOnAttendanceEntry?: boolean;
+    notifyOnLeaveApplied?: boolean;
+    notifyOnLeaveApproved?: boolean;
   };
   employeeCodeConfig: {
     prefix: string;
@@ -85,6 +87,16 @@ export interface ICompanySettings extends Document {
     defaultEmploymentType: 'permanent' | 'contract' | 'temporary' | 'trainee';
     defaultSalaryType: 'monthly' | 'daily';
     defaultWorkingDays: number;
+  };
+  leaveConfig: {
+    financialYearStartMonth: number;
+    accrualDayOfMonth: number;
+    defaultApprovalLevels: number;
+    allowCancelAfterApproval: boolean;
+    cancelAfterApprovalDaysLimit: number;
+    deductionPriority: 'unpaid-first' | 'pro-rata';
+    allowanceProRateMode: 'none' | 'days' | 'calendar';
+    deductionProRateMode: 'none' | 'days' | 'calendar';
   };
   updatedBy?: mongoose.Types.ObjectId;
 }
@@ -178,6 +190,8 @@ const CompanySettingsSchema = new Schema<ICompanySettings>(
       notifyOnEmployeeAdded: { type: Boolean, default: true },
       notifyOnUserCreated: { type: Boolean, default: true },
       notifyOnAttendanceEntry: { type: Boolean, default: false },
+      notifyOnLeaveApplied: { type: Boolean, default: true },
+      notifyOnLeaveApproved: { type: Boolean, default: true },
     },
     employeeCodeConfig: {
       prefix: { type: String, default: 'EMP' },
@@ -196,6 +210,16 @@ const CompanySettingsSchema = new Schema<ICompanySettings>(
       defaultEmploymentType: { type: String, enum: ['permanent', 'contract', 'temporary', 'trainee'], default: 'permanent' },
       defaultSalaryType: { type: String, enum: ['monthly', 'daily'], default: 'monthly' },
       defaultWorkingDays: { type: Number, default: 26 },
+    },
+    leaveConfig: {
+      financialYearStartMonth: { type: Number, default: 4, min: 1, max: 12 },
+      accrualDayOfMonth: { type: Number, default: 1, min: 1, max: 28 },
+      defaultApprovalLevels: { type: Number, default: 1, min: 1, max: 3 },
+      allowCancelAfterApproval: { type: Boolean, default: false },
+      cancelAfterApprovalDaysLimit: { type: Number, default: 0, min: 0 },
+      deductionPriority: { type: String, enum: ['unpaid-first', 'pro-rata'], default: 'unpaid-first' },
+      allowanceProRateMode: { type: String, enum: ['none', 'days', 'calendar'], default: 'days' },
+      deductionProRateMode: { type: String, enum: ['none', 'days', 'calendar'], default: 'days' },
     },
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
   },

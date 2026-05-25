@@ -118,6 +118,32 @@ export const API_ENDPOINTS = {
     update: '/settings',
   },
 
+  leave: {
+    types: {
+      list: '/leave/types',
+      create: '/leave/types',
+      update: (id: string) => `/leave/types/${id}`,
+      delete: (id: string) => `/leave/types/${id}`,
+    },
+    applications: {
+      list: '/leave/applications',
+      my: '/leave/applications/my',
+      create: '/leave/applications',
+      cancel: (id: string) => `/leave/applications/${id}/cancel`,
+      approve: '/leave/applications/approve',
+    },
+    approvals: {
+      pending: '/leave/approvals/pending',
+    },
+    balances: {
+      get: (employeeId: string) => `/leave/balances/${employeeId}`,
+      my: '/leave/balances/my',
+    },
+    accrue: '/leave/accrue',
+    calendar: '/leave/calendar',
+    summary: '/leave/summary',
+  },
+
   notifications: {
     list: '/notifications',
     markRead: (id: string) => `/notifications/${id}/read`,
