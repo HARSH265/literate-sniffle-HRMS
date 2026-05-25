@@ -1,6 +1,7 @@
 # Manufacturing HRMS
 
-Production-grade HRMS for manufacturing companies built with MERN stack.
+Production-grade HRMS for manufacturing companies built with MERN stack.  
+Designed for **Factories Act 1948** and **Payment of Wages Act** compliance.
 
 ## Tech Stack
 
@@ -16,22 +17,28 @@ Production-grade HRMS for manufacturing companies built with MERN stack.
 ### Core Modules
 - **Authentication** - JWT-based login/logout with role-based access
 - **User Management** - Create, update, delete users with role assignment
-- **Employee Management** - Full CRUD with photo upload
-- **Organization** - Departments, Designations, Shifts (master data)
-- **Attendance** - Manual entry from physical register, bulk entry by date
-- **Overtime** - Rules configuration and entry tracking
-- **Payroll** - Monthly processing, salary calculation, slip generation
-- **Reports** - Excel export for employees, attendance, payroll
-- **Settings** - Company info, payroll configuration
-- **Audit Logs** - Track all system activities
-- **Notifications** - In-app notifications with badge
+- **Employee Management** - Full CRUD with auto-generated employee codes, document upload, bulk import/export
+- **Organization** - Departments (auto-generated codes), Designations, Shifts (master data)
+- **Attendance** - Manual entry from physical register, bulk entry by date, shift-based validation
+- **Overtime** - Rules configuration and entry tracking with Factories Act multiplier enforcement
+- **Payroll** - Monthly processing, salary calculation, allowance/deduction config, slip generation
+- **Reports** - Excel export for employees, attendance, payroll with filters
+- **Settings** - Company info, payroll config, code configuration, email test
+- **Audit Logs** - Full activity trail with filters, stats, Excel export
+- **Notifications** - In-app notifications with auto-generation for key events
+
+### Intelligent Code Generation
+- **Auto-generated employee codes** — configurable prefix, padding, starting number
+- **Auto-generated department codes** — same configurable pattern
+- Toggle between auto and manual code entry from Settings → Code Configuration
+- Quick gear icon navigation from forms to code settings
 
 ### User Roles
-- Super Admin - Full system access
-- HR Admin - HR operations and user management
-- HR Staff - Daily attendance and entry
-- Accounts - Payroll processing
-- Manager - View only access
+- Super Admin — Full system access
+- HR Admin — HR operations and user management
+- HR Staff — Daily attendance and entry
+- Accounts — Payroll processing
+- Manager — View only access
 
 ## Getting Started
 
@@ -120,16 +127,31 @@ HRMS/
 ├── client/                 # React frontend
 │   └── src/
 │       ├── core/          # API, stores, hooks, components
-│       ├── features/      # Feature modules
-│       └── layout/        # App layout
+│       ├── features/      # Feature modules (auth, employees, departments, etc.)
+│       └── layout/        # App layout (sidebar, header)
 ├── server/                 # Express backend
 │   └── src/
 │       ├── core/          # Core services (audit, cache, etc.)
 │       ├── modules/       # Feature modules
 │       ├── models/        # Mongoose models
 │       └── config/        # Configuration
-└── docs/                   # Documentation (not in git)
+└── docs/                   # Documentation
 ```
+
+## Routes Overview
+
+| Path | Page | Access |
+|------|------|--------|
+| `/` | Landing Page | Public |
+| `/login` | Login | Public |
+| `/dashboard` | Dashboard | Authenticated |
+| `/employees` | Employee List | Authenticated |
+| `/employees/new` | Add Employee | Authenticated |
+| `/departments` | Departments | Authenticated |
+| `/attendance` | Attendance | Authenticated |
+| `/payroll` | Payroll | Authenticated |
+| `/settings` | Settings | Authenticated |
+| `/audit-logs` | Audit Logs | Authenticated |
 
 ## Available Scripts
 

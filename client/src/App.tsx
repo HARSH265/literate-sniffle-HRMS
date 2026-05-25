@@ -1,12 +1,13 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AppLayout } from './layout/AppLayout';
-import { ProtectedRoute } from './layout/ProtectedRoute';
 import { ErrorBoundary } from './core/components/ErrorBoundary';
+import { useAuthStore } from './core/stores/authStore';
 
 import { lazy, Suspense } from 'react';
 import { Spin } from 'antd';
 
 const LoginPage = lazy(() => import('./features/auth/pages/LoginPage').then(m => ({ default: m.LoginPage })));
+const LandingPage = lazy(() => import('./features/auth/pages/LandingPage').then(m => ({ default: m.LandingPage })));
 
 import { DashboardPage } from './features/auth/pages/DashboardPage';
 import { EmployeesPage } from './features/employees/pages/EmployeesPage';
@@ -40,19 +41,28 @@ const PageLoader = () => (
 );
 
 function App() {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+
+  if (!isAuthenticated) {
+    return (
+      <ErrorBoundary>
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Suspense>
+      </ErrorBoundary>
+    );
+  }
+
   return (
     <ErrorBoundary>
       <Suspense fallback={<PageLoader />}>
         <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route
-            path="/*"
-            element={
-              <ProtectedRoute>
-                <AppLayout />
-              </ProtectedRoute>
-            }
-          >
+          <Route path="/login" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/*" element={<AppLayout />}>
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="dashboard" element={<DashboardPage />} />
             <Route path="employees" element={<EmployeesPage />} />
