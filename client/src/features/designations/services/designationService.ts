@@ -37,8 +37,8 @@ export const designationService = {
     return data;
   },
 
-  async update(id: string, payload: Partial<CreateDesignation>): Promise<{ success: boolean; data: Designation }> {
-    const { data } = await apiClient.put(`/designations/${id}`, payload);
+  async update(id: string, payload: Partial<CreateDesignation> & { isActive?: boolean }): Promise<{ success: boolean; data: Designation }> {
+    const { data } = await apiClient.patch(`/designations/${id}`, payload);
     return data;
   },
 

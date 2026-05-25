@@ -5,6 +5,7 @@ export interface IDesignation extends Document {
   department: mongoose.Types.ObjectId;
   isActive: boolean;
   createdBy?: mongoose.Types.ObjectId;
+  updatedBy?: mongoose.Types.ObjectId;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -17,6 +18,7 @@ const DesignationSchema = new Schema<IDesignation>(
     department: { type: Schema.Types.ObjectId, ref: 'Department', required: true },
     isActive: { type: Boolean, default: true },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    updatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
   },
   { timestamps: true },
 );

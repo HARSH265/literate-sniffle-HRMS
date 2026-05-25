@@ -14,7 +14,8 @@ export class DesignationsService {
     const filter: Record<string, unknown> = {};
 
     if (search) {
-      filter.name = { $regex: search, $options: 'i' };
+      const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      filter.name = { $regex: escaped, $options: 'i' };
     }
 
     if (queryParams.department) {
@@ -145,6 +146,7 @@ export class DesignationsService {
     if (data.name) des.name = data.name as string;
     if (data.department) des.department = data.department as any;
     if (data.isActive !== undefined) des.isActive = data.isActive as boolean;
+    des.updatedBy = updatedById as any;
 
     await des.save();
 
