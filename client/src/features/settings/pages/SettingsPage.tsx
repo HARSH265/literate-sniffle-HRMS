@@ -605,7 +605,7 @@ function EmailSection({ form, onSave, onTestEmail, isTesting }: { form: any; onS
         </Col>
         <Col span={12}>
           <Form.Item name={['emailConfig', 'fromName']} label="From Name">
-            <Input style={{ height: 40 }} placeholder="HRMS System" />
+            <Input style={{ height: 40 }} placeholder="Orian System" />
           </Form.Item>
         </Col>
       </Row>

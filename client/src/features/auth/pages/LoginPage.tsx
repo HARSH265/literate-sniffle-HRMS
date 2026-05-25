@@ -66,10 +66,10 @@ export function LoginPage() {
             background: 'linear-gradient(135deg, #667eea, #764ba2)',
             marginBottom: 20,
           }}>
-            <span style={{ fontSize: 24, fontWeight: 800, color: 'white' }}>H</span>
+            <span style={{ fontSize: 24, fontWeight: 800, color: 'white' }}>O</span>
           </div>
           <h2>{isRegistering ? 'Create Account' : 'Welcome back'}</h2>
-          <p>{isRegistering ? 'Sign up to get started' : 'Sign in to your HRMS account'}</p>
+          <p>{isRegistering ? 'Sign up to get started' : 'Sign in to your Orian account'}</p>
         </div>
 
         {isRegistering ? (

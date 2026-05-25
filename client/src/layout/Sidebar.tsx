@@ -173,11 +173,11 @@ export function Sidebar({ collapsed }: SidebarProps) {
           color: 'white',
           flexShrink: 0,
         }}>
-          H
+          O
         </div>
         {!collapsed && (
           <div style={{ overflow: 'hidden' }}>
-            <div style={{ fontSize: 15, fontWeight: 700, color: 'white', letterSpacing: '-0.01em', whiteSpace: 'nowrap' }}>HRMS</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: 'white', letterSpacing: '-0.01em', whiteSpace: 'nowrap' }}>Orian</div>
             <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.05em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Management System</div>
           </div>
         )}

@@ -210,8 +210,8 @@ export function LandingPage() {
 
       <header className="landing-header">
         <div className="landing-logo">
-          <div className="landing-logo-mark">H</div>
-          HRMS
+          <div className="landing-logo-mark">O</div>
+          Orian
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
           <Button
@@ -227,7 +227,7 @@ export function LandingPage() {
 
       <section className="landing-hero">
         <div className="landing-hero-badge">
-          <StarOutlined style={{ fontSize: 11 }} /> Manufacturing HRMS v1.0
+          <StarOutlined style={{ fontSize: 11 }} /> Manufacturing Orian v1.0
         </div>
         <h1>
           Workforce Management<br />
@@ -292,7 +292,7 @@ export function LandingPage() {
 
       <section className="landing-cta">
         <h2>Ready to streamline your HR operations?</h2>
-        <p>Join 500+ manufacturing companies already using HRMS.</p>
+        <p>Join 500+ manufacturing companies already using Orian.</p>
         <Button
           type="primary"
           size="large"
@@ -304,7 +304,7 @@ export function LandingPage() {
       </section>
 
       <footer className="landing-footer">
-        &copy; {new Date().getFullYear()} HRMS. All rights reserved. Built for manufacturing workforce management.
+        &copy; {new Date().getFullYear()} Orian. All rights reserved. Built for manufacturing workforce management.
       </footer>
     </div>
   );

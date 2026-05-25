@@ -1,6 +1,6 @@
-# Manufacturing HRMS
+# Orian — Manufacturing HRMS
 
-Production-grade HRMS for manufacturing companies built with MERN stack.  
+Production-grade workforce management system for manufacturing companies, built with the MERN stack.  
 Designed for **Factories Act 1948** and **Payment of Wages Act** compliance.
 
 ## Tech Stack
@@ -96,7 +96,7 @@ EMAIL_FROM=noreply@company.com
 **Client .env:**
 ```
 VITE_API_BASE_URL=http://localhost:5000/api/v1
-VITE_APP_NAME=HRMS
+VITE_APP_NAME=Orian
 ```
 
 5. Run the application
