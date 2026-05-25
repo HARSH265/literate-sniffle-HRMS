@@ -120,15 +120,49 @@ export class EmployeesService {
     return sanitizeEmployee(employee, userRole);
   }
 
+  static async generateNextEmployeeCode(): Promise<string> {
+    const settings = await CompanySettings.findOne().lean() as any;
+    const config = settings?.employeeCodeConfig || { prefix: 'EMP', startNumber: 1, padding: 3, isAutoGenerate: true };
+    const { prefix, startNumber, padding } = config;
+
+    const lastEmployee = await Employee.findOne({ employeeCode: { $regex: `^${prefix}` } })
+      .sort({ employeeCode: -1 })
+      .select('employeeCode')
+      .lean();
+
+    let nextNumber = startNumber;
+    if (lastEmployee) {
+      const lastCode = (lastEmployee as any).employeeCode as string;
+      const numPart = parseInt(lastCode.replace(prefix, ''), 10);
+      if (!isNaN(numPart)) {
+        nextNumber = numPart + 1;
+      }
+    }
+
+    return `${prefix}${String(nextNumber).padStart(padding, '0')}`;
+  }
+
   static async create(data: Record<string, unknown>, createdById: string, userRole: string) {
-    const existing = await Employee.findOne({ employeeCode: (data.employeeCode as string).toUpperCase() });
+    const settings = await CompanySettings.findOne().lean() as any;
+    const isAutoGenerate = settings?.employeeCodeConfig?.isAutoGenerate !== false;
+
+    let employeeCode = (data.employeeCode as string) || '';
+
+    if (!employeeCode) {
+      if (!isAutoGenerate) {
+        throw new AppError('Employee code is required when auto-generation is disabled', 400);
+      }
+      employeeCode = await this.generateNextEmployeeCode();
+    }
+
+    const existing = await Employee.findOne({ employeeCode: employeeCode.toUpperCase() });
     if (existing) {
       throw new AppError('Employee code already exists', 400);
     }
 
     const encryptedData = {
       ...data,
-      employeeCode: (data.employeeCode as string).toUpperCase(),
+      employeeCode: employeeCode.toUpperCase(),
       bankDetails: data.bankDetails ? encryptBankDetails(data.bankDetails as Record<string, unknown>) : undefined,
       createdBy: createdById,
     };
@@ -140,14 +174,14 @@ export class EmployeesService {
       module: 'employees',
       userId: createdById,
       targetId: emp._id.toString(),
-      details: { employeeCode: data.employeeCode, fullName: data.fullName },
+      details: { employeeCode, fullName: data.fullName },
     });
 
     const hrAdmins = await User.find({ role: { $in: ['super-admin', 'hr-admin', 'hr-staff'] } }).lean();
     for (const admin of hrAdmins) {
       await NotificationService.send({
         title: 'New Employee Added',
-        message: `${data.fullName} (${data.employeeCode}) has been added to the system.`,
+        message: `${data.fullName} (${employeeCode}) has been added to the system.`,
         type: 'info',
         recipient: admin._id.toString(),
         module: 'employees',

@@ -255,53 +255,7 @@ export function EmployeeDetailPage() {
               </Card>
             )}
 
-            <Card 
-              title="Documents" 
-              style={{ borderRadius: 12 }}
-              extra={
-                <Button 
-                  type="primary" 
-                  size="small" 
-                  icon={<UploadOutlined />}
-                  onClick={() => setUploadModalOpen(true)}
-                >
-                  Add Document
-                </Button>
-              }
-            >
-              {employee.documents && employee.documents.length > 0 ? (
-                <Row gutter={16}>
-                  {employee.documents.map((doc: any) => (
-                    <Col xs={24} sm={12} md={8} key={doc._id}>
-                      <Card 
-                        size="small" 
-                        style={{ marginBottom: 12 }}
-                        actions={[
-                          <EyeOutlined key="view" onClick={() => window.open(doc.filePath, '_blank')} />,
-                          <Popconfirm 
-                            key="delete"
-                            title="Delete this document?" 
-                            onConfirm={() => deleteMutation.mutate(doc._id)}
-                          >
-                            <DeleteOutlined style={{ color: '#ff4d4f' }} />
-                          </Popconfirm>
-                        ]}
-                      >
-                        <Card.Meta 
-                          avatar={<FileTextOutlined style={{ fontSize: 24, color: '#4f46e5' }} />}
-                          title={docTypeLabels[doc.type] || doc.type}
-                          description={doc.fileName}
-                        />
-                      </Card>
-                    </Col>
-                  ))}
-                </Row>
-              ) : (
-                <div style={{ textAlign: 'center', color: 'var(--hrms-text-muted)', padding: 24 }}>
-                  No documents uploaded yet
-                </div>
-              )}
-            </Card>
+
 
             <Card style={{ borderRadius: 12, marginTop: 24 }}>
               <Tabs

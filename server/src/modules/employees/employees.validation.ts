@@ -11,7 +11,7 @@ const bankDetailsSchema = z.object({
 const contactNumberSchema = z.string().regex(/^[6-9][0-9]{9}$/, 'Invalid Indian mobile number').optional();
 
 export const createEmployeeSchema = z.object({
-  employeeCode: z.string().min(1).max(20),
+  employeeCode: z.string().min(1).max(20).optional(),
   fullName: z.string().min(2).max(100),
   fatherName: z.string().min(2).max(100),
   category: z.enum(['worker', 'office-staff']),

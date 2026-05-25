@@ -74,6 +74,12 @@ export interface ICompanySettings extends Document {
     padding: number;
     isAutoGenerate: boolean;
   };
+  departmentCodeConfig: {
+    prefix: string;
+    startNumber: number;
+    padding: number;
+    isAutoGenerate: boolean;
+  };
   employeeDefaults: {
     defaultCategory: 'worker' | 'office-staff';
     defaultEmploymentType: 'permanent' | 'contract' | 'temporary' | 'trainee';
@@ -175,6 +181,12 @@ const CompanySettingsSchema = new Schema<ICompanySettings>(
     },
     employeeCodeConfig: {
       prefix: { type: String, default: 'EMP' },
+      startNumber: { type: Number, default: 1 },
+      padding: { type: Number, default: 3 },
+      isAutoGenerate: { type: Boolean, default: true },
+    },
+    departmentCodeConfig: {
+      prefix: { type: String, default: 'DEPT' },
       startNumber: { type: Number, default: 1 },
       padding: { type: Number, default: 3 },
       isAutoGenerate: { type: Boolean, default: true },

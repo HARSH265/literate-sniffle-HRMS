@@ -41,6 +41,24 @@ export interface CompanySettings {
     applicableTo: string;
     isActive: boolean;
   }>;
+  employeeCodeConfig: {
+    prefix: string;
+    startNumber: number;
+    padding: number;
+    isAutoGenerate: boolean;
+  };
+  departmentCodeConfig: {
+    prefix: string;
+    startNumber: number;
+    padding: number;
+    isAutoGenerate: boolean;
+  };
+  employeeDefaults: {
+    defaultCategory: 'worker' | 'office-staff';
+    defaultEmploymentType: 'permanent' | 'contract' | 'temporary' | 'trainee';
+    defaultSalaryType: 'monthly' | 'daily';
+    defaultWorkingDays: number;
+  };
 }
 
 export const settingsService = {

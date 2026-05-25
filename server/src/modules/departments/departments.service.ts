@@ -1,5 +1,6 @@
 import Department from '../../models/Department.model.js';
 import Employee from '../../models/Employee.model.js';
+import CompanySettings from '../../models/CompanySettings.model.js';
 import { AppError } from '../../core/errors/AppError.js';
 import { CacheService } from '../../core/cache/CacheService.js';
 import { CACHE_KEYS } from '../../core/cache/cache.keys.js';
@@ -58,11 +59,45 @@ export class DepartmentsService {
     return { ...dept, id: dept._id.toString(), _id: undefined };
   }
 
+  static async generateNextDepartmentCode(): Promise<string> {
+    const settings = await CompanySettings.findOne().lean() as any;
+    const config = settings?.departmentCodeConfig || { prefix: 'DEPT', startNumber: 1, padding: 3, isAutoGenerate: true };
+    const { prefix, startNumber, padding } = config;
+
+    const lastDept = await Department.findOne({ code: { $regex: `^${prefix}` } })
+      .sort({ code: -1 })
+      .select('code')
+      .lean();
+
+    let nextNumber = startNumber;
+    if (lastDept) {
+      const lastCode = (lastDept as any).code as string;
+      const numPart = parseInt(lastCode.replace(prefix, ''), 10);
+      if (!isNaN(numPart)) {
+        nextNumber = numPart + 1;
+      }
+    }
+
+    return `${prefix}${String(nextNumber).padStart(padding, '0')}`;
+  }
+
   static async create(data: Record<string, unknown>, createdById: string) {
+    const settings = await CompanySettings.findOne().lean() as any;
+    const isAutoGenerate = settings?.departmentCodeConfig?.isAutoGenerate !== false;
+
+    let code = (data.code as string) || '';
+
+    if (!code) {
+      if (!isAutoGenerate) {
+        throw new AppError('Department code is required when auto-generation is disabled', 400);
+      }
+      code = await this.generateNextDepartmentCode();
+    }
+
     const existing = await Department.findOne({
       $or: [
         { name: (data.name as string) },
-        { code: (data.code as string).toUpperCase() },
+        { code: code.toUpperCase() },
       ],
     });
     if (existing) {
@@ -71,7 +106,7 @@ export class DepartmentsService {
 
     const dept = await Department.create({
       ...data,
-      code: (data.code as string).toUpperCase(),
+      code: code.toUpperCase(),
       isActive: true,
       createdBy: createdById,
     });
@@ -83,7 +118,7 @@ export class DepartmentsService {
       module: 'departments',
       userId: createdById,
       targetId: dept._id.toString(),
-      details: { name: data.name, code: data.code },
+      details: { name: data.name, code },
     });
 
     return { ...dept.toObject(), id: dept._id.toString(), _id: undefined };

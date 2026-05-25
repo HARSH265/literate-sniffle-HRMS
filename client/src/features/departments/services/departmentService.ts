@@ -12,7 +12,7 @@ export interface Department {
 
 export interface CreateDepartment {
   name: string;
-  code: string;
+  code?: string;
   description?: string;
 }
 
@@ -36,6 +36,11 @@ export interface PaginatedResponse<T> {
 }
 
 export const departmentService = {
+  async getNextCode(): Promise<string> {
+    const { data } = await apiClient.get('/departments/next-code');
+    return data.data.code;
+  },
+
   async list(params?: Record<string, unknown>): Promise<PaginatedResponse<Department>> {
     const { data } = await apiClient.get<PaginatedResponse<Department>>('/departments', { params });
     return data;

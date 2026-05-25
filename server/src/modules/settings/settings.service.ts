@@ -73,6 +73,21 @@ export class SettingsService {
       Object.assign(changes, emailChanges);
       (settings as any).emailConfig = { ...(settings as any).emailConfig?.toObject?.() || {}, ...data.emailConfig };
     }
+    if (data.employeeCodeConfig) {
+      const codeChanges = getChangedFields(oldSettings.employeeCodeConfig, data.employeeCodeConfig, 'employeeCodeConfig');
+      Object.assign(changes, codeChanges);
+      (settings as any).employeeCodeConfig = { ...((settings as any).employeeCodeConfig?.toObject?.() || {}), ...data.employeeCodeConfig };
+    }
+    if (data.departmentCodeConfig) {
+      const deptChanges = getChangedFields(oldSettings.departmentCodeConfig, data.departmentCodeConfig, 'departmentCodeConfig');
+      Object.assign(changes, deptChanges);
+      (settings as any).departmentCodeConfig = { ...((settings as any).departmentCodeConfig?.toObject?.() || {}), ...data.departmentCodeConfig };
+    }
+    if (data.employeeDefaults) {
+      const defaultsChanges = getChangedFields(oldSettings.employeeDefaults, data.employeeDefaults, 'employeeDefaults');
+      Object.assign(changes, defaultsChanges);
+      (settings as any).employeeDefaults = { ...((settings as any).employeeDefaults?.toObject?.() || {}), ...data.employeeDefaults };
+    }
 
     (settings as any).updatedBy = userId;
     await (settings as any).save();

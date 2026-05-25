@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Form, Input, Select, InputNumber, DatePicker, Button, Row, Col, message, Card, Upload, Switch } from 'antd';
-import { ArrowLeftOutlined, SaveOutlined, UploadOutlined, UserOutlined, BankOutlined, FileTextOutlined, DollarOutlined, HomeOutlined, IdcardOutlined } from '@ant-design/icons';
+import { Form, Input, Select, InputNumber, DatePicker, Button, Row, Col, message, Card, Upload, Switch, Tag } from 'antd';
+import { ArrowLeftOutlined, SaveOutlined, UploadOutlined, UserOutlined, BankOutlined, FileTextOutlined, DollarOutlined, HomeOutlined, IdcardOutlined, SettingOutlined } from '@ant-design/icons';
 import { PageHeader } from '../../../core/components/PageHeader';
 import { employeeService, CreateEmployee } from '../services/employeeService';
 import { useQuery, useMutation } from '@tanstack/react-query';
@@ -94,6 +94,24 @@ export function EmployeeNewPage() {
     queryKey: ['shifts'],
     queryFn: () => import('../../shifts/services/shiftService').then(m => m.shiftService.list({ limit: 100 })),
   });
+
+  const { data: settings } = useQuery({
+    queryKey: ['settings'],
+    queryFn: () => import('../../settings/services/settingsService').then(m => m.settingsService.get()),
+  });
+  const isAutoGenerate = settings?.data?.employeeCodeConfig?.isAutoGenerate !== false;
+
+  const { data: nextCode } = useQuery({
+    queryKey: ['next-employee-code'],
+    queryFn: () => employeeService.getNextCode(),
+    enabled: isAutoGenerate,
+  });
+
+  useEffect(() => {
+    if (nextCode) {
+      form.setFieldValue('employeeCode', nextCode);
+    }
+  }, [nextCode, form]);
 
   const createMutation = useMutation({
     mutationFn: (payload: CreateEmployee) => employeeService.create(payload),
@@ -189,8 +207,25 @@ export function EmployeeNewPage() {
               <Section title="Employment Details" icon={<IdcardOutlined />}>
                 <Row gutter={rowGutter}>
                   <Col span={8}>
-                    <Form.Item name="employeeCode" label="Employee Code" rules={[{ required: true, message: 'Required' }]}>
-                      <Input placeholder="EMP001" style={{ height: inputHeight }} />
+                    <Form.Item name="employeeCode" label="Employee Code" rules={isAutoGenerate ? [] : [{ required: true, message: 'Required' }]}>
+                      <div style={{ display: 'flex', gap: 4 }}>
+                        {isAutoGenerate ? (
+                          <Input
+                            placeholder="Auto-generated"
+                            style={{ height: inputHeight, flex: 1 }}
+                            disabled
+                            suffix={<Tag color="blue" style={{ marginRight: 0, fontSize: 11, lineHeight: '18px' }}>Auto</Tag>}
+                          />
+                        ) : (
+                          <Input placeholder="Enter employee code" style={{ height: inputHeight, flex: 1 }} />
+                        )}
+                        <Button
+                          type="default"
+                          icon={<SettingOutlined />}
+                          style={{ height: inputHeight, width: inputHeight }}
+                          onClick={() => navigate('/settings', { state: { section: 'codeConfig' } })}
+                        />
+                      </div>
                     </Form.Item>
                   </Col>
                   <Col span={8}>

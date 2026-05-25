@@ -9,7 +9,8 @@ export const createDepartmentSchema = z.object({
     .string()
     .min(2, 'Code must be at least 2 characters')
     .max(10, 'Code must be at most 10 characters')
-    .regex(/^[A-Z0-9_-]+$/, 'Code must contain only uppercase letters, numbers, underscore, or hyphen'),
+    .regex(/^[A-Z0-9_-]+$/, 'Code must contain only uppercase letters, numbers, underscore, or hyphen')
+    .optional(),
   description: z.string().max(500, 'Description must be at most 500 characters').optional(),
 });
 

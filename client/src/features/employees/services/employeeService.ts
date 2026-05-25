@@ -36,7 +36,7 @@ export interface Employee {
 }
 
 export interface CreateEmployee {
-  employeeCode: string;
+  employeeCode?: string;
   fullName: string;
   fatherName: string;
   category: 'worker' | 'office-staff';
@@ -67,6 +67,11 @@ export interface PaginatedResponse<T> {
 }
 
 export const employeeService = {
+  async getNextCode(): Promise<string> {
+    const { data } = await apiClient.get('/employees/next-code');
+    return data.data.employeeCode;
+  },
+
   async list(params?: Record<string, unknown>): Promise<PaginatedResponse<Employee>> {
     const { data } = await apiClient.get<PaginatedResponse<Employee>>('/employees', { params });
     return data;

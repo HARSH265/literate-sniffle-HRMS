@@ -1,10 +1,11 @@
-import { useState } from 'react';
-import { Table, Button, Modal, Form, Input, message, Popconfirm, Tooltip } from 'antd';
+import { useState, useEffect } from 'react';
+import { Table, Button, Modal, Form, Input, message, Popconfirm, Tooltip, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, SettingOutlined } from '@ant-design/icons';
 import { PageHeader } from '../../../core/components/PageHeader';
 import { departmentService, Department, CreateDepartment, UpdateDepartment } from '../services/departmentService';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 
 export function DepartmentsPage() {
   const [form] = Form.useForm();
@@ -13,7 +14,27 @@ export function DepartmentsPage() {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(20);
   const [search, setSearch] = useState('');
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
+
+  const { data: settings } = useQuery({
+    queryKey: ['settings'],
+    queryFn: () => import('../../settings/services/settingsService').then(m => m.settingsService.get()),
+    enabled: isModalOpen && !editingId,
+  });
+  const isAutoGenerate = !editingId ? settings?.data?.departmentCodeConfig?.isAutoGenerate !== false : false;
+
+  const { data: nextCode } = useQuery({
+    queryKey: ['next-dept-code'],
+    queryFn: () => departmentService.getNextCode(),
+    enabled: isModalOpen && !editingId && isAutoGenerate,
+  });
+
+  useEffect(() => {
+    if (nextCode && !editingId) {
+      form.setFieldValue('code', nextCode);
+    }
+  }, [nextCode, form, editingId]);
 
   const { data, isLoading } = useQuery({
     queryKey: ['departments', page, limit, search],
@@ -194,8 +215,25 @@ export function DepartmentsPage() {
         <div style={{ padding: '8px 0 0' }}>
           <Form form={form} layout="vertical">
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-              <Form.Item name="code" label="Department Code" rules={[{ required: true, message: 'Code is required' }]}>
-                <Input placeholder="e.g. PROD" style={{ height: 40 }} />
+              <Form.Item name="code" label="Department Code" rules={editingId || !isAutoGenerate ? [{ required: true, message: 'Code is required' }] : []}>
+                <div style={{ display: 'flex', gap: 4 }}>
+                  {!editingId && isAutoGenerate ? (
+                    <Input
+                      placeholder="Auto-generated"
+                      style={{ height: 40, flex: 1 }}
+                      disabled
+                      suffix={<Tag color="blue" style={{ marginRight: 0, fontSize: 11, lineHeight: '18px' }}>Auto</Tag>}
+                    />
+                  ) : (
+                    <Input placeholder="e.g. PROD" style={{ height: 40, flex: 1 }} />
+                  )}
+                  <Button
+                    type="default"
+                    icon={<SettingOutlined />}
+                    style={{ height: 40, width: 40 }}
+                    onClick={() => navigate('/settings', { state: { section: 'codeConfig' } })}
+                  />
+                </div>
               </Form.Item>
               <Form.Item name="name" label="Department Name" rules={[{ required: true, message: 'Name is required' }]}>
                 <Input placeholder="e.g. Production" style={{ height: 40 }} />
