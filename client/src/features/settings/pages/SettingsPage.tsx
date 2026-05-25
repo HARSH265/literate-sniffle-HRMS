@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { PageHeader } from '../../../core/components/PageHeader';
-import { Form, Input, InputNumber, Switch, Button, Card, Row, Col, message, Table, Tag, Select, Popconfirm, Modal, DatePicker, Avatar, Upload } from 'antd';
-import { SaveOutlined, PlusOutlined, DeleteOutlined, UserOutlined, BankOutlined, DollarOutlined, CalendarOutlined, GiftOutlined, ClockCircleOutlined, MailOutlined, BellOutlined, IdcardOutlined, CodeOutlined } from '@ant-design/icons';
+import { Form, Input, InputNumber, Switch, Button, Card, Row, Col, message, Table, Tag, Select, Popconfirm, Modal, DatePicker, Avatar, Upload, Space } from 'antd';
+import { SaveOutlined, PlusOutlined, DeleteOutlined, EditOutlined, UserOutlined, BankOutlined, DollarOutlined, CalendarOutlined, GiftOutlined, ClockCircleOutlined, MailOutlined, BellOutlined, IdcardOutlined, CodeOutlined, BarChartOutlined, SettingOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
 import { settingsService, CompanySettings } from '../services/settingsService';
 import { overtimeRuleService, OvertimeRule, CreateOvertimeRule } from '../../overtime-rules/services/overtimeRuleService';
 import { weeklyOffRuleService, WeeklyOffRule, CreateWeeklyOffRule } from '../../weekly-off-rules/services/weeklyOffRuleService';
 import { holidayService, Holiday, CreateHoliday } from '../../holidays/services/holidayService';
+import { loanService, LoanType } from '../../loans/services/loanService';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import apiClient from '../../../core/api/apiClient';
 import { useAuthStore } from '../../../core/stores/authStore';
@@ -25,6 +26,9 @@ const SETTINGS_MENU = [
   { key: 'holidays', label: 'Holidays', icon: <GiftOutlined /> },
   { key: 'codeConfig', label: 'Code Configuration', icon: <CodeOutlined /> },
   { key: 'leave', label: 'Leave Config', icon: <CalendarOutlined /> },
+  { key: 'reports', label: 'Reports', icon: <BarChartOutlined /> },
+  { key: 'loans', label: 'Loans', icon: <DollarOutlined /> },
+  { key: 'statutory', label: 'Statutory', icon: <SafetyCertificateOutlined /> },
 ];
 
 export function SettingsPage() {
@@ -123,6 +127,12 @@ export function SettingsPage() {
         return <CodeConfigSection form={companyForm} onSave={handleSaveCompany} />;
       case 'leave':
         return <LeaveSection form={companyForm} onSave={handleSaveCompany} />;
+      case 'reports':
+        return <ReportsSection form={companyForm} onSave={handleSaveCompany} />;
+      case 'loans':
+        return <LoanConfigSection form={companyForm} onSave={handleSaveCompany} />;
+      case 'statutory':
+        return <StatutoryConfigSection form={companyForm} onSave={handleSaveCompany} />;
       default:
         return null;
     }
@@ -1201,6 +1211,400 @@ function CodeConfigSection({ form, onSave }: { form: any; onSave: (values: any) 
         Save Code Settings
       </Button>
     </Form>
+  );
+}
+
+function ReportsSection({ form, onSave }: { form: any; onSave: (values: any) => void }) {
+  return (
+    <Form form={form} layout="vertical" onFinish={onSave}>
+      <h3 style={{ marginBottom: 16 }}>Scheduled Report Export Configuration</h3>
+      <p style={{ marginBottom: 20, color: '#666', fontSize: 13 }}>
+        Configure automated report exports to be sent via email on a schedule.
+      </p>
+      <Row gutter={16}>
+        <Col span={8}>
+          <Form.Item name={['reportsConfig', 'scheduledExportEnabled']} label="Enable Scheduled Exports" valuePropName="checked">
+            <Switch />
+          </Form.Item>
+        </Col>
+        <Col span={8}>
+          <Form.Item name={['reportsConfig', 'scheduledExportFrequency']} label="Export Frequency">
+            <Select options={[
+              { label: 'Daily', value: 'daily' },
+              { label: 'Weekly', value: 'weekly' },
+              { label: 'Monthly', value: 'monthly' },
+            ]} />
+          </Form.Item>
+        </Col>
+        <Col span={8}>
+          <Form.Item name={['reportsConfig', 'scheduledExportDay']} label="Day (1-31 / 0=Sun 1=Mon)">
+            <InputNumber style={{ width: '100%', height: 40 }} min={0} max={31} />
+          </Form.Item>
+        </Col>
+        <Col span={8}>
+          <Form.Item name={['reportsConfig', 'scheduledExportFormat']} label="Export Format">
+            <Select options={[
+              { label: 'Excel (xlsx)', value: 'xlsx' },
+              { label: 'CSV', value: 'csv' },
+            ]} />
+          </Form.Item>
+        </Col>
+        <Col span={16}>
+          <Form.Item name={['reportsConfig', 'scheduledExportRecipients']} label="Recipient Emails (comma separated)">
+            <Input placeholder="admin@company.com, hr@company.com" />
+          </Form.Item>
+        </Col>
+        <Col span={24}>
+          <Form.Item name={['reportsConfig', 'scheduledExportReports']} label="Reports to Export (comma separated)">
+            <Input placeholder="attendance, payroll, overtime, employees" />
+          </Form.Item>
+        </Col>
+      </Row>
+      <Button type="primary" icon={<SaveOutlined />} htmlType="submit" style={{ marginTop: 16 }}>
+        Save Reports Settings
+      </Button>
+    </Form>
+  );
+}
+
+function LoanTypesSection() {
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form] = Form.useForm();
+  const queryClient = useQueryClient();
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['loan-types-settings'],
+    queryFn: () => loanService.getLoanTypes(),
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (payload: Partial<LoanType>) => loanService.createLoanType(payload),
+    onSuccess: () => { message.success('Loan type created'); closeModal(); queryClient.invalidateQueries({ queryKey: ['loan-types-settings'] }); },
+    onError: (err: any) => message.error(err?.response?.data?.message || 'Failed to create'),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: Partial<LoanType> }) => loanService.updateLoanType(id, payload),
+    onSuccess: () => { message.success('Loan type updated'); closeModal(); queryClient.invalidateQueries({ queryKey: ['loan-types-settings'] }); },
+    onError: (err: any) => message.error(err?.response?.data?.message || 'Failed to update'),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => loanService.deleteLoanType(id),
+    onSuccess: () => { message.success('Loan type deleted'); queryClient.invalidateQueries({ queryKey: ['loan-types-settings'] }); },
+    onError: (err: any) => message.error(err?.response?.data?.message || 'Failed to delete'),
+  });
+
+  const closeModal = () => { setModalOpen(false); setEditingId(null); form.resetFields(); };
+
+  const handleEdit = (record: LoanType) => {
+    setEditingId(record.id);
+    form.setFieldsValue(record);
+    setModalOpen(true);
+  };
+
+  const handleSubmit = (values: any) => {
+    if (editingId) updateMutation.mutate({ id: editingId, payload: values });
+    else createMutation.mutate(values);
+  };
+
+  const columns = [
+    { title: 'Name', dataIndex: 'name', key: 'name' },
+    { title: 'Code', dataIndex: 'code', key: 'code', render: (v: string) => <Tag color="blue">{v}</Tag> },
+    { title: 'Max Amount', dataIndex: 'maxAmount', key: 'maxAmount', render: (v: number) => `₹${v.toLocaleString()}` },
+    { title: 'Interest Rate', dataIndex: 'interestRate', key: 'interestRate', render: (v: number) => `${v}%` },
+    { title: 'Max Tenure', dataIndex: 'maxTenure', key: 'maxTenure', render: (v: number) => `${v} months` },
+    { title: 'Applicable', dataIndex: 'applicableTo', key: 'applicableTo', render: (v: string) => <Tag>{v}</Tag> },
+    { title: 'Status', dataIndex: 'isActive', key: 'isActive', render: (s: boolean) => <Tag color={s ? 'green' : 'red'}>{s ? 'Active' : 'Inactive'}</Tag> },
+    { title: '', key: 'actions', width: 100, render: (_: any, r: LoanType) => (
+      <Space>
+        <Button type="text" size="small" icon={<EditOutlined />} onClick={() => handleEdit(r)} />
+        <Popconfirm title="Delete this loan type?" onConfirm={() => deleteMutation.mutate(r.id)}>
+          <Button type="text" size="small" danger icon={<DeleteOutlined />} />
+        </Popconfirm>
+      </Space>
+    )},
+  ];
+
+  return (
+    <div>
+      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h3 style={{ margin: 0 }}>Loan Types</h3>
+        <Button type="primary" icon={<PlusOutlined />} onClick={() => setModalOpen(true)}>Add Loan Type</Button>
+      </div>
+      <Table dataSource={data?.data?.loanTypes || []} columns={columns} rowKey="id" loading={isLoading} pagination={false} size="small" locale={{ emptyText: 'No loan types configured.' }} />
+
+      <Modal title={editingId ? 'Edit Loan Type' : 'Create Loan Type'} open={modalOpen} onCancel={closeModal} onOk={form.submit} okText={editingId ? 'Update' : 'Create'} width={640}>
+        <Form form={form} layout="vertical" onFinish={handleSubmit}>
+          <Row gutter={12}>
+            <Col span={12}>
+              <Form.Item name="name" label="Name" rules={[{ required: true }]}><Input placeholder="e.g. Personal Loan" /></Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="code" label="Code" rules={[{ required: true }]}><Input placeholder="e.g. PL" /></Form.Item>
+            </Col>
+          </Row>
+          <Form.Item name="description" label="Description"><Input.TextArea rows={2} /></Form.Item>
+          <Row gutter={12}>
+            <Col span={8}>
+              <Form.Item name="minAmount" label="Min Amount" rules={[{ required: true }]}><InputNumber style={{ width: '100%' }} min={0} /></Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="maxAmount" label="Max Amount" rules={[{ required: true }]}><InputNumber style={{ width: '100%' }} min={0} /></Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="interestRate" label="Interest Rate (%)" rules={[{ required: true }]}><InputNumber style={{ width: '100%' }} min={0} max={100} step={0.5} /></Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={12}>
+            <Col span={8}>
+              <Form.Item name="minTenure" label="Min Tenure (months)" rules={[{ required: true }]}><InputNumber style={{ width: '100%' }} min={1} /></Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="maxTenure" label="Max Tenure (months)" rules={[{ required: true }]}><InputNumber style={{ width: '100%' }} min={1} max={120} /></Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="maxActiveLoans" label="Max Active Loans" rules={[{ required: true }]}><InputNumber style={{ width: '100%' }} min={1} /></Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={12}>
+            <Col span={8}>
+              <Form.Item name="applicableTo" label="Applicable To"><Select><Select.Option value="all">All</Select.Option><Select.Option value="worker">Worker</Select.Option><Select.Option value="office-staff">Office Staff</Select.Option></Select></Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="coolingOffPeriodDays" label="Cooling Off (days)"><InputNumber style={{ width: '100%' }} min={0} /></Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="isActive" label="Active" valuePropName="checked"><Switch defaultChecked /></Form.Item>
+            </Col>
+          </Row>
+        </Form>
+      </Modal>
+    </div>
+  );
+}
+
+function LoanConfigSection({ form, onSave }: { form: any; onSave: (values: any) => void }) {
+  const [activeTab, setActiveTab] = useState<'config' | 'types'>('config');
+
+  return (
+    <div>
+      <div style={{ display: 'flex', gap: 12, marginBottom: 24 }}>
+        <Button type={activeTab === 'config' ? 'primary' : 'default'} onClick={() => setActiveTab('config')} icon={<SettingOutlined />}>
+          Loan Configuration
+        </Button>
+        <Button type={activeTab === 'types' ? 'primary' : 'default'} onClick={() => setActiveTab('types')} icon={<DollarOutlined />}>
+          Loan Types
+        </Button>
+      </div>
+
+      {activeTab === 'config' && (
+        <Form form={form} layout="vertical" onFinish={onSave}>
+          <h3 style={{ marginBottom: 16 }}>Loan Configuration</h3>
+          <p style={{ marginBottom: 20, color: '#666', fontSize: 13 }}>
+            Configure default loan rules for the organization.
+          </p>
+          <Row gutter={16}>
+            <Col span={8}>
+              <Form.Item name={['loanConfig', 'defaultApprovalLevels']} label="Default Approval Levels">
+                <InputNumber style={{ width: '100%', height: 40 }} min={1} max={3} />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name={['loanConfig', 'maxLoanPercentageOfSalary']} label="Max Loan % of Salary">
+                <InputNumber style={{ width: '100%', height: 40 }} min={1} max={100} addonAfter="%" />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name={['loanConfig', 'deductionPriority']} label="EMI Deduction Priority">
+                <Select options={[
+                  { label: 'Before Tax', value: 'before-tax' },
+                  { label: 'After Tax', value: 'after-tax' },
+                ]} />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name={['loanConfig', 'minRepaymentPeriodMonths']} label="Min Repayment Period (months)">
+                <InputNumber style={{ width: '100%', height: 40 }} min={1} />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name={['loanConfig', 'maxRepaymentPeriodMonths']} label="Max Repayment Period (months)">
+                <InputNumber style={{ width: '100%', height: 40 }} min={1} max={120} />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Button type="primary" icon={<SaveOutlined />} htmlType="submit" style={{ marginTop: 16 }}>
+            Save Loan Settings
+          </Button>
+        </Form>
+      )}
+
+      {activeTab === 'types' && <LoanTypesSection />}
+    </div>
+  );
+}
+
+function StatutoryConfigSection({ form, onSave }: { form: any; onSave: (values: any) => void }) {
+  const [activeTab, setActiveTab] = useState<'pf' | 'esi' | 'pt'>('pf');
+
+  return (
+    <div>
+      <div style={{ display: 'flex', gap: 12, marginBottom: 24 }}>
+        <Button type={activeTab === 'pf' ? 'primary' : 'default'} onClick={() => setActiveTab('pf')} icon={<BankOutlined />}>PF Configuration</Button>
+        <Button type={activeTab === 'esi' ? 'primary' : 'default'} onClick={() => setActiveTab('esi')} icon={<SafetyCertificateOutlined />}>ESI Configuration</Button>
+        <Button type={activeTab === 'pt' ? 'primary' : 'default'} onClick={() => setActiveTab('pt')} icon={<DollarOutlined />}>Professional Tax</Button>
+      </div>
+
+      <Form form={form} layout="vertical" onFinish={onSave}>
+        {activeTab === 'pf' && (
+          <>
+            <h3 style={{ marginBottom: 16 }}>PF Configuration</h3>
+            <p style={{ marginBottom: 20, color: '#666', fontSize: 13 }}>Configure Provident Fund rates and wage ceiling for statutory compliance.</p>
+            <Row gutter={16}>
+              <Col span={8}>
+                <Form.Item name={['statutoryConfig', 'pfEnabled']} label="Enable PF" valuePropName="checked"><Switch /></Form.Item>
+              </Col>
+              <Col span={8}>
+                <Form.Item name={['statutoryConfig', 'pfWageCeiling']} label="Wage Ceiling (₹)">
+                  <InputNumber style={{ width: '100%', height: 40 }} min={0} />
+                </Form.Item>
+              </Col>
+              <Col span={8}>
+                <Form.Item name={['statutoryConfig', 'pfEmployeeRate']} label="Employee PF Rate (%)">
+                  <InputNumber style={{ width: '100%', height: 40 }} min={0} max={100} step={0.01} />
+                </Form.Item>
+              </Col>
+              <Col span={8}>
+                <Form.Item name={['statutoryConfig', 'pfEmployerRate']} label="Employer PF Rate (%)">
+                  <InputNumber style={{ width: '100%', height: 40 }} min={0} max={100} step={0.01} />
+                </Form.Item>
+              </Col>
+              <Col span={8}>
+                <Form.Item name={['statutoryConfig', 'epsRate']} label="EPS Rate (%)">
+                  <InputNumber style={{ width: '100%', height: 40 }} min={0} max={100} step={0.01} />
+                </Form.Item>
+              </Col>
+              <Col span={8}>
+                <Form.Item name={['statutoryConfig', 'edliRate']} label="EDLI Rate (%)">
+                  <InputNumber style={{ width: '100%', height: 40 }} min={0} max={100} step={0.01} />
+                </Form.Item>
+              </Col>
+              <Col span={8}>
+                <Form.Item name={['statutoryConfig', 'pfAdminCharges']} label="PF Admin Charges (%)">
+                  <InputNumber style={{ width: '100%', height: 40 }} min={0} max={100} step={0.01} />
+                </Form.Item>
+              </Col>
+              <Col span={8}>
+                <Form.Item name={['statutoryConfig', 'edliAdminCharges']} label="EDLI Admin Charges (%)">
+                  <InputNumber style={{ width: '100%', height: 40 }} min={0} max={100} step={0.01} />
+                </Form.Item>
+              </Col>
+            </Row>
+          </>
+        )}
+
+        {activeTab === 'esi' && (
+          <>
+            <h3 style={{ marginBottom: 16 }}>ESI Configuration</h3>
+            <p style={{ marginBottom: 20, color: '#666', fontSize: 13 }}>Configure Employee State Insurance rates and threshold.</p>
+            <Row gutter={16}>
+              <Col span={8}>
+                <Form.Item name={['statutoryConfig', 'esiEnabled']} label="Enable ESI" valuePropName="checked"><Switch /></Form.Item>
+              </Col>
+              <Col span={8}>
+                <Form.Item name={['statutoryConfig', 'esiThreshold']} label="Threshold (₹)">
+                  <InputNumber style={{ width: '100%', height: 40 }} min={0} />
+                </Form.Item>
+              </Col>
+              <Col span={8}>
+                <Form.Item name={['statutoryConfig', 'esiEmployeeRate']} label="Employee ESI Rate (%)">
+                  <InputNumber style={{ width: '100%', height: 40 }} min={0} max={100} step={0.01} />
+                </Form.Item>
+              </Col>
+              <Col span={8}>
+                <Form.Item name={['statutoryConfig', 'esiEmployerRate']} label="Employer ESI Rate (%)">
+                  <InputNumber style={{ width: '100%', height: 40 }} min={0} max={100} step={0.01} />
+                </Form.Item>
+              </Col>
+            </Row>
+          </>
+        )}
+
+        {activeTab === 'pt' && (
+          <>
+            <h3 style={{ marginBottom: 16 }}>Professional Tax Configuration</h3>
+            <p style={{ marginBottom: 20, color: '#666', fontSize: 13 }}>Configure state-wise Professional Tax slabs. Employees can be assigned a state in their profile.</p>
+            <Row gutter={16}>
+              <Col span={8}>
+                <Form.Item name={['statutoryConfig', 'ptEnabled']} label="Enable Professional Tax" valuePropName="checked"><Switch /></Form.Item>
+              </Col>
+            </Row>
+            <Form.List name={['statutoryConfig', 'ptSlabs']}>
+              {(fields, { add, remove }) => (
+                <>
+                  {fields.map(({ key, name, ...rest }) => (
+                    <Card key={key} size="small" title={`State #${name + 1}`} style={{ marginBottom: 12 }} extra={<Button type="text" danger icon={<DeleteOutlined />} onClick={() => remove(name)} />}>
+                      <Form.Item {...rest} name={[name, 'state']} label="State" rules={[{ required: true }]}>
+                        <Input style={{ width: 200 }} placeholder="e.g. Karnataka" />
+                      </Form.Item>
+                      <Form.List {...rest} name={[name, 'slabs']}>
+                        {(slabFields, { add: addSlab, remove: removeSlab }) => (
+                          <>
+                            {slabFields.map(({ key: slabKey, name: slabName, ...slabRest }) => (
+                              <Row key={slabKey} gutter={8} align="middle" style={{ marginBottom: 8 }}>
+                                <Col span={5}>
+                                  <Form.Item {...slabRest} name={[slabName, 'minSalary']} rules={[{ required: true }]} style={{ marginBottom: 0 }}>
+                                    <InputNumber style={{ width: '100%' }} placeholder="Min" min={0} />
+                                  </Form.Item>
+                                </Col>
+                                <Col span={5}>
+                                  <Form.Item {...slabRest} name={[slabName, 'maxSalary']} rules={[{ required: true }]} style={{ marginBottom: 0 }}>
+                                    <InputNumber style={{ width: '100%' }} placeholder="Max" min={0} />
+                                  </Form.Item>
+                                </Col>
+                                <Col span={4}>
+                                  <Form.Item {...slabRest} name={[slabName, 'amount']} rules={[{ required: true }]} style={{ marginBottom: 0 }}>
+                                    <InputNumber style={{ width: '100%' }} placeholder="Amount" min={0} />
+                                  </Form.Item>
+                                </Col>
+                                <Col span={6}>
+                                  <Form.Item {...slabRest} name={[slabName, 'frequency']} rules={[{ required: true }]} style={{ marginBottom: 0 }}>
+                                    <Select placeholder="Frequency">
+                                      <Select.Option value="monthly">Monthly</Select.Option>
+                                      <Select.Option value="half-yearly">Half-Yearly</Select.Option>
+                                      <Select.Option value="yearly">Yearly</Select.Option>
+                                    </Select>
+                                  </Form.Item>
+                                </Col>
+                                <Col span={2}>
+                                  <Button type="text" danger icon={<DeleteOutlined />} onClick={() => removeSlab(slabName)} />
+                                </Col>
+                              </Row>
+                            ))}
+                            <Button type="dashed" size="small" icon={<PlusOutlined />} onClick={() => addSlab({ minSalary: 0, maxSalary: 0, amount: 0, frequency: 'monthly' })} style={{ marginBottom: 12 }}>
+                              Add Slab
+                            </Button>
+                          </>
+                        )}
+                      </Form.List>
+                    </Card>
+                  ))}
+                  <Button type="dashed" icon={<PlusOutlined />} onClick={() => add({ state: '', slabs: [{ minSalary: 0, maxSalary: 999999, amount: 0, frequency: 'monthly' }] })} block>
+                    Add State
+                  </Button>
+                </>
+              )}
+            </Form.List>
+          </>
+        )}
+
+        <Button type="primary" icon={<SaveOutlined />} htmlType="submit" style={{ marginTop: 16 }}>
+          Save Statutory Settings
+        </Button>
+      </Form>
+    </div>
   );
 }
 

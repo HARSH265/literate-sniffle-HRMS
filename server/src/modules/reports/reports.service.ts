@@ -5,6 +5,8 @@ import PayrollItem from '../../models/PayrollItem.model.js';
 import OvertimeEntry from '../../models/OvertimeEntry.model.js';
 import OvertimeRule from '../../models/OvertimeRule.model.js';
 import CompanySettings from '../../models/CompanySettings.model.js';
+import Department from '../../models/Department.model.js';
+import LeaveApplication from '../../models/LeaveApplication.model.js';
 import { ExcelGeneratorService } from '../../core/excel/ExcelGeneratorService.js';
 import { Response } from 'express';
 
@@ -612,5 +614,382 @@ export class ReportsService {
       stats,
       rules: rules.map((r: any) => ({ id: String(r._id), name: r.name, multiplier: r.multiplier, maxHoursPerDay: r.maxHoursPerDay, maxHoursPerMonth: r.maxHoursPerMonth })),
     };
+  }
+
+  static async getCustomReport(params: {
+    fields: string[];
+    filters: Record<string, any>;
+    groupBy?: string;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
+    limit?: number;
+  }): Promise<Record<string, unknown>> {
+    const { fields, filters, groupBy, sortBy, sortOrder, limit } = params;
+
+    const availableFields: Record<string, string> = {
+      employeeCode: 'employeeCode',
+      fullName: 'fullName',
+      fatherName: 'fatherName',
+      category: 'category',
+      employmentType: 'employmentType',
+      salaryType: 'salaryType',
+      baseSalary: 'baseSalary',
+      dailyWage: 'dailyWage',
+      status: 'status',
+      department: 'department.name',
+      designation: 'designation.name',
+      shift: 'shift.name',
+      joiningDate: 'joiningDate',
+      contactNumber: 'contactNumber',
+    };
+
+    const selectedFields = fields?.length > 0
+      ? fields.filter((f) => availableFields[f])
+      : Object.keys(availableFields);
+
+    const query: Record<string, any> = {};
+    if (filters) {
+      if (filters.status) query.status = filters.status;
+      if (filters.category) query.category = filters.category;
+      if (filters.department) query.department = filters.department;
+      if (filters.employmentType) query.employmentType = filters.employmentType;
+      if (filters.salaryType) query.salaryType = filters.salaryType;
+      if (filters.search) {
+        query.$or = [
+          { fullName: { $regex: filters.search, $options: 'i' } },
+          { employeeCode: { $regex: filters.search, $options: 'i' } },
+        ];
+      }
+    }
+
+    let employees = await Employee.find(query)
+      .populate('department', 'name code')
+      .populate('designation', 'name')
+      .populate('shift', 'name')
+      .lean();
+
+    let data = employees.map((emp: any) => {
+      const row: Record<string, any> = {};
+      selectedFields.forEach((field) => {
+        if (field === 'department') row['department'] = emp.department?.name || 'N/A';
+        else if (field === 'designation') row['designation'] = emp.designation?.name || 'N/A';
+        else if (field === 'shift') row['shift'] = emp.shift?.name || 'N/A';
+        else row[field] = emp[field] ?? 'N/A';
+      });
+      return row;
+    });
+
+    if (groupBy && availableFields[groupBy]) {
+      const grouped: Record<string, any[]> = {};
+      data.forEach((row) => {
+        const key = String(row[groupBy] || 'Unknown');
+        if (!grouped[key]) grouped[key] = [];
+        grouped[key].push(row);
+      });
+      data = Object.entries(grouped).map(([key, items]) => ({
+        group: key,
+        count: items.length,
+        items: items.slice(0, 100),
+      }));
+    }
+
+    if (sortBy && data.length > 0 && data[0][sortBy] !== undefined) {
+      data.sort((a: any, b: any) => {
+        const aVal = a[sortBy] ?? '';
+        const bVal = b[sortBy] ?? '';
+        const cmp = String(aVal).localeCompare(String(bVal));
+        return sortOrder === 'desc' ? -cmp : cmp;
+      });
+    }
+
+    if (limit && !groupBy) {
+      data = data.slice(0, limit);
+    }
+
+    return {
+      fields: selectedFields,
+      total: employees.length,
+      data,
+      groupBy: groupBy || null,
+    };
+  }
+
+  static async getChartData(params: {
+    chartType: 'attendance' | 'payroll' | 'department' | 'leave';
+    period?: { start?: string; end?: string };
+    groupBy?: 'month' | 'department' | 'category' | 'status';
+  }): Promise<Record<string, unknown>> {
+    const { chartType, period, groupBy } = params;
+
+    let start: Date, end: Date;
+    if (period?.start && period?.end) {
+      start = new Date(period.start);
+      end = new Date(period.end);
+    } else {
+      end = new Date();
+      start = new Date(end.getFullYear(), end.getMonth() - 11, 1);
+    }
+
+    if (chartType === 'attendance') {
+      const employeeFilter: Record<string, unknown> = { status: 'active' };
+      const employees = await Employee.find(employeeFilter)
+        .populate('department', 'name')
+        .lean();
+
+      const attendances = await AttendanceEntry.find({
+        employee: { $in: employees.map((e: any) => e._id) },
+        date: { $gte: start, $lte: end },
+      }).lean();
+
+      if (groupBy === 'month') {
+        const byMonth: Record<string, any> = {};
+        attendances.forEach((att: any) => {
+          const d = new Date(att.date);
+          const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+          if (!byMonth[key]) byMonth[key] = { month: key, present: 0, absent: 0, halfDay: 0, leave: 0 };
+          const status = att.status === 'half-day' ? 'halfDay' : att.status;
+          if (byMonth[key][status] !== undefined) byMonth[key][status]++;
+        });
+        return { chartType, groupBy: 'month', data: Object.values(byMonth).sort((a: any, b: any) => a.month.localeCompare(b.month)) };
+      }
+
+      if (groupBy === 'department') {
+        const byDept: Record<string, any> = {};
+        attendances.forEach((att: any) => {
+          const emp = employees.find((e: any) => String(e._id) === String(att.employee));
+          const deptName = (emp as any)?.department?.name || 'Unassigned';
+          if (!byDept[deptName]) byDept[deptName] = { department: deptName, present: 0, absent: 0, halfDay: 0 };
+          const status = att.status === 'half-day' ? 'halfDay' : att.status;
+          if (byDept[deptName][status] !== undefined) byDept[deptName][status]++;
+        });
+        return { chartType, groupBy: 'department', data: Object.values(byDept) };
+      }
+
+      const totalPresent = attendances.filter((a: any) => a.status === 'present').length;
+      const totalAbsent = attendances.filter((a: any) => a.status === 'absent').length;
+      const totalHalfDay = attendances.filter((a: any) => a.status === 'half-day').length;
+      const totalLeave = attendances.filter((a: any) => a.status === 'leave').length;
+
+      return {
+        chartType,
+        data: [
+          { name: 'Present', value: totalPresent, color: '#3f8600' },
+          { name: 'Absent', value: totalAbsent, color: '#cf1322' },
+          { name: 'Half Day', value: totalHalfDay, color: '#faad14' },
+          { name: 'Leave', value: totalLeave, color: '#1890ff' },
+        ],
+      };
+    }
+
+    if (chartType === 'payroll') {
+      const runs = await PayrollRun.find({
+        status: 'finalized',
+        createdAt: { $gte: start, $lte: end },
+      }).sort({ createdAt: 1 }).lean();
+
+      const data: any[] = [];
+      for (const run of runs) {
+        const items = await PayrollItem.find({ payrollRun: run._id }).lean();
+        const gross = items.reduce((s: number, i: any) => s + (i.grossEarnings || 0), 0);
+        const deductions = items.reduce((s: number, i: any) => s + (i.totalDeductions || 0), 0);
+        const net = items.reduce((s: number, i: any) => s + (i.netPay || 0), 0);
+        data.push({ month: run.month, gross, deductions, net, employees: items.length });
+      }
+
+      if (groupBy === 'department') {
+        const byDept: Record<string, any> = {};
+        for (const run of runs) {
+          const items = await PayrollItem.find({ payrollRun: run._id }).populate('employee', 'department').lean();
+          items.forEach((item: any) => {
+            const dept = (item.employee as any)?.department || 'Unassigned';
+            const deptName = typeof dept === 'object' ? (dept as any)?.name || 'Unknown' : 'Unknown';
+            if (!byDept[deptName]) byDept[deptName] = { department: deptName, gross: 0, deductions: 0, net: 0, employees: new Set() };
+            byDept[deptName].gross += item.grossEarnings || 0;
+            byDept[deptName].deductions += item.totalDeductions || 0;
+            byDept[deptName].net += item.netPay || 0;
+            byDept[deptName].employees.add(String(item.employee));
+          });
+        }
+        return {
+          chartType,
+          groupBy: 'department',
+          data: Object.values(byDept).map((d: any) => ({ ...d, employees: d.employees.size })),
+        };
+      }
+
+      return { chartType, groupBy: 'month', data };
+    }
+
+    if (chartType === 'department') {
+      const employees = await Employee.find({ status: 'active' })
+        .populate('department', 'name')
+        .lean();
+
+      const byDept: Record<string, any> = {};
+      employees.forEach((emp: any) => {
+        const deptName = emp.department?.name || 'Unassigned';
+        if (!byDept[deptName]) byDept[deptName] = { department: deptName, total: 0, workers: 0, officeStaff: 0, monthly: 0, daily: 0 };
+        byDept[deptName].total++;
+        if (emp.category === 'worker') byDept[deptName].workers++;
+        else byDept[deptName].officeStaff++;
+        if (emp.salaryType === 'monthly') byDept[deptName].monthly++;
+        else byDept[deptName].daily++;
+      });
+
+      return { chartType, groupBy: 'department', data: Object.values(byDept) };
+    }
+
+    if (chartType === 'leave') {
+      const leaves = await LeaveApplication.find({
+        createdAt: { $gte: start, $lte: end },
+      }).populate('leaveType', 'name').lean();
+
+      const byType: Record<string, number> = {};
+      leaves.forEach((l: any) => {
+        const typeName = l.leaveType?.name || 'Unknown';
+        byType[typeName] = (byType[typeName] || 0) + (l.totalDays || 1);
+      });
+
+      const byStatus = { applied: 0, approved: 0, rejected: 0, cancelled: 0 };
+      leaves.forEach((l: any) => {
+        if (byStatus[l.status as keyof typeof byStatus] !== undefined) byStatus[l.status as keyof typeof byStatus]++;
+      });
+
+      return {
+        chartType,
+        byType: Object.entries(byType).map(([name, days]) => ({ name, days })),
+        byStatus: Object.entries(byStatus).map(([name, count]) => ({ name, count })),
+        data: leaves,
+      };
+    }
+
+    return { chartType, data: [] };
+  }
+
+  static async getDrillDown(params: {
+    entity: 'attendance' | 'payroll' | 'department' | 'leave';
+    id?: string;
+    period?: { start?: string; end?: string };
+    filters?: Record<string, any>;
+    page?: number;
+    limit?: number;
+  }): Promise<Record<string, unknown>> {
+    const { entity, id, period, filters, page = 1, limit = 50 } = params;
+    const skip = (page - 1) * limit;
+
+    if (entity === 'attendance') {
+      let query: Record<string, any> = {};
+      if (id) query.employee = id;
+      if (filters?.status) query.status = filters.status;
+      if (period?.start && period?.end) {
+        query.date = { $gte: new Date(period.start), $lte: new Date(period.end) };
+      }
+      if (filters?.department) {
+        const empIds = await Employee.find({ department: filters.department }).select('_id').lean();
+        query.employee = { $in: empIds.map((e: any) => e._id) };
+      }
+
+      const [records, total] = await Promise.all([
+        AttendanceEntry.find(query)
+          .populate('employee', 'fullName employeeCode')
+          .sort({ date: -1 })
+          .skip(skip)
+          .limit(limit)
+          .lean(),
+        AttendanceEntry.countDocuments(query),
+      ]);
+
+      return { entity, total, page, limit, totalPages: Math.ceil(total / limit), records };
+    }
+
+    if (entity === 'payroll') {
+      let query: Record<string, any> = {};
+      if (id) query.payrollRun = id;
+      if (filters?.department) {
+        const empIds = await Employee.find({ department: filters.department }).select('_id').lean();
+        query.employee = { $in: empIds.map((e: any) => e._id) };
+      }
+
+      const [records, total] = await Promise.all([
+        PayrollItem.find(query)
+          .populate('employee', 'fullName employeeCode department')
+          .sort({ netPay: -1 })
+          .skip(skip)
+          .limit(limit)
+          .lean(),
+        PayrollItem.countDocuments(query),
+      ]);
+
+      return { entity, total, page, limit, totalPages: Math.ceil(total / limit), records };
+    }
+
+    if (entity === 'department') {
+      const depts = await Department.find().lean();
+
+      const employees = await Employee.find({ status: 'active' })
+        .populate('department', 'name')
+        .lean();
+
+      const byDept: Record<string, any> = {};
+      employees.forEach((emp: any) => {
+        const deptName = emp.department?.name || 'Unassigned';
+        if (!byDept[deptName]) byDept[deptName] = { name: deptName, employees: [], count: 0 };
+        byDept[deptName].employees.push({
+          code: emp.employeeCode,
+          name: emp.fullName,
+          category: emp.category,
+          type: emp.employmentType,
+          status: emp.status,
+        });
+        byDept[deptName].count++;
+      });
+
+      if (id) {
+        const dept = byDept[id];
+        if (!dept) return { entity, message: 'Department not found', records: [] };
+        const paginated = dept.employees.slice(skip, skip + limit);
+        return { entity, total: dept.count, page, limit, totalPages: Math.ceil(dept.count / limit), records: paginated, name: id };
+      }
+
+      return { entity, total: depts.length, records: Object.values(byDept) };
+    }
+
+    if (entity === 'leave') {
+      let query: Record<string, any> = {};
+      if (id) query.employee = id;
+      if (filters?.status) query.status = filters.status;
+      if (period?.start && period?.end) {
+        query.createdAt = { $gte: new Date(period.start), $lte: new Date(period.end) };
+      }
+
+      const [records, total] = await Promise.all([
+        LeaveApplication.find(query)
+          .populate('employee', 'fullName employeeCode')
+          .populate('leaveType', 'name')
+          .sort({ createdAt: -1 })
+          .skip(skip)
+          .limit(limit)
+          .lean(),
+        LeaveApplication.countDocuments(query),
+      ]);
+
+      return { entity, total, page, limit, totalPages: Math.ceil(total / limit), records };
+    }
+
+    return { entity, records: [], total: 0 };
+  }
+
+  static async getScheduledExportConfig(): Promise<Record<string, unknown>> {
+    const settings = await CompanySettings.findOne().lean();
+    return { config: (settings as any)?.reportsConfig || {} };
+  }
+
+  static async saveScheduledExportConfig(config: Record<string, unknown>): Promise<Record<string, unknown>> {
+    const settings = await CompanySettings.findOne();
+    if (!settings) throw new Error('Company settings not found');
+    (settings as any).reportsConfig = { ...((settings as any).reportsConfig || {}), ...config };
+    settings.updatedBy = undefined as any;
+    await settings.save();
+    return { config: (settings as any).reportsConfig };
   }
 }

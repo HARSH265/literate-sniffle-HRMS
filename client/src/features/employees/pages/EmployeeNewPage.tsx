@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Form, Input, Select, InputNumber, DatePicker, Button, Row, Col, message, Card, Upload, Switch, Tag } from 'antd';
-import { ArrowLeftOutlined, SaveOutlined, UploadOutlined, UserOutlined, BankOutlined, FileTextOutlined, DollarOutlined, HomeOutlined, IdcardOutlined, SettingOutlined } from '@ant-design/icons';
+import { ArrowLeftOutlined, SaveOutlined, UploadOutlined, UserOutlined, BankOutlined, FileTextOutlined, DollarOutlined, HomeOutlined, IdcardOutlined, SettingOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
 import { PageHeader } from '../../../core/components/PageHeader';
 import { employeeService, CreateEmployee } from '../services/employeeService';
 import { useQuery, useMutation } from '@tanstack/react-query';
@@ -356,6 +356,55 @@ export function EmployeeNewPage() {
                   <Col span={24}>
                     <Form.Item name={['bankDetails', 'accountHolderName']} label="Account Holder Name">
                       <Input placeholder="Enter name as per bank" style={{ height: inputHeight }} />
+                    </Form.Item>
+                  </Col>
+                </Row>
+              </Section>
+
+              <Section title="Statutory Compliance" icon={<SafetyCertificateOutlined />}>
+                <Row gutter={rowGutter}>
+                  <Col span={12}>
+                    <Form.Item name="pfUAN" label="PF UAN">
+                      <Input placeholder="e.g. IN/UAN/123456789" style={{ height: inputHeight }} />
+                    </Form.Item>
+                  </Col>
+                  <Col span={12}>
+                    <Form.Item name="esiNumber" label="ESI Number">
+                      <Input placeholder="e.g. 1234567890" style={{ height: inputHeight }} />
+                    </Form.Item>
+                  </Col>
+                  <Col span={8}>
+                    <Form.Item name="pfJoiningDate" label="PF Joining Date">
+                      <DatePicker style={{ width: '100%', height: inputHeight }} format="YYYY-MM-DD" />
+                    </Form.Item>
+                  </Col>
+                  <Col span={4}>
+                    <Form.Item name="pfExempted" label="PF Exempted" valuePropName="checked">
+                      <Switch />
+                    </Form.Item>
+                  </Col>
+                  <Col span={4}>
+                    <Form.Item name="esiExempted" label="ESI Exempted" valuePropName="checked">
+                      <Switch />
+                    </Form.Item>
+                  </Col>
+                  <Col span={4}>
+                    <Form.Item name="ptExempted" label="PT Exempted" valuePropName="checked">
+                      <Switch />
+                    </Form.Item>
+                  </Col>
+                  <Col span={12}>
+                    <Form.Item name="ptState" label="Professional Tax State">
+                      <Select placeholder="Select state" allowClear style={{ height: inputHeight }}>
+                        <Select.Option value="Andhra Pradesh">Andhra Pradesh</Select.Option>
+                        <Select.Option value="Karnataka">Karnataka</Select.Option>
+                        <Select.Option value="Kerala">Kerala</Select.Option>
+                        <Select.Option value="Maharashtra">Maharashtra</Select.Option>
+                        <Select.Option value="Tamil Nadu">Tamil Nadu</Select.Option>
+                        <Select.Option value="Telangana">Telangana</Select.Option>
+                        <Select.Option value="West Bengal">West Bengal</Select.Option>
+                        <Select.Option value="Other">Other</Select.Option>
+                      </Select>
                     </Form.Item>
                   </Col>
                 </Row>

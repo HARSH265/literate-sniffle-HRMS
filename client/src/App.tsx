@@ -25,6 +25,9 @@ import { PayrollDetailsPage } from './features/payroll/pages/PayrollDetailsPage'
 import { SalarySlipsPage } from './features/payroll/pages/SalarySlipsPage';
 import { SalarySlipDetailsPage } from './features/payroll/pages/SalarySlipDetailsPage';
 import { ReportsPage } from './features/reports/pages/ReportsPage';
+import { StatutoryDashboard } from './features/statutory/pages/StatutoryDashboard';
+import { LoansPage } from './features/loans/pages/LoansPage';
+import { LoanDetailPage } from './features/loans/pages/LoanDetailPage';
 import { LeaveTypesPage } from './features/leave/pages/LeaveTypesPage';
 import { LeaveApplyPage } from './features/leave/pages/LeaveApplyPage';
 import { LeaveApprovalsPage } from './features/leave/pages/LeaveApprovalsPage';
@@ -95,6 +98,9 @@ function App() {
             <Route path="leave/approvals" element={<LeaveApprovalsPage />} />
             <Route path="leave/balances" element={<LeaveBalancesPage />} />
             <Route path="leave/applications" element={<LeaveApplicationsPage />} />
+            <Route path="loans" element={<LoansPage />} />
+            <Route path="loans/:id" element={<LoanDetailPage />} />
+            <Route path="statutory" element={<StatutoryDashboard />} />
             <Route path="reports" element={<ReportsPage />} />
             <Route path="settings" element={<SettingsPage />} />
             <Route path="settings/totp" element={<TOTPEnrollPage />} />

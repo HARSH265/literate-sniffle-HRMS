@@ -29,6 +29,8 @@ import leaveRoutes from './modules/leave/leave.routes.js';
 import payrollRoutes from './modules/payroll/payroll.routes.js';
 import salarySlipRoutes from './modules/salary-slips/salarySlips.routes.js';
 import reportsRoutes from './modules/reports/reports.routes.js';
+import loanRoutes from './modules/loans/loans.routes.js';
+import statutoryRoutes from './modules/statutory/statutory.routes.js';
 import notificationsRoutes from './modules/notifications/notifications.routes.js';
 import auditRoutes from './modules/audit/audit.routes.js';
 
@@ -119,6 +121,8 @@ app.use('/api/v1/leave', leaveRoutes);
 app.use('/api/v1/payroll', payrollRoutes);
 app.use('/api/v1/salary-slips', salarySlipRoutes);
 app.use('/api/v1/reports', auditMiddleware, reportsRoutes);
+app.use('/api/v1/loans', auditMiddleware, loanRoutes);
+app.use('/api/v1/statutory', auditMiddleware, statutoryRoutes);
 app.use('/api/v1/notifications', notificationsRoutes);
 app.use('/api/v1/audit-logs', auditRoutes);
 

@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import QRCode from 'qrcode-generator';
+import { qrcode as QRCode } from 'qrcode-generator';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 

@@ -255,6 +255,24 @@ export function EmployeeDetailPage() {
               </Card>
             )}
 
+            <Card title="Statutory Compliance" style={{ borderRadius: 12, marginBottom: 24 }}>
+              <Descriptions column={{ xs: 1, sm: 2 }} size="small">
+                <Descriptions.Item label="PF UAN">{employee.pfUAN || '—'}</Descriptions.Item>
+                <Descriptions.Item label="ESI Number">{employee.esiNumber || '—'}</Descriptions.Item>
+                <Descriptions.Item label="PF Joining Date">{employee.pfJoiningDate ? dayjs(employee.pfJoiningDate).format('DD MMM YYYY') : '—'}</Descriptions.Item>
+                <Descriptions.Item label="PF Exempted">
+                  {employee.pfExempted ? <Tag color="red">Exempted</Tag> : <Tag color="green">Not Exempted</Tag>}
+                </Descriptions.Item>
+                <Descriptions.Item label="ESI Exempted">
+                  {employee.esiExempted ? <Tag color="red">Exempted</Tag> : <Tag color="green">Not Exempted</Tag>}
+                </Descriptions.Item>
+                <Descriptions.Item label="PT Exempted">
+                  {employee.ptExempted ? <Tag color="red">Exempted</Tag> : <Tag color="green">Not Exempted</Tag>}
+                </Descriptions.Item>
+                <Descriptions.Item label="PT State">{employee.ptState || '—'}</Descriptions.Item>
+              </Descriptions>
+            </Card>
+
 
 
             <Card style={{ borderRadius: 12, marginTop: 24 }}>

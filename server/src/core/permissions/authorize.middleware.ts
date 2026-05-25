@@ -18,7 +18,12 @@ export type Permission =
   | 'manage-leave-types'
   | 'manage-leave-applications'
   | 'approve-leave'
-  | 'view-leave';
+  | 'view-leave'
+  | 'manage-loans'
+  | 'view-loans'
+  | 'apply-loan'
+  | 'manage-statutory'
+  | 'view-statutory';
 
 export function authorize(...allowedPermissions: Permission[]) {
   return (_req: Request, _res: Response, next: NextFunction): void => {

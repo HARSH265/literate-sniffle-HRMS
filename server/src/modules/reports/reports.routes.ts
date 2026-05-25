@@ -16,4 +16,10 @@ router.get('/departments', authorize('view-reports'), reportsController.getDepar
 router.get('/overtime', authorize('view-reports'), reportsController.exportOvertime);
 router.get('/overtime/summary', authorize('view-reports'), reportsController.getOvertimeSummary);
 
+router.post('/custom', authorize('view-reports'), reportsController.getCustomReport);
+router.get('/chart-data', authorize('view-reports'), reportsController.getChartData);
+router.get('/drill-down', authorize('view-reports'), reportsController.getDrillDown);
+router.get('/scheduled-export-config', authorize('view-reports'), reportsController.getScheduledExportConfig);
+router.patch('/scheduled-export-config', authorize('manage-settings'), reportsController.saveScheduledExportConfig);
+
 export default router;

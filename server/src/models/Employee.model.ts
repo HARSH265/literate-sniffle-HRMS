@@ -35,6 +35,13 @@ export interface IEmployee extends Document {
   totpSecret?: string;
   totpEnabled: boolean;
   registeredDeviceId?: string;
+  pfUAN?: string;
+  esiNumber?: string;
+  pfJoiningDate?: Date;
+  pfExempted: boolean;
+  esiExempted: boolean;
+  ptExempted: boolean;
+  ptState?: string;
 }
 
 interface EmployeeModel extends Model<IEmployee> {}
@@ -91,6 +98,13 @@ const EmployeeSchema = new Schema<IEmployee>(
     totpSecret: { type: String, select: false },
     totpEnabled: { type: Boolean, default: false },
     registeredDeviceId: { type: String },
+    pfUAN: { type: String },
+    esiNumber: { type: String },
+    pfJoiningDate: { type: Date },
+    pfExempted: { type: Boolean, default: false },
+    esiExempted: { type: Boolean, default: false },
+    ptExempted: { type: Boolean, default: false },
+    ptState: { type: String },
   },
   { timestamps: true },
 );

@@ -35,6 +35,11 @@ export interface IPayrollItem extends Document {
     calculatedValue: number;
   }[];
   totalDeductions: number;
+  employerContributions: {
+    name: string;
+    calculatedValue: number;
+  }[];
+  loanEmiDeduction: number;
   netPay: number;
   status: 'draft' | 'submitted' | 'approved' | 'finalized';
 }
@@ -81,6 +86,11 @@ const PayrollItemSchema = new Schema<IPayrollItem>(
       },
     ],
     totalDeductions: { type: Number, required: true },
+    employerContributions: [{
+      name: { type: String },
+      calculatedValue: { type: Number },
+    }],
+    loanEmiDeduction: { type: Number, default: 0 },
     netPay: { type: Number, required: true },
     status: {
       type: String,

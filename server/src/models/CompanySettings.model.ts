@@ -119,6 +119,40 @@ export interface ICompanySettings extends Document {
     allowanceProRateMode: 'none' | 'days' | 'calendar';
     deductionProRateMode: 'none' | 'days' | 'calendar';
   };
+  reportsConfig: {
+    scheduledExportEnabled: boolean;
+    scheduledExportFrequency: 'daily' | 'weekly' | 'monthly';
+    scheduledExportDay: number;
+    scheduledExportFormat: 'xlsx' | 'csv';
+    scheduledExportRecipients: string[];
+    scheduledExportReports: string[];
+  };
+  loanConfig: {
+    defaultApprovalLevels: number;
+    maxLoanPercentageOfSalary: number;
+    minRepaymentPeriodMonths: number;
+    maxRepaymentPeriodMonths: number;
+    deductionPriority: 'before-tax' | 'after-tax';
+  };
+  statutoryConfig: {
+    pfEnabled: boolean;
+    pfWageCeiling: number;
+    pfEmployeeRate: number;
+    pfEmployerRate: number;
+    epsRate: number;
+    edliRate: number;
+    pfAdminCharges: number;
+    edliAdminCharges: number;
+    esiEnabled: boolean;
+    esiThreshold: number;
+    esiEmployeeRate: number;
+    esiEmployerRate: number;
+    ptEnabled: boolean;
+    ptSlabs: {
+      state: string;
+      slabs: { minSalary: number; maxSalary: number; amount: number; frequency: 'monthly' | 'half-yearly' | 'yearly' }[];
+    }[];
+  };
   updatedBy?: mongoose.Types.ObjectId;
 }
 
@@ -262,6 +296,68 @@ const CompanySettingsSchema = new Schema<ICompanySettings>(
       deductionPriority: { type: String, enum: ['unpaid-first', 'pro-rata'], default: 'unpaid-first' },
       allowanceProRateMode: { type: String, enum: ['none', 'days', 'calendar'], default: 'days' },
       deductionProRateMode: { type: String, enum: ['none', 'days', 'calendar'], default: 'days' },
+    },
+    reportsConfig: {
+      scheduledExportEnabled: { type: Boolean, default: false },
+      scheduledExportFrequency: { type: String, enum: ['daily', 'weekly', 'monthly'], default: 'monthly' },
+      scheduledExportDay: { type: Number, default: 1, min: 1, max: 31 },
+      scheduledExportFormat: { type: String, enum: ['xlsx', 'csv'], default: 'xlsx' },
+      scheduledExportRecipients: { type: [String], default: [] },
+      scheduledExportReports: { type: [String], default: ['attendance', 'payroll'] },
+    },
+    loanConfig: {
+      defaultApprovalLevels: { type: Number, default: 1, min: 1, max: 3 },
+      maxLoanPercentageOfSalary: { type: Number, default: 50, min: 1, max: 100 },
+      minRepaymentPeriodMonths: { type: Number, default: 1, min: 1 },
+      maxRepaymentPeriodMonths: { type: Number, default: 60, min: 1, max: 120 },
+      deductionPriority: { type: String, enum: ['before-tax', 'after-tax'], default: 'after-tax' },
+    },
+    statutoryConfig: {
+      pfEnabled: { type: Boolean, default: true },
+      pfWageCeiling: { type: Number, default: 15000 },
+      pfEmployeeRate: { type: Number, default: 12 },
+      pfEmployerRate: { type: Number, default: 13.61 },
+      epsRate: { type: Number, default: 8.33 },
+      edliRate: { type: Number, default: 0.5 },
+      pfAdminCharges: { type: Number, default: 1.1 },
+      edliAdminCharges: { type: Number, default: 0.01 },
+      esiEnabled: { type: Boolean, default: true },
+      esiThreshold: { type: Number, default: 21000 },
+      esiEmployeeRate: { type: Number, default: 0.75 },
+      esiEmployerRate: { type: Number, default: 3.25 },
+      ptEnabled: { type: Boolean, default: true },
+      ptSlabs: { type: [Schema.Types.Mixed], default: [
+        {
+          state: 'Karnataka',
+          slabs: [
+            { minSalary: 0, maxSalary: 15000, amount: 0, frequency: 'monthly' },
+            { minSalary: 15001, maxSalary: 20000, amount: 150, frequency: 'monthly' },
+            { minSalary: 20001, maxSalary: 25000, amount: 300, frequency: 'monthly' },
+            { minSalary: 25001, maxSalary: 30000, amount: 450, frequency: 'monthly' },
+            { minSalary: 30001, maxSalary: 999999, amount: 600, frequency: 'monthly' },
+          ],
+        },
+        {
+          state: 'Maharashtra',
+          slabs: [
+            { minSalary: 0, maxSalary: 10000, amount: 0, frequency: 'monthly' },
+            { minSalary: 10001, maxSalary: 15000, amount: 175, frequency: 'monthly' },
+            { minSalary: 15001, maxSalary: 25000, amount: 300, frequency: 'monthly' },
+            { minSalary: 25001, maxSalary: 999999, amount: 500, frequency: 'monthly' },
+          ],
+        },
+        {
+          state: 'Tamil Nadu',
+          slabs: [
+            { minSalary: 0, maxSalary: 21000, amount: 0, frequency: 'monthly' },
+            { minSalary: 21001, maxSalary: 30000, amount: 150, frequency: 'half-yearly' },
+            { minSalary: 30001, maxSalary: 45000, amount: 400, frequency: 'half-yearly' },
+            { minSalary: 45001, maxSalary: 60000, amount: 750, frequency: 'half-yearly' },
+            { minSalary: 60001, maxSalary: 75000, amount: 1000, frequency: 'half-yearly' },
+            { minSalary: 75001, maxSalary: 999999, amount: 1250, frequency: 'half-yearly' },
+          ],
+        },
+      ]},
     },
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
   },

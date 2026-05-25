@@ -1,11 +1,13 @@
 import PayrollRun from '../../models/PayrollRun.model.js';
 import PayrollItem from '../../models/PayrollItem.model.js';
 import Employee from '../../models/Employee.model.js';
+import { calculateStatutoryForEmployee } from '../statutory/statutory.service.js';
 import AttendanceEntry from '../../models/AttendanceEntry.model.js';
 import OvertimeEntry from '../../models/OvertimeEntry.model.js';
 import OvertimeRule from '../../models/OvertimeRule.model.js';
 import CompanySettings from '../../models/CompanySettings.model.js';
 import LeaveApplication from '../../models/LeaveApplication.model.js';
+import LoanRepayment from '../../models/LoanRepayment.model.js';
 import User from '../../models/User.model.js';
 import { AppError } from '../../core/errors/AppError.js';
 import { AuditService } from '../../core/audit/AuditService.js';
@@ -74,11 +76,14 @@ function calculateAllowances(baseEarnings: number, employeeCategory: string, emp
   return appliedAllowances;
 }
 
-function calculateDeductions(baseEarnings: number, grossEarnings: number, employeeCategory: string, employeeType: string, deductions: any[]): { name: string; type: string; value: number; calculatedValue: number }[] {
+function calculateDeductions(baseEarnings: number, _grossEarnings: number, employeeCategory: string, employeeType: string, deductions: any[]): { name: string; type: string; value: number; calculatedValue: number }[] {
   const appliedDeductions = [];
   
   for (const deduction of deductions) {
     if (!deduction.isActive) continue;
+    
+    const name = deduction.name.toUpperCase();
+    if (['PF', 'ESI', 'PT', 'PROFESSIONAL TAX'].includes(name)) continue;
     
     const applicableTo = deduction.applicableTo || 'all';
     const isApplicable = 
@@ -90,10 +95,6 @@ function calculateDeductions(baseEarnings: number, grossEarnings: number, employ
     
     let calculatedValue = 0;
     let amount = baseEarnings;
-    
-    if (['PF', 'ESI'].includes(deduction.name.toUpperCase())) {
-      amount = grossEarnings;
-    }
     
     if (deduction.type === 'percentage') {
       calculatedValue = Math.round(amount * (deduction.value / 100));
@@ -258,8 +259,54 @@ async function calculatePayrollForEmployee(
 
   const grossEarnings = basicEarnings + allowancesTotal + overtimeAmount;
   const appliedDeductions = calculateDeductions(basicEarnings, grossEarnings, category, employmentType, deductions);
-  const totalDeductionsValue = appliedDeductions.reduce((sum, d) => sum + d.calculatedValue, 0) + halfDayDeduction + lateDeduction + unpaidLeaveDeduction;
-  const netPay = grossEarnings - totalDeductionsValue;
+  let totalDeductionsValue = appliedDeductions.reduce((sum, d) => sum + d.calculatedValue, 0) + halfDayDeduction + lateDeduction + unpaidLeaveDeduction;
+
+  const monthStr = `${_year}-${String(_month).padStart(2, '0')}`;
+  let employerContributions: { name: string; calculatedValue: number }[] = [];
+  try {
+    const statutory = await calculateStatutoryForEmployee(String(emp._id), grossEarnings, monthStr);
+    if (statutory.employeePf > 0) {
+      appliedDeductions.push({ name: 'PF', type: 'percentage', value: 0, calculatedValue: statutory.employeePf });
+      totalDeductionsValue += statutory.employeePf;
+    }
+    if (statutory.esiEmployee > 0) {
+      appliedDeductions.push({ name: 'ESI', type: 'percentage', value: 0, calculatedValue: statutory.esiEmployee });
+      totalDeductionsValue += statutory.esiEmployee;
+    }
+    if (statutory.professionalTax > 0) {
+      appliedDeductions.push({ name: 'Professional Tax', type: 'fixed', value: 0, calculatedValue: statutory.professionalTax });
+      totalDeductionsValue += statutory.professionalTax;
+    }
+    employerContributions = [
+      { name: 'Employer PF', calculatedValue: statutory.employerPf },
+      { name: 'EPS', calculatedValue: statutory.eps },
+      { name: 'EDLI', calculatedValue: statutory.edli },
+      { name: 'Employer ESI', calculatedValue: statutory.esiEmployer },
+    ].filter((c) => c.calculatedValue > 0);
+  } catch {
+    // statutory calculation failed silently - proceed without it
+  }
+
+  let netPay = grossEarnings - totalDeductionsValue;
+
+  const loanRepayment = await LoanRepayment.findOne({
+    employee: emp._id,
+    month: monthStr,
+    status: 'pending',
+  }).populate('loan', 'amount').lean();
+
+  let loanEmiDeduction = 0;
+  if (loanRepayment) {
+    loanEmiDeduction = Math.round(loanRepayment.amount * 100) / 100;
+    appliedDeductions.push({
+      name: 'Loan EMI',
+      type: 'fixed' as const,
+      value: loanEmiDeduction,
+      calculatedValue: loanEmiDeduction,
+    });
+    totalDeductionsValue += loanEmiDeduction;
+    netPay = grossEarnings - totalDeductionsValue;
+  }
 
   return {
     totalDays, presentDays, absentDays, halfDays, paidLeaveDays, unpaidLeaveDays,
@@ -268,8 +315,9 @@ async function calculatePayrollForEmployee(
     overtimeHours: totalOvertimeHours, overtimeHoursAllowed: allowedOvertimeHours,
     overtimeRuleApplied: overtimeRule ? { name: overtimeRule.name, multiplier: overtimeRule.multiplier } : null,
     overtimeAmount, basicEarnings, allowances: appliedAllowances, allowancesTotal,
-    grossEarnings, deductions: appliedDeductions, totalDeductions: totalDeductionsValue, netPay,
+    grossEarnings, deductions: appliedDeductions, totalDeductions: totalDeductionsValue, employerContributions, loanEmiDeduction, netPay,
     employee: { id: String(emp._id), name: emp.fullName, code: emp.employeeCode },
+    _loanRepaymentId: loanRepayment?._id?.toString(),
   };
 }
 
@@ -350,11 +398,24 @@ export class PayrollService {
       grossEarnings: item.grossEarnings,
       deductions: item.deductions,
       totalDeductions: item.totalDeductions,
+      employerContributions: item.employerContributions || [],
+      loanEmiDeduction: item.loanEmiDeduction || 0,
       netPay: item.netPay,
       status: 'draft',
     }));
 
-    await PayrollItem.insertMany(payrollItemDocs);
+    const insertedItems = await PayrollItem.insertMany(payrollItemDocs);
+
+    for (let i = 0; i < insertedItems.length; i++) {
+      const item = payrollItems[i];
+      if (item._loanRepaymentId) {
+        await LoanRepayment.findByIdAndUpdate(item._loanRepaymentId, {
+          status: 'deducted',
+          payrollRun: run._id,
+          repaidAt: new Date(),
+        });
+      }
+    }
 
     await AuditService.log({
       action: 'create',

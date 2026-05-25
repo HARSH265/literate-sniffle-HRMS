@@ -15,7 +15,8 @@ export type AuditAction =
   | 'approve' | 'reject' | 'download' | 'view' | 'activate' | 'deactivate'
   | 'attendance-checkin' | 'attendance-checkout'
   | 'kiosk-register'
-  | 'totp-enroll' | 'totp-disable';
+  | 'totp-enroll' | 'totp-disable'
+  | 'generate-challan' | 'generate-report' | 'generate-statutory';
 
 export interface AuditData {
   action: AuditAction;

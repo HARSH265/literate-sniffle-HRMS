@@ -33,6 +33,13 @@ export interface Employee {
     uploadedAt: string;
     _id: string;
   }>;
+  pfUAN?: string;
+  esiNumber?: string;
+  pfJoiningDate?: string;
+  pfExempted?: boolean;
+  esiExempted?: boolean;
+  ptExempted?: boolean;
+  ptState?: string;
 }
 
 export interface CreateEmployee {
@@ -57,6 +64,13 @@ export interface CreateEmployee {
     ifscCode?: string;
     accountType?: 'savings' | 'current';
   };
+  pfUAN?: string;
+  esiNumber?: string;
+  pfJoiningDate?: string;
+  pfExempted?: boolean;
+  esiExempted?: boolean;
+  ptExempted?: boolean;
+  ptState?: string;
 }
 
 export interface PaginatedResponse<T> {

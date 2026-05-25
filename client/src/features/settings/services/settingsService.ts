@@ -69,6 +69,21 @@ export interface CompanySettings {
     allowanceProRateMode: string;
     deductionProRateMode: string;
   };
+  reportsConfig: {
+    scheduledExportEnabled: boolean;
+    scheduledExportFrequency: 'daily' | 'weekly' | 'monthly';
+    scheduledExportDay: number;
+    scheduledExportFormat: 'xlsx' | 'csv';
+    scheduledExportRecipients: string[];
+    scheduledExportReports: string[];
+  };
+  loanConfig: {
+    defaultApprovalLevels: number;
+    maxLoanPercentageOfSalary: number;
+    minRepaymentPeriodMonths: number;
+    maxRepaymentPeriodMonths: number;
+    deductionPriority: 'before-tax' | 'after-tax';
+  };
 }
 
 export const settingsService = {

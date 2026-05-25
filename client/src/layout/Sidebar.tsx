@@ -23,6 +23,7 @@ import {
   CalendarOutlined,
   CheckSquareOutlined,
   SafetyCertificateOutlined,
+  CreditCardOutlined,
 } from '@ant-design/icons';
 import { usePermission } from '../core/hooks/usePermission';
 import { useUIStore } from '../core/stores/uiStore';
@@ -63,6 +64,8 @@ export function Sidebar({ collapsed }: SidebarProps) {
     return '/overtime';
   }
     if (path.includes('/payroll') || path.includes('/salary-slips')) return '/payroll';
+    if (path.includes('/loans')) return '/loans';
+    if (path.includes('/statutory')) return '/statutory';
     if (path.includes('/reports')) return '/reports';
     if (path.includes('/users')) return '/users';
     if (path.includes('/audit-logs')) return '/audit-logs';
@@ -78,6 +81,7 @@ export function Sidebar({ collapsed }: SidebarProps) {
     if (path.includes('/leave')) return ['leave'];
     if (path.includes('/overtime')) return ['overtime'];
     if (path.includes('/payroll') || path.includes('/salary-slips')) return ['payroll'];
+    if (path.includes('/loans')) return ['loans'];
     return [];
   };
 
@@ -129,6 +133,8 @@ export function Sidebar({ collapsed }: SidebarProps) {
         { key: '/salary-slips', icon: <FileTextOutlined />, label: 'Salary Slips' },
       ]
     },
+    { key: '/loans', icon: <CreditCardOutlined />, label: 'Loans', permission: 'view-loans' },
+    { key: '/statutory', icon: <SafetyCertificateOutlined />, label: 'Statutory', permission: 'view-statutory' },
     { key: '/reports', icon: <BarChartOutlined />, label: 'Reports', permission: 'view-reports' },
     { key: '/users', icon: <UserOutlined />, label: 'Users', permission: 'manage-users' },
     { key: '/audit-logs', icon: <FileDoneOutlined />, label: 'Audit Logs', permission: 'view-audit' },

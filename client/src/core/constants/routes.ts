@@ -42,11 +42,20 @@ export const ROUTES = {
     balances: '/leave/balances',
     calendar: '/leave/calendar',
   },
+  loans: {
+    list: '/loans',
+    apply: '/loans/apply',
+    detail: (id: string) => `/loans/${id}`,
+    types: '/loans/types',
+  },
   reports: {
     attendance: '/reports/attendance',
     payroll: '/reports/payroll',
+    custom: '/reports/custom',
+    charts: '/reports/charts',
   },
 
+  statutory: '/statutory',
   settings: '/settings',
   users: '/users',
   auditLogs: '/audit-logs',
