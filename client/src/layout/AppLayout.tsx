@@ -1,10 +1,17 @@
+import { Suspense } from 'react';
 import { Outlet } from 'react-router-dom';
-import { Layout } from 'antd';
+import { Layout, Spin } from 'antd';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { useUIStore } from '../core/stores/uiStore';
 
 const { Content } = Layout;
+
+const PageLoader = () => (
+  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
+    <Spin size="large" />
+  </div>
+);
 
 export function AppLayout() {
   const sidebarCollapsed = useUIStore((state) => state.sidebarCollapsed);
@@ -22,7 +29,9 @@ export function AppLayout() {
           overflow: 'auto',
         }}>
           <div style={{ padding: '0 0 32px' }}>
-            <Outlet />
+            <Suspense fallback={<PageLoader />}>
+              <Outlet />
+            </Suspense>
           </div>
         </Content>
       </Layout>

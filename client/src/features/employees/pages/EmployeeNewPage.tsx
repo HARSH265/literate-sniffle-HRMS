@@ -1,79 +1,17 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Form, Input, Select, InputNumber, DatePicker, Button, Row, Col, message, Card, Upload, Switch, Tag } from 'antd';
+import { Form, Input, Select, InputNumber, DatePicker, Button, Row, Col, message, Upload, Switch, Tag } from 'antd';
 import { ArrowLeftOutlined, SaveOutlined, UploadOutlined, UserOutlined, BankOutlined, FileTextOutlined, DollarOutlined, HomeOutlined, IdcardOutlined, SettingOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
 import { PageHeader } from '../../../core/components/PageHeader';
+import { FormSection } from '../../../core/components/FormSection';
 import { employeeService, CreateEmployee } from '../services/employeeService';
+import {
+  CATEGORY_OPTIONS, GENDER_OPTIONS, EMPLOYMENT_TYPE_OPTIONS,
+  SALARY_TYPE_OPTIONS, BLOOD_GROUP_OPTIONS, FORM_LAYOUT,
+} from '../../../core/constants/employee';
 import { useQuery, useMutation } from '@tanstack/react-query';
 
-const CATEGORY_OPTIONS = [
-  { label: 'Manufacturing Worker', value: 'worker' },
-  { label: 'Office Staff', value: 'office-staff' },
-];
-
-const GENDER_OPTIONS = [
-  { label: 'Male', value: 'male' },
-  { label: 'Female', value: 'female' },
-  { label: 'Other', value: 'other' },
-];
-
-const EMPLOYMENT_TYPE_OPTIONS = [
-  { label: 'Permanent', value: 'permanent' },
-  { label: 'Contract', value: 'contract' },
-  { label: 'Temporary', value: 'temporary' },
-  { label: 'Trainee', value: 'trainee' },
-];
-
-const SALARY_TYPE_OPTIONS = [
-  { label: 'Monthly', value: 'monthly' },
-  { label: 'Daily', value: 'daily' },
-];
-
-const BLOOD_GROUP_OPTIONS = [
-  { label: 'A+', value: 'A+' },
-  { label: 'A-', value: 'A-' },
-  { label: 'B+', value: 'B+' },
-  { label: 'B-', value: 'B-' },
-  { label: 'AB+', value: 'AB+' },
-  { label: 'AB-', value: 'AB-' },
-  { label: 'O+', value: 'O+' },
-  { label: 'O-', value: 'O-' },
-];
-
-interface SectionProps {
-  title: string;
-  icon: React.ReactNode;
-  children: React.ReactNode;
-}
-
-const Section = ({ title, icon, children }: SectionProps) => (
-  <Card 
-    size="small" 
-    style={{ marginBottom: 16, borderRadius: 8, border: '1px solid var(--hrms-border-light)' }}
-    styles={{ body: { padding: '20px 24px' } }}
-  >
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
-      <div style={{ 
-        width: 32, 
-        height: 32, 
-        borderRadius: 8, 
-        background: 'var(--hrms-primary-light)', 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center',
-        color: 'var(--hrms-primary)',
-      }}>
-        {icon}
-      </div>
-      <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--hrms-text-primary)' }}>{title}</span>
-    </div>
-    {children}
-  </Card>
-);
-
-const rowGutter: [number, number] = [16, 12];
-const colSpan = 8;
-const inputHeight = 38;
+const { rowGutter, colSpan, inputHeight } = FORM_LAYOUT;
 
 export function EmployeeNewPage() {
   const [form] = Form.useForm();
@@ -155,7 +93,7 @@ export function EmployeeNewPage() {
         >
           <Row gutter={24}>
             <Col xs={24} lg={16}>
-              <Section title="Personal Information" icon={<UserOutlined />}>
+              <FormSection title="Personal Information" icon={<UserOutlined />}>
                 <Row gutter={rowGutter}>
                   <Col span={12}>
                     <Form.Item name="fullName" label="Full Name" rules={[{ required: true, message: 'Required' }]}>
@@ -202,9 +140,9 @@ export function EmployeeNewPage() {
                     </Form.Item>
                   </Col>
                 </Row>
-              </Section>
+              </FormSection>
 
-              <Section title="Employment Details" icon={<IdcardOutlined />}>
+              <FormSection title="Employment Details" icon={<IdcardOutlined />}>
                 <Row gutter={rowGutter}>
                   <Col span={8}>
                     <Form.Item name="employeeCode" label="Employee Code" rules={isAutoGenerate ? [] : [{ required: true, message: 'Required' }]}>
@@ -239,9 +177,9 @@ export function EmployeeNewPage() {
                     </Form.Item>
                   </Col>
                 </Row>
-              </Section>
+              </FormSection>
 
-              <Section title="Organization" icon={<FileTextOutlined />}>
+              <FormSection title="Organization" icon={<FileTextOutlined />}>
                 <Row gutter={rowGutter}>
                   <Col span={colSpan}>
                     <Form.Item name="department" label="Department" rules={[{ required: true, message: 'Required' }]}>
@@ -274,9 +212,9 @@ export function EmployeeNewPage() {
                     </Form.Item>
                   </Col>
                 </Row>
-              </Section>
+              </FormSection>
 
-              <Section title="Contact Information" icon={<HomeOutlined />}>
+              <FormSection title="Contact Information" icon={<HomeOutlined />}>
                 <Row gutter={rowGutter}>
                   <Col span={8}>
                     <Form.Item name="contactNumber" label="Phone Number">
@@ -304,11 +242,11 @@ export function EmployeeNewPage() {
                     </Form.Item>
                   </Col>
                 </Row>
-              </Section>
+              </FormSection>
             </Col>
 
             <Col xs={24} lg={8}>
-              <Section title="Salary & Benefits" icon={<DollarOutlined />}>
+              <FormSection title="Salary & Benefits" icon={<DollarOutlined />}>
                 <Row gutter={rowGutter}>
                   <Col span={12}>
                     <Form.Item name="salaryType" label="Salary Type" rules={[{ required: true, message: 'Required' }]}>
@@ -334,9 +272,9 @@ export function EmployeeNewPage() {
                     </Form.Item>
                   </Col>
                 </Row>
-              </Section>
+              </FormSection>
 
-              <Section title="Bank Details" icon={<BankOutlined />}>
+              <FormSection title="Bank Details" icon={<BankOutlined />}>
                 <Row gutter={rowGutter}>
                   <Col span={24}>
                     <Form.Item name={['bankDetails', 'bankName']} label="Bank Name">
@@ -359,9 +297,9 @@ export function EmployeeNewPage() {
                     </Form.Item>
                   </Col>
                 </Row>
-              </Section>
+              </FormSection>
 
-              <Section title="Statutory Compliance" icon={<SafetyCertificateOutlined />}>
+              <FormSection title="Statutory Compliance" icon={<SafetyCertificateOutlined />}>
                 <Row gutter={rowGutter}>
                   <Col span={12}>
                     <Form.Item name="pfUAN" label="PF UAN">
@@ -408,9 +346,9 @@ export function EmployeeNewPage() {
                     </Form.Item>
                   </Col>
                 </Row>
-              </Section>
+              </FormSection>
 
-              <Section title="Documents" icon={<FileTextOutlined />}>
+              <FormSection title="Documents" icon={<FileTextOutlined />}>
                 <Row gutter={rowGutter}>
                   <Col span={12}>
                     <Form.Item name={['documents', 'aadhar']} label="Aadhar Card">
@@ -446,7 +384,7 @@ export function EmployeeNewPage() {
                     </Form.Item>
                   </Col>
                 </Row>
-              </Section>
+              </FormSection>
             </Col>
           </Row>
 

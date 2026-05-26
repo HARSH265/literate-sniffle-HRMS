@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { PageHeader } from '../../../core/components/PageHeader';
-import { Form, Card, Row, Col, message, Modal, Input, InputNumber, Switch, Select, DatePicker } from 'antd';
+import { Form, Card, Row, Col, message, Modal, Input, InputNumber, Switch, Select, DatePicker, Button, Alert, Typography } from 'antd';
 import {
   UserOutlined, BankOutlined, MailOutlined, DollarOutlined, CalendarOutlined,
   GiftOutlined, ClockCircleOutlined, CodeOutlined, BarChartOutlined,
@@ -11,6 +11,8 @@ import { settingsService, CompanySettings } from '../services/settingsService';
 import { overtimeRuleService } from '../../overtime-rules/services/overtimeRuleService';
 import { weeklyOffRuleService } from '../../weekly-off-rules/services/weeklyOffRuleService';
 import { holidayService } from '../../holidays/services/holidayService';
+import { totpService } from '../../attendance-qr/services/attendanceQRService';
+import { employeeService } from '../../employees/services/employeeService';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   ProfileSection, CompanySection, AuthSection, EmailSection, PayrollSection,
@@ -18,6 +20,8 @@ import {
   HolidaysSection, CodeConfigSection, LeaveSection, ReportsSection,
   LoanConfigSection, StatutoryConfigSection,
 } from '../sections';
+
+const { Text, Paragraph } = Typography;
 
 const SETTINGS_MENU = [
   { key: 'profile', label: 'My Profile', icon: <UserOutlined /> },
@@ -44,6 +48,11 @@ export function SettingsPage() {
   const [woModalOpen, setWoModalOpen] = useState(false);
   const [holidayModalOpen, setHolidayModalOpen] = useState(false);
   const [allowanceModalOpen, setAllowanceModalOpen] = useState(false);
+  const [totpModalOpen, setTotpModalOpen] = useState(false);
+  const [totpEmployee, setTotpEmployee] = useState<string>('');
+  const [totpQrUrl, setTotpQrUrl] = useState<string>('');
+  const [totpSecret, setTotpSecret] = useState<string>('');
+  const [totpLoading, setTotpLoading] = useState(false);
   const [otForm] = Form.useForm();
   const [woForm] = Form.useForm();
   const [holidayForm] = Form.useForm();
@@ -57,11 +66,21 @@ export function SettingsPage() {
     queryFn: () => settingsService.get(),
   });
 
-  useEffect(() => {
-    if (data?.data) {
-      companyForm.setFieldsValue(data.data);
-    }
-  }, [data, companyForm]);
+  const testEmailMutation = useMutation({
+    mutationFn: (email: string) => settingsService.testEmail(email),
+    onSuccess: (res: any) => {
+      if (res.success) {
+        message.success('Test email sent successfully!');
+      } else {
+        message.error(res.message || 'Failed to send test email');
+      }
+    },
+    onError: (err: any) => message.error(err?.response?.data?.message || 'Failed to send test email'),
+  });
+
+  const handleSaveCompany = (values: any) => {
+    updateMutation.mutate(values);
+  };
 
   const updateMutation = useMutation({
     mutationFn: (payload: Partial<CompanySettings>) => settingsService.update(payload),
@@ -90,27 +109,51 @@ export function SettingsPage() {
     onError: (err: any) => message.error(err?.response?.data?.message || 'Failed to create'),
   });
 
-  const testEmailMutation = useMutation({
-    mutationFn: (email: string) => settingsService.testEmail(email),
-    onSuccess: (res: any) => {
-      if (res.success) {
-        message.success('Test email sent successfully!');
-      } else {
-        message.error(res.message || 'Failed to send test email');
-      }
-    },
-    onError: (err: any) => message.error(err?.response?.data?.message || 'Failed to send test email'),
-  });
-
-  const handleSaveCompany = (values: any) => {
-    updateMutation.mutate(values);
-  };
-
   useEffect(() => {
     if (data?.data) {
       companyForm.setFieldsValue(data.data);
     }
   }, [data, companyForm]);
+
+  useEffect(() => {
+    if (activeSection === 'totp') {
+      setTotpModalOpen(true);
+      setActiveSection('profile');
+    }
+  }, [activeSection]);
+
+  const { data: employees } = useQuery({
+    queryKey: ['employees'],
+    queryFn: () => employeeService.list({ limit: 500, status: 'active' }),
+    enabled: totpModalOpen,
+  });
+
+  const handleTotpEnroll = async () => {
+    if (!totpEmployee) { message.warning('Select an employee'); return; }
+    setTotpLoading(true);
+    try {
+      const res = await totpService.enroll(totpEmployee);
+      setTotpQrUrl(res.data.qrUrl);
+      setTotpSecret(res.data.qrUrl);
+      message.success('TOTP enrolled successfully');
+    } catch (err: any) {
+      message.error(err?.response?.data?.message || 'Failed to enroll TOTP');
+    } finally {
+      setTotpLoading(false);
+    }
+  };
+
+  const handleTotpDisable = async () => {
+    if (!totpEmployee) return;
+    try {
+      await totpService.disable(totpEmployee);
+      setTotpQrUrl('');
+      setTotpSecret('');
+      message.success('TOTP disabled');
+    } catch (err: any) {
+      message.error(err?.response?.data?.message || 'Failed to disable');
+    }
+  };
 
   const renderContent = () => {
     switch (activeSection) {
@@ -338,6 +381,67 @@ export function SettingsPage() {
             <Switch defaultChecked />
           </Form.Item>
         </Form>
+      </Modal>
+
+      <Modal title="TOTP Enrollment" open={totpModalOpen} onCancel={() => { setTotpModalOpen(false); setTotpQrUrl(''); setTotpSecret(''); setTotpEmployee(''); }} width={520} footer={null}>
+        <div style={{ paddingTop: 8 }}>
+          <div style={{ marginBottom: 24 }}>
+            <div style={{ marginBottom: 8, fontWeight: 500 }}>Select Employee</div>
+            <Select
+              showSearch
+              style={{ width: '100%' }}
+              placeholder="Search employee by name or code"
+              value={totpEmployee || undefined}
+              onChange={(val) => { setTotpEmployee(val); setTotpQrUrl(''); setTotpSecret(''); }}
+              filterOption={(input, option) =>
+                (option?.label as string || '').toLowerCase().includes(input.toLowerCase())
+              }
+              options={(employees?.data || []).map((emp: any) => ({
+                label: `${emp.fullName} (${emp.employeeCode})`,
+                value: emp.id,
+              }))}
+              size="large"
+            />
+          </div>
+
+          <div style={{ display: 'flex', gap: 12, marginBottom: 24 }}>
+            <Button type="primary" icon={<SafetyCertificateOutlined />} onClick={handleTotpEnroll} loading={totpLoading} size="large">
+              Generate TOTP Secret
+            </Button>
+            <Button danger icon={<SafetyCertificateOutlined />} onClick={handleTotpDisable} size="large">
+              Disable TOTP
+            </Button>
+          </div>
+
+          {totpQrUrl && (
+            <Alert
+              type="success"
+              showIcon
+              message="TOTP Enrolled Successfully"
+              description={
+                <div>
+                  <Paragraph>
+                    Ask the employee to scan this QR code with their authenticator app
+                    (Google Authenticator, Microsoft Authenticator, or Authy).
+                  </Paragraph>
+                  <div style={{ textAlign: 'center', margin: '16px 0' }}>
+                    <img src={totpQrUrl} alt="TOTP QR Code" style={{ width: 200, height: 200 }} />
+                  </div>
+                  <Paragraph copyable={{ text: totpSecret }}>
+                    <Text type="secondary">OTPAuth URI: {totpSecret}</Text>
+                  </Paragraph>
+                </div>
+              }
+            />
+          )}
+
+          {!totpQrUrl && (
+            <div style={{ textAlign: 'center', padding: 40, color: '#888' }}>
+              <SafetyCertificateOutlined style={{ fontSize: 48, marginBottom: 12 }} />
+              <div>Select an employee and click "Generate TOTP Secret" to enroll</div>
+            </div>
+          )}
+        </div>
       </Modal>
     </div>
   );

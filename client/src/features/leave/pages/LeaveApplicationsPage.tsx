@@ -1,8 +1,10 @@
 import { useState } from 'react';
-import { Table, Tag, Space, Select, Row, Col, Card, Button, message, Modal } from 'antd';
+import { Table, Tag, Select, Row, Col, Card, Button, message, Modal, Form, Input, DatePicker } from 'antd';
+import { PlusOutlined, SendOutlined } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { leaveService, LeaveApplication } from '../services/leaveService';
+import { employeeService } from '../../employees/services/employeeService';
 import { PageHeader } from '../../../core/components/PageHeader';
 import { QUERY_KEYS } from '../../../core/constants/queryKeys';
 
@@ -10,11 +12,23 @@ export function LeaveApplicationsPage() {
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [selectedApp, setSelectedApp] = useState<LeaveApplication | null>(null);
+  const [applyModalOpen, setApplyModalOpen] = useState(false);
+  const [applyForm] = Form.useForm();
   const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery({
     queryKey: [...QUERY_KEYS.leaveApplications, statusFilter],
     queryFn: () => leaveService.listApplications({ status: statusFilter || undefined, limit: 500 }),
+  });
+
+  const { data: employees } = useQuery({
+    queryKey: QUERY_KEYS.employees,
+    queryFn: () => employeeService.list({ limit: 500 }),
+  });
+
+  const { data: leaveTypes } = useQuery({
+    queryKey: QUERY_KEYS.leaveTypes,
+    queryFn: () => leaveService.listLeaveTypes(),
   });
 
   const cancelMutation = useMutation({
@@ -27,17 +41,38 @@ export function LeaveApplicationsPage() {
     },
   });
 
+  const createMutation = useMutation({
+    mutationFn: (payload: any) => leaveService.createApplication(payload),
+    onSuccess: () => {
+      message.success('Leave application submitted');
+      setApplyModalOpen(false);
+      applyForm.resetFields();
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.leaveApplications });
+    },
+  });
+
+  const handleApplySubmit = async () => {
+    const values = await applyForm.validateFields();
+    createMutation.mutate({
+      employee: values.employee,
+      leaveType: values.leaveType,
+      startDate: values.dateRange[0].format('YYYY-MM-DD'),
+      endDate: values.dateRange[1].format('YYYY-MM-DD'),
+      reason: values.reason,
+    });
+  };
+
   const columns = [
     { title: 'Employee', dataIndex: ['employee', 'fullName'], key: 'employee' },
     { title: 'Code', dataIndex: ['employee', 'employeeCode'], key: 'code' },
     {
       title: 'Leave Type', key: 'type',
       render: (_: any, r: LeaveApplication) => (
-        <Space>
+        <span className="select-option-badge">
           <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 2, background: r.leaveType?.color }} />
           {r.leaveType?.name}
           <Tag>{r.isPaid ? 'Paid' : 'Unpaid'}</Tag>
-        </Space>
+        </span>
       ),
     },
     { title: 'From', dataIndex: 'startDate', key: 'startDate', render: (v: string) => dayjs(v).format('DD-MMM-YYYY') },
@@ -64,7 +99,11 @@ export function LeaveApplicationsPage() {
 
   return (
     <div>
-      <PageHeader title="Leave Applications" subtitle="View all leave applications" />
+      <PageHeader
+        title="Leave Applications"
+        subtitle="View all leave applications"
+        actions={<Button type="primary" icon={<PlusOutlined />} onClick={() => setApplyModalOpen(true)}>Apply Leave</Button>}
+      />
 
       <Card style={{ marginBottom: 24 }}>
         <Row gutter={16}>
@@ -95,6 +134,41 @@ export function LeaveApplicationsPage() {
           pagination={{ pageSize: 20 }}
         />
       </div>
+
+      <Modal title="Apply for Leave" open={applyModalOpen} onOk={handleApplySubmit} onCancel={() => { setApplyModalOpen(false); applyForm.resetFields(); }} confirmLoading={createMutation.isPending} okText="Submit" okButtonProps={{ icon: <SendOutlined /> }} width={520}>
+        <Form form={applyForm} layout="vertical" style={{ paddingTop: 8 }}>
+          <Form.Item name="employee" label="Employee" rules={[{ required: true }]}>
+            <Select
+              showSearch
+              placeholder="Select employee"
+              optionFilterProp="label"
+              options={employees?.data?.map((e: any) => ({ label: `${e.fullName} (${e.employeeCode})`, value: e.id }))}
+              style={{ height: 40 }}
+            />
+          </Form.Item>
+          <Form.Item name="leaveType" label="Leave Type" rules={[{ required: true }]}>
+            <Select
+              placeholder="Select leave type"
+              style={{ height: 40 }}
+              options={leaveTypes?.data?.filter((lt: any) => lt.isActive).map((lt: any) => ({
+                label: (
+                  <span className="select-option-badge">
+                    <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 2, background: lt.color }} />
+                    {lt.name} ({lt.isPaid ? 'Paid' : 'Unpaid'})
+                  </span>
+                ),
+                value: lt.id,
+              }))}
+            />
+          </Form.Item>
+          <Form.Item name="dateRange" label="Date Range" rules={[{ required: true, message: 'Select start and end dates' }]}>
+            <DatePicker.RangePicker style={{ width: '100%' }} />
+          </Form.Item>
+          <Form.Item name="reason" label="Reason" rules={[{ required: true, min: 10 }]}>
+            <Input.TextArea rows={3} placeholder="Explain the reason for leave..." maxLength={1000} showCount />
+          </Form.Item>
+        </Form>
+      </Modal>
 
       <Modal
         title="Cancel Application"

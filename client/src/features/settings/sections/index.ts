@@ -10,6 +10,7 @@ export { WeeklyOffSection } from './WeeklyOffSection';
 export { HolidaysSection } from './HolidaysSection';
 export { CodeConfigSection } from './CodeConfigSection';
 export { LeaveSection } from './LeaveSection';
+export { LeaveTypesSection } from './LeaveTypesSection';
 export { ReportsSection } from './ReportsSection';
 export { LoanTypesSection } from './LoanTypesSection';
 export { LoanConfigSection } from './LoanConfigSection';

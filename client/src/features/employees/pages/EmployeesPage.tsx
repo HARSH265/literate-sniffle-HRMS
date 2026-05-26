@@ -7,19 +7,8 @@ import { PageHeader } from '../../../core/components/PageHeader';
 import { employeeService, Employee } from '../services/employeeService';
 import { departmentService } from '../../departments/services/departmentService';
 import { designationService } from '../../designations/services/designationService';
+import { CATEGORY_OPTIONS, STATUS_OPTIONS } from '../../../core/constants/employee';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-
-const CATEGORY_OPTIONS = [
-  { label: 'Manufacturing Worker', value: 'worker' },
-  { label: 'Office Staff', value: 'office-staff' },
-];
-
-const STATUS_OPTIONS = [
-  { label: 'Active', value: 'active' },
-  { label: 'Inactive', value: 'inactive' },
-  { label: 'Terminated', value: 'terminated' },
-  { label: 'Archived', value: 'archived' },
-];
 
 const StatusBadge = ({ status }: { status: string }) => {
   const map: Record<string, string> = {

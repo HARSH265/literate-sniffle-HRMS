@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Layout, Menu } from 'antd';
 import {
@@ -40,6 +41,18 @@ export function Sidebar({ collapsed }: SidebarProps) {
   const location = useLocation();
   const { hasPermission } = usePermission();
   const toggleSidebar = useUIStore((state) => state.toggleSidebar);
+  const [openKeys, setOpenKeys] = useState<string[]>([]);
+
+  useEffect(() => {
+    const path = location.pathname;
+    if (path === '/employees' || path === '/employees/new') { setOpenKeys(['employees']); }
+    else if (path.includes('/departments') || path.includes('/designations') || path.includes('/shifts') || path.includes('/holidays')) { setOpenKeys(['organization']); }
+    else if (path.includes('/leave')) { setOpenKeys(['leave']); }
+    else if (path.includes('/overtime')) { setOpenKeys(['overtime']); }
+    else if (path.includes('/payroll') || path.includes('/salary-slips')) { setOpenKeys(['payroll']); }
+    else if (path.includes('/loans')) { setOpenKeys(['loans']); }
+    else { setOpenKeys([]); }
+  }, [location.pathname]);
 
   const getSelectedKey = () => {
     const path = location.pathname;
@@ -76,18 +89,7 @@ export function Sidebar({ collapsed }: SidebarProps) {
     if (path.includes('/settings')) return '/settings';
     if (path.includes('/rule-book')) return '/rule-book';
     return path;
-  };
-
-  const openKeys = () => {
-    const path = location.pathname;
-    if (path === '/employees' || path === '/employees/new') return ['employees'];
-    if (path.includes('/departments') || path.includes('/designations') || path.includes('/shifts') || path.includes('/holidays')) return ['organization'];
-    if (path.includes('/leave')) return ['leave'];
-    if (path.includes('/overtime')) return ['overtime'];
-    if (path.includes('/payroll') || path.includes('/salary-slips')) return ['payroll'];
-    if (path.includes('/loans')) return ['loans'];
-    return [];
-  };
+  }; // end getSelectedKey
 
   const menuItems = [
     { key: '/dashboard', icon: <DashboardOutlined />, label: 'Dashboard', permission: undefined },
@@ -120,11 +122,12 @@ export function Sidebar({ collapsed }: SidebarProps) {
       label: 'Leave',
       permission: 'view-leave',
       children: [
-        { key: '/leave/my-applications', icon: <PlusOutlined />, label: 'Apply Leave' },
+
+
         { key: '/leave/applications', icon: <UnorderedListOutlined />, label: 'Applications' },
+
         { key: '/leave/approvals', icon: <CheckSquareOutlined />, label: 'Approvals' },
         { key: '/leave/balances', icon: <BarChartOutlined />, label: 'Balances' },
-        { key: '/leave/types', icon: <SettingOutlined />, label: 'Leave Types' },
       ]
     },
     { key: '/overtime', icon: <PlayCircleOutlined />, label: 'Overtime', permission: 'manage-overtime' },
@@ -146,7 +149,6 @@ export function Sidebar({ collapsed }: SidebarProps) {
       children: [
         { key: '/loans', icon: <UnorderedListOutlined />, label: 'Loan List' },
         { key: '/loans/apply', icon: <PlusOutlined />, label: 'Apply Loan' },
-        { key: '/loans/types', icon: <SettingOutlined />, label: 'Loan Types' },
       ]
     },
     { key: '/statutory', icon: <SafetyCertificateOutlined />, label: 'Statutory', permission: 'view-statutory' },
@@ -246,8 +248,22 @@ export function Sidebar({ collapsed }: SidebarProps) {
           theme="dark"
           mode="inline"
           selectedKeys={[getSelectedKey()]}
-          defaultOpenKeys={openKeys()}
-          onClick={({ key }) => navigate(key)}
+          openKeys={openKeys}
+          onOpenChange={(keys) => {
+            if (keys.length > openKeys.length) {
+              const newKey = keys.find(k => !openKeys.includes(k));
+              setOpenKeys(newKey ? [newKey] : keys);
+            } else {
+              setOpenKeys(keys);
+            }
+          }}
+          onClick={({ key }) => {
+            if (key === '/settings/totp') {
+              navigate('/settings', { state: { section: 'totp' } });
+            } else {
+              navigate(key);
+            }
+          }}
           style={{ background: 'transparent', borderRight: 0 }}
           inlineCollapsed={collapsed}
         >

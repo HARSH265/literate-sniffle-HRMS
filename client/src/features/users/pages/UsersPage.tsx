@@ -213,7 +213,7 @@ export function UsersPage() {
           <div style={{ display: 'flex', gap: 8 }}>
             <Button icon={<DownloadOutlined />} onClick={handleExport}>Export</Button>
             <Button icon={<UploadOutlined />} onClick={() => setImportModalOpen(true)}>Import</Button>
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/users/new')}>Add User</Button>
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditingId(null); form.resetFields(); setIsModalOpen(true); }}>Add User</Button>
           </div>
         }
       />
