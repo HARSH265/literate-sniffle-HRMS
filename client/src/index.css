@@ -28,6 +28,12 @@
   --hrms-header-height: 64px;
 
   --hrms-radius-sm: 6px;
+  --hrms-spacing-xs: 4px;
+  --hrms-spacing-sm: 8px;
+  --hrms-spacing-md: 12px;
+  --hrms-spacing-lg: 16px;
+  --hrms-spacing-xl: 24px;
+  --hrms-spacing-2xl: 32px;
   --hrms-radius-md: 8px;
   --hrms-radius-lg: 12px;
   --hrms-radius-xl: 16px;

@@ -38,6 +38,7 @@ const AuditLogsPage = lazy(() => import('./features/audit/pages/AuditLogsPage').
 const NotificationsPage = lazy(() => import('./features/notifications/pages/NotificationsPage').then(m => ({ default: m.NotificationsPage })));
 const RuleBookPage = lazy(() => import('./features/rule-book/pages/RuleBookPage').then(m => ({ default: m.RuleBookPage })));
 const KioskPage = lazy(() => import('./features/kiosk/pages/KioskPage').then(m => ({ default: m.KioskPage })));
+const KioskDevicesPage = lazy(() => import('./features/kiosk/pages/KioskDevicesPage').then(m => ({ default: m.KioskDevicesPage })));
 const ScanPage = lazy(() => import('./features/attendance-qr/pages/ScanPage').then(m => ({ default: m.ScanPage })));
 
 const PageLoader = () => <div style={{ minHeight: '60vh' }} />;
@@ -79,6 +80,7 @@ function App() {
             <Route path="holidays" element={<HolidaysPage />} />
             <Route path="weekly-off-rules" element={<WeeklyOffRulesPage />} />
             <Route path="attendance" element={<AttendancePage />} />
+            <Route path="kiosk/devices" element={<KioskDevicesPage />} />
             <Route path="overtime" element={<OvertimePage />} />
             <Route path="payroll" element={<PayrollPage />} />
             <Route path="payroll/:id" element={<PayrollDetailsPage />} />

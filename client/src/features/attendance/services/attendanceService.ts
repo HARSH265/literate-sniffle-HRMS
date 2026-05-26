@@ -76,6 +76,11 @@ export const attendanceService = {
     return data;
   },
 
+  async bulkUpdate(entries: Array<{ id: string; status?: string; inTime?: string; outTime?: string; remarks?: string }>): Promise<any> {
+    const { data } = await apiClient.patch('/attendance/bulk-update', { entries });
+    return data;
+  },
+
   async update(id: string, payload: Partial<CreateAttendanceEntry>): Promise<{ success: boolean; data: AttendanceEntry }> {
     const { data } = await apiClient.patch(`/attendance/${id}`, payload);
     return data;

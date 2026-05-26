@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Layout, Menu } from 'antd';
+import type { MenuProps } from 'antd';
 import {
   DashboardOutlined,
   TeamOutlined,
@@ -8,6 +9,7 @@ import {
   TrophyOutlined,
   ClockCircleOutlined,
   FieldTimeOutlined,
+  QrcodeOutlined,
   DollarOutlined,
   FileTextOutlined,
   BarChartOutlined,
@@ -30,11 +32,12 @@ import { usePermission } from '../core/hooks/usePermission';
 import { useUIStore } from '../core/stores/uiStore';
 
 const { Sider } = Layout;
-const { SubMenu } = Menu;
 
 interface SidebarProps {
   collapsed: boolean;
 }
+
+type MenuItem = Required<MenuProps>['items'][number];
 
 export function Sidebar({ collapsed }: SidebarProps) {
   const navigate = useNavigate();
@@ -48,6 +51,7 @@ export function Sidebar({ collapsed }: SidebarProps) {
     if (path === '/employees' || path === '/employees/new') { setOpenKeys(['employees']); }
     else if (path.includes('/departments') || path.includes('/designations') || path.includes('/shifts') || path.includes('/holidays')) { setOpenKeys(['organization']); }
     else if (path.includes('/leave')) { setOpenKeys(['leave']); }
+    else if (path.includes('/attendance') || path.includes('/kiosk')) { setOpenKeys(['attendance']); }
     else if (path.includes('/overtime')) { setOpenKeys(['overtime']); }
     else if (path.includes('/payroll') || path.includes('/salary-slips')) { setOpenKeys(['payroll']); }
     else { setOpenKeys([]); }
@@ -65,6 +69,7 @@ export function Sidebar({ collapsed }: SidebarProps) {
     if (path.includes('/holidays')) return '/holidays';
     if (path.includes('/weekly-off-rules')) return '/weekly-off-rules';
     if (path.includes('/attendance')) return '/attendance';
+    if (path.includes('/kiosk')) return '/kiosk/devices';
     if (path.includes('/leave')) {
       if (path.includes('/leave/types')) return '/leave/types';
       if (path.includes('/leave/my-applications')) return '/leave/my-applications';
@@ -88,84 +93,99 @@ export function Sidebar({ collapsed }: SidebarProps) {
     }
     if (path.includes('/rule-book')) return '/rule-book';
     return path;
-  }; // end getSelectedKey
-
-  const menuItems = [
-    { key: '/dashboard', icon: <DashboardOutlined />, label: 'Dashboard', permission: undefined },
-    { 
-      key: 'employees', 
-      icon: <TeamOutlined />, 
-      label: 'Employees', 
-      permission: 'view-employees',
-      children: [
-        { key: '/employees', icon: <UnorderedListOutlined />, label: 'Employee List' },
-        { key: '/employees/new', icon: <PlusOutlined />, label: 'Add Employee' },
-      ]
-    },
-{
-      key: 'organization',
-      icon: <AppstoreOutlined />,
-      label: 'Organization',
-      children: [
-        { key: '/departments', icon: <BankOutlined />, label: 'Departments' },
-        { key: '/designations', icon: <TrophyOutlined />, label: 'Designations' },
-        { key: '/shifts', icon: <ClockCircleOutlined />, label: 'Shifts' },
-        { key: '/holidays', icon: <GiftOutlined />, label: 'Holidays' },
-        { key: '/weekly-off-rules', icon: <CalendarOutlined />, label: 'Weekly Off Rules' },
-      ]
-    },
-    { key: '/attendance', icon: <FieldTimeOutlined />, label: 'Attendance', permission: 'manage-attendance' },
-    {
-      key: 'leave',
-      icon: <CalendarOutlined />,
-      label: 'Leave',
-      permission: 'view-leave',
-      children: [
-
-
-        { key: '/leave/applications', icon: <UnorderedListOutlined />, label: 'Applications' },
-
-        { key: '/leave/approvals', icon: <CheckSquareOutlined />, label: 'Approvals' },
-        { key: '/leave/balances', icon: <BarChartOutlined />, label: 'Balances' },
-      ]
-    },
-    { key: '/overtime', icon: <PlayCircleOutlined />, label: 'Overtime', permission: 'manage-overtime' },
-    { 
-      key: 'payroll', 
-      icon: <DollarOutlined />, 
-      label: 'Payroll', 
-      permission: 'process-payroll',
-      children: [
-        { key: '/payroll', icon: <DollarOutlined />, label: 'Process Payroll' },
-        { key: '/salary-slips', icon: <FileTextOutlined />, label: 'Salary Slips' },
-      ]
-    },
-    { key: '/loans', icon: <CreditCardOutlined />, label: 'Loans', permission: 'view-loans' },
-    { key: '/statutory', icon: <SafetyCertificateOutlined />, label: 'Statutory', permission: 'view-statutory' },
-    { key: '/reports', icon: <BarChartOutlined />, label: 'Reports', permission: 'view-reports' },
-    { key: '/users', icon: <UserOutlined />, label: 'Users', permission: 'manage-users' },
-    { key: '/audit-logs', icon: <FileDoneOutlined />, label: 'Audit Logs', permission: 'view-audit' },
-    { key: '/notifications', icon: <BellOutlined />, label: 'Notifications', permission: undefined },
-    { key: '/rule-book', icon: <BookOutlined />, label: 'User Guide' },
-    { key: '/settings', icon: <SettingOutlined />, label: 'Settings', permission: 'manage-settings' },
-  ];
-
-  const renderMenuItems = (items: typeof menuItems) => {
-    return items.map((item) => {
-      if (item.permission && !hasPermission(item.permission)) return null;
-      
-      if (item.children) {
-        return (
-          <SubMenu key={item.key} icon={item.icon} title={item.label}>
-            {item.children.map((child) => (
-              <Menu.Item key={child.key} icon={child.icon}>{child.label}</Menu.Item>
-            ))}
-          </SubMenu>
-        );
-      }
-      return <Menu.Item key={item.key} icon={item.icon}>{item.label}</Menu.Item>;
-    });
   };
+
+  const menuItems: MenuItem[] = useMemo(() => {
+    const rawItems: Array<{
+      key: string;
+      icon: React.ReactNode;
+      label: string;
+      permission?: string;
+      children?: Array<{ key: string; icon: React.ReactNode; label: string }>;
+    }> = [
+      { key: '/dashboard', icon: <DashboardOutlined />, label: 'Dashboard', permission: undefined },
+      { 
+        key: 'employees', 
+        icon: <TeamOutlined />, 
+        label: 'Employees', 
+        permission: 'view-employees',
+        children: [
+          { key: '/employees', icon: <UnorderedListOutlined />, label: 'Employee List' },
+          { key: '/employees/new', icon: <PlusOutlined />, label: 'Add Employee' },
+        ]
+      },
+      {
+        key: 'organization',
+        icon: <AppstoreOutlined />,
+        label: 'Organization',
+        children: [
+          { key: '/departments', icon: <BankOutlined />, label: 'Departments' },
+          { key: '/designations', icon: <TrophyOutlined />, label: 'Designations' },
+          { key: '/shifts', icon: <ClockCircleOutlined />, label: 'Shifts' },
+          { key: '/holidays', icon: <GiftOutlined />, label: 'Holidays' },
+          { key: '/weekly-off-rules', icon: <CalendarOutlined />, label: 'Weekly Off Rules' },
+        ]
+      },
+      {
+        key: 'attendance',
+        icon: <FieldTimeOutlined />,
+        label: 'Attendance',
+        permission: 'manage-attendance',
+        children: [
+          { key: '/attendance', icon: <FieldTimeOutlined />, label: 'Attendance' },
+          { key: '/kiosk/devices', icon: <QrcodeOutlined />, label: 'Kiosk' },
+        ]
+      },
+      {
+        key: 'leave',
+        icon: <CalendarOutlined />,
+        label: 'Leave',
+        permission: 'view-leave',
+        children: [
+          { key: '/leave/applications', icon: <UnorderedListOutlined />, label: 'Applications' },
+          { key: '/leave/approvals', icon: <CheckSquareOutlined />, label: 'Approvals' },
+          { key: '/leave/balances', icon: <BarChartOutlined />, label: 'Balances' },
+        ]
+      },
+      { key: '/overtime', icon: <PlayCircleOutlined />, label: 'Overtime', permission: 'manage-overtime' },
+      { 
+        key: 'payroll', 
+        icon: <DollarOutlined />, 
+        label: 'Payroll', 
+        permission: 'process-payroll',
+        children: [
+          { key: '/payroll', icon: <DollarOutlined />, label: 'Process Payroll' },
+          { key: '/salary-slips', icon: <FileTextOutlined />, label: 'Salary Slips' },
+        ]
+      },
+      { key: '/loans', icon: <CreditCardOutlined />, label: 'Loans', permission: 'view-loans' },
+      { key: '/statutory', icon: <SafetyCertificateOutlined />, label: 'Statutory', permission: 'view-statutory' },
+      { key: '/reports', icon: <BarChartOutlined />, label: 'Reports', permission: 'view-reports' },
+      { key: '/users', icon: <UserOutlined />, label: 'Users', permission: 'manage-users' },
+      { key: '/audit-logs', icon: <FileDoneOutlined />, label: 'Audit Logs', permission: 'view-audit' },
+      { key: '/notifications', icon: <BellOutlined />, label: 'Notifications', permission: undefined },
+      { key: '/rule-book', icon: <BookOutlined />, label: 'User Guide' },
+      { key: '/settings', icon: <SettingOutlined />, label: 'Settings', permission: 'manage-settings' },
+    ];
+
+    return rawItems
+      .filter((item) => !item.permission || hasPermission(item.permission))
+      .map((item) => {
+        if (item.children) {
+          return {
+            key: item.key,
+            icon: item.icon,
+            label: item.label,
+            children: item.children.map((child) => ({
+              key: child.key,
+              icon: child.icon,
+              label: child.label,
+            })),
+          } as MenuItem;
+        }
+        return { key: item.key, icon: item.icon, label: item.label } as MenuItem;
+      });
+  }, [hasPermission]);
 
   return (
     <Sider
@@ -247,9 +267,8 @@ export function Sidebar({ collapsed }: SidebarProps) {
           }}
           style={{ background: 'transparent', borderRight: 0 }}
           inlineCollapsed={collapsed}
-        >
-          {renderMenuItems(menuItems)}
-        </Menu>
+          items={menuItems}
+        />
       </div>
     </Sider>
   );

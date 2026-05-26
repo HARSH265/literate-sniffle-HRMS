@@ -26,7 +26,7 @@ export function Header() {
         apiClient.get('/notifications?limit=5'),
         apiClient.get('/notifications/unread-count'),
       ]);
-      setNotifications(notifs.data.notifications);
+      setNotifications(notifs.data);
       setUnreadCount(count.data.count);
     } catch { /* ignore */ }
   };
@@ -121,7 +121,7 @@ export function Header() {
       />
 
       <Space size={16}>
-        <Dropdown dropdownRender={() => notificationContent} placement="bottomRight" trigger={['click']}>
+        <Dropdown popupRender={() => notificationContent} placement="bottomRight" trigger={['click']}>
           <Badge count={unreadCount} size="small" offset={[2, -2]}>
             <Button
               type="text"

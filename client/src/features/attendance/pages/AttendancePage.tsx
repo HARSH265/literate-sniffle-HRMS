@@ -28,7 +28,9 @@ const STATUS_COLORS: Record<string, string> = {
 
 export function AttendancePage() {
   const [form] = Form.useForm();
+  const [bulkForm] = Form.useForm();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isBulkUpdateOpen, setIsBulkUpdateOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState(dayjs());
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(20);
@@ -76,6 +78,18 @@ export function AttendancePage() {
     onError: (err: any) => message.error(err?.response?.data?.message || 'Failed to save attendance'),
   });
 
+  const bulkUpdateMutation = useMutation({
+    mutationFn: (entries: Array<{ id: string; status?: string; inTime?: string; outTime?: string; remarks?: string }>) => attendanceService.bulkUpdate(entries),
+    onSuccess: (res) => {
+      message.success(`Bulk update completed: ${res.updated} updated, ${res.failed} failed`);
+      setIsBulkUpdateOpen(false);
+      bulkForm.resetFields();
+      queryClient.invalidateQueries({ queryKey: ['attendance'] });
+      queryClient.invalidateQueries({ queryKey: ['attendance-monthly'] });
+    },
+    onError: (err: any) => message.error(err?.response?.data?.message || 'Failed to bulk update attendance'),
+  });
+
   const handleBulkSave = () => {
     const values = form.getFieldsValue();
     const entries = values.employees?.map((emp: any) => ({
@@ -87,6 +101,18 @@ export function AttendancePage() {
     })) || [];
 
     bulkMutation.mutate({ date: dateStr, entries });
+  };
+
+  const handleBulkUpdate = () => {
+    const values = bulkForm.getFieldsValue();
+    const entries = values.bulkEntries?.map((entry: any) => ({
+      id: entry.id,
+      status: entry.status,
+      inTime: entry.inTime || undefined,
+      outTime: entry.outTime || undefined,
+      remarks: entry.remarks || undefined,
+    })) || [];
+    bulkUpdateMutation.mutate(entries);
   };
 
   const getShiftDisplay = (shift: any) => {
@@ -284,6 +310,9 @@ export function AttendancePage() {
                       onChange={(val) => { setDepartmentFilter(val || ''); setPage(1); }}
                       options={deptData?.data?.map((d: any) => ({ label: d.name, value: d.id })) || []}
                     />
+                    <Button onClick={() => setIsBulkUpdateOpen(true)}>
+                      Bulk Update
+                    </Button>
                   </div>
                 }
                 toolbarRight={
@@ -403,6 +432,92 @@ export function AttendancePage() {
                   width: 150,
                   render: (_: unknown, _record: any, index: number) => (
                     <Form.Item name={['employees', index, 'remarks']} noStyle>
+                      <Input placeholder="Optional remarks" style={{ width: '100%' }} />
+                    </Form.Item>
+                  ),
+                },
+              ]}
+            />
+          </div>
+        </Form>
+      </Modal>
+
+      <Modal
+        title="Bulk Update Attendance"
+        open={isBulkUpdateOpen}
+        onCancel={() => { setIsBulkUpdateOpen(false); bulkForm.resetFields(); }}
+        width={1000}
+        footer={[
+          <Button key="cancel" onClick={() => setIsBulkUpdateOpen(false)}>Cancel</Button>,
+          <Button key="update" type="primary" onClick={handleBulkUpdate} loading={bulkUpdateMutation.isPending}>
+            Update Selected
+          </Button>,
+        ]}
+      >
+        <Form form={bulkForm} layout="vertical">
+          <div style={{ maxHeight: 500, overflowY: 'auto' }}>
+            <Table
+              dataSource={data?.data || []}
+              rowKey="id"
+              pagination={false}
+              size="small"
+              scroll={{ y: 400 }}
+              columns={[
+                {
+                  title: 'Employee',
+                  key: 'employee',
+                  width: 160,
+                  render: (_: unknown, record: any, index: number) => (
+                    <div>
+                      <Form.Item name={['bulkEntries', index, 'id']} initialValue={record.id} noStyle>
+                        <input type="hidden" />
+                      </Form.Item>
+                      <div style={{ fontWeight: 500 }}>{record.employee?.fullName || 'N/A'}</div>
+                      <div style={{ fontSize: 11, color: 'var(--hrms-text-muted)' }}>{record.employee?.employeeCode}</div>
+                    </div>
+                  ),
+                },
+                {
+                  title: 'Status',
+                  key: 'status',
+                  width: 140,
+                  render: (_: unknown, record: any, index: number) => (
+                    <Form.Item name={['bulkEntries', index, 'status']} initialValue={record.status} noStyle>
+                      <Select
+                        options={STATUS_OPTIONS}
+                        style={{ width: '100%' }}
+                        placeholder="Select status"
+                        allowClear
+                      />
+                    </Form.Item>
+                  ),
+                },
+                {
+                  title: 'In Time',
+                  key: 'inTime',
+                  width: 100,
+                  render: (_: unknown, record: any, index: number) => (
+                    <Form.Item name={['bulkEntries', index, 'inTime']} initialValue={record.inTime} noStyle>
+                      <Input placeholder="09:00" style={{ width: '100%' }} />
+                    </Form.Item>
+                  ),
+                },
+                {
+                  title: 'Out Time',
+                  key: 'outTime',
+                  width: 100,
+                  render: (_: unknown, record: any, index: number) => (
+                    <Form.Item name={['bulkEntries', index, 'outTime']} initialValue={record.outTime} noStyle>
+                      <Input placeholder="18:00" style={{ width: '100%' }} />
+                    </Form.Item>
+                  ),
+                },
+                {
+                  title: 'Remarks',
+                  key: 'remarks',
+                  width: 150,
+                  render: (_: unknown, record: any, index: number) => (
+                    <Form.Item name={['bulkEntries', index, 'remarks']} initialValue={record.remarks} noStyle>
                       <Input placeholder="Optional remarks" style={{ width: '100%' }} />
                     </Form.Item>
                   ),

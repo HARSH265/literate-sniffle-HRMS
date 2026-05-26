@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Row, Col, Avatar, Button, Spin, Card, Descriptions, Tag, message, Upload, Select, Popconfirm, Modal, Tabs } from 'antd';
-import { ArrowLeftOutlined, EditOutlined, UserOutlined, CheckCircleOutlined, CloseCircleOutlined, DeleteOutlined, UploadOutlined, FileTextOutlined, EyeOutlined, CalendarOutlined, DollarOutlined } from '@ant-design/icons';
+import { ArrowLeftOutlined, EditOutlined, UserOutlined, CheckCircleOutlined, CloseCircleOutlined, DeleteOutlined, UploadOutlined, FileTextOutlined, EyeOutlined, DownloadOutlined, CalendarOutlined, DollarOutlined } from '@ant-design/icons';
 import { PageHeader } from '../../../core/components/PageHeader';
 import { DataTable } from '../../../core/components/DataTable';
 import { employeeService } from '../services/employeeService';
@@ -295,6 +295,7 @@ export function EmployeeDetailPage() {
                                 <Card size="small" style={{ marginBottom: 12 }}
                                   actions={[
                                     <EyeOutlined key="view" onClick={() => window.open(doc.filePath, '_blank')} />,
+                                    <DownloadOutlined key="download" onClick={() => window.open(employeeService.getDocumentUrl(employee.id, doc._id), '_blank')} />,
                                     <Popconfirm key="delete" title="Delete this document?" onConfirm={() => deleteMutation.mutate(doc._id)}>
                                       <DeleteOutlined style={{ color: '#ff4d4f' }} />
                                     </Popconfirm>

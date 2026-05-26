@@ -111,9 +111,10 @@ export function SettingsPage() {
   });
 
   useEffect(() => {
-    if (data?.data) {
+    if (!data?.data) return;
+    try {
       companyForm.setFieldsValue(data.data);
-    }
+    } catch { /* form not yet mounted */ }
   }, [data, companyForm]);
 
   useEffect(() => {
@@ -263,7 +264,7 @@ export function SettingsPage() {
       <Row gutter={24}>
         <Col xs={24} md={5}>
           <Card
-            bodyStyle={{ padding: '12px' }}
+            styles={{ body: { padding: '12px' } }}
             style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
           >
             <div style={{ padding: '4px 8px', marginBottom: 8 }}>
@@ -303,7 +304,7 @@ export function SettingsPage() {
 
         <Col xs={24} md={19}>
           <Card
-            bodyStyle={{ padding: 24 }}
+            styles={{ body: { padding: 24 } }}
             style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
           >
             {renderContent()}

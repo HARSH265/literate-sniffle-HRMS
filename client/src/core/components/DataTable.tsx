@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Table, Button, Drawer, Descriptions, Tag, Empty } from 'antd';
+import { Table, Button, Drawer, Descriptions, Tag, Empty, Skeleton } from 'antd';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import { FilterOutlined, CloseOutlined } from '@ant-design/icons';
 import { APP_CONSTANTS } from '../constants/app.constants';
@@ -130,7 +130,11 @@ export function DataTable<T extends object>({
     }
   };
 
-  const tableContent = (
+  const tableContent = loading && (!dataSource || dataSource.length === 0) ? (
+    <div style={{ padding: 16 }}>
+      <Skeleton active paragraph={{ rows: 8 }} />
+    </div>
+  ) : (
     <Table<T>
       columns={columns}
       dataSource={dataSource}

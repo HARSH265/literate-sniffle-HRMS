@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { PayrollService } from './payroll.service.js';
 import { ResponseHandler } from '../../core/response/ResponseHandler.js';
 import { asyncHandler } from '../../core/errors/asyncHandler.js';
+import { AppError } from '../../core/errors/AppError.js';
 
 const listRuns = asyncHandler(async (req: Request, res: Response) => {
   const result = await PayrollService.listRuns(req.query);
@@ -10,14 +11,14 @@ const listRuns = asyncHandler(async (req: Request, res: Response) => {
 
 const runPayroll = asyncHandler(async (req: Request, res: Response) => {
   const { month, year } = req.body;
-  if (!month || !year) throw new Error('Month and year are required');
+  if (!month || !year) throw new AppError('Month and year are required', 400);
   const result = await PayrollService.runPayroll(month, year, req.user!.id);
   ResponseHandler.created(res, result, 'Payroll processed successfully');
 });
 
 const previewRun = asyncHandler(async (req: Request, res: Response) => {
   const { month, year } = req.body;
-  if (!month || !year) throw new Error('Month and year are required');
+  if (!month || !year) throw new AppError('Month and year are required', 400);
   const result = await PayrollService.previewRun(month, year);
   ResponseHandler.success(res, result, 'Payroll preview generated');
 });
@@ -59,7 +60,7 @@ const updatePayrollItem = asyncHandler(async (req: Request, res: Response) => {
 
 const batchUpdateItems = asyncHandler(async (req: Request, res: Response) => {
   const { items } = req.body;
-  if (!items || !Array.isArray(items)) throw new Error('Items array is required');
+  if (!items || !Array.isArray(items)) throw new AppError('Items array is required', 400);
   const result = await PayrollService.batchUpdateItems(req.params.id, items, req.user!.id);
   ResponseHandler.success(res, result, 'Payroll items updated in batch');
 });
