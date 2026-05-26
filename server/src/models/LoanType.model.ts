@@ -35,7 +35,6 @@ const LoanTypeSchema = new Schema<ILoanType>(
     maxActiveLoans: { type: Number, default: 1, min: 1 },
     coolingOffPeriodDays: { type: Number, default: 0, min: 0 },
     isActive: { type: Boolean, default: true },
-  },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
   },

@@ -984,11 +984,11 @@ export class ReportsService {
     return { config: (settings as any)?.reportsConfig || {} };
   }
 
-  static async saveScheduledExportConfig(config: Record<string, unknown>): Promise<Record<string, unknown>> {
+  static async saveScheduledExportConfig(config: Record<string, unknown>, userId?: string): Promise<Record<string, unknown>> {
     const settings = await CompanySettings.findOne();
     if (!settings) throw new Error('Company settings not found');
     (settings as any).reportsConfig = { ...((settings as any).reportsConfig || {}), ...config };
-    settings.updatedBy = undefined as any;
+    if (userId) (settings as any).updatedBy = userId;
     await settings.save();
     return { config: (settings as any).reportsConfig };
   }

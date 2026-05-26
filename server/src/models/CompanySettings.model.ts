@@ -68,9 +68,11 @@ export interface ICompanySettings extends Document {
   emailConfig: {
     host?: string;
     port?: number;
+    secure?: boolean;
     user?: string;
     password?: string;
-    fromAddress?: string;
+    fromEmail?: string;
+    fromName?: string;
   };
   authConfig: {
     tokenExpiry?: string;
@@ -246,9 +248,11 @@ const CompanySettingsSchema = new Schema<ICompanySettings>(
     emailConfig: {
       host: { type: String },
       port: { type: Number },
+      secure: { type: Boolean, default: false },
       user: { type: String },
       password: { type: String },
-      fromAddress: { type: String },
+      fromEmail: { type: String },
+      fromName: { type: String },
     },
     authConfig: {
       tokenExpiry: { type: String, default: '24h' },

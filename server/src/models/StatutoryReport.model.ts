@@ -7,6 +7,7 @@ export interface IStatutoryReport extends Document {
   status: 'generated' | 'downloaded' | 'filed';
   generatedAt: Date;
   generatedBy: mongoose.Types.ObjectId;
+  updatedBy?: mongoose.Types.ObjectId;
   data: Record<string, unknown>;
   filePath?: string;
   fileName?: string;
@@ -32,6 +33,7 @@ const StatutoryReportSchema = new Schema<IStatutoryReport>(
     },
     generatedAt: { type: Date, default: Date.now },
     generatedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    updatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
     data: { type: Schema.Types.Mixed, default: {} },
     filePath: { type: String },
     fileName: { type: String },

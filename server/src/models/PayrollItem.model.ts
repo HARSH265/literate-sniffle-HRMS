@@ -99,7 +99,6 @@ const PayrollItemSchema = new Schema<IPayrollItem>(
       enum: ['draft', 'submitted', 'approved', 'finalized'],
       default: 'draft',
     },
-  },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
   },

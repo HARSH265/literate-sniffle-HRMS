@@ -41,7 +41,7 @@ export function TOTPEnrollPage() {
     try {
       const res = await totpService.enroll(selectedEmployee);
       setQrUrl(res.data.qrUrl);
-      setSecret(res.data.secret);
+      setSecret(res.data.qrUrl);
       message.success('TOTP enrolled successfully');
     } catch (err: any) {
       message.error(err?.response?.data?.message || 'Failed to enroll TOTP');
@@ -114,7 +114,7 @@ export function TOTPEnrollPage() {
                   <img src={qrUrl} alt="TOTP QR Code" style={{ width: 200, height: 200 }} />
                 </div>
                 <Paragraph copyable={{ text: secret }}>
-                  <Text type="secondary">Backup Secret: {secret}</Text>
+                  <Text type="secondary">OTPAuth URI: {secret}</Text>
                 </Paragraph>
               </div>
             }

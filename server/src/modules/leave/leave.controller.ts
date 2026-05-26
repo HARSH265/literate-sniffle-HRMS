@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { LeaveService } from './leave.service.js';
-import { ResponseHandler } from '../../core/response/ResponseHandler.js';
 import { asyncHandler } from '../../core/errors/asyncHandler.js';
+import { ResponseHandler } from '../../core/response/ResponseHandler.js';
 import { PaginationMeta } from '../../core/utils/PaginationUtil.js';
 
 const listLeaveTypes = asyncHandler(async (_req: Request, res: Response) => {
@@ -30,7 +30,7 @@ const listApplications = asyncHandler(async (req: Request, res: Response) => {
 });
 
 const getMyApplications = asyncHandler(async (req: Request, res: Response) => {
-  const employeeId = (req.query.employee as string) || req.user!.id;
+  const employeeId = req.user!.id;
   const result = await LeaveService.getEmployeeApplications(employeeId, req.query as Record<string, unknown>);
   ResponseHandler.success(res, result, 'My leave applications fetched successfully');
 });
@@ -63,9 +63,8 @@ const getBalances = asyncHandler(async (req: Request, res: Response) => {
 });
 
 const getMyBalances = asyncHandler(async (req: Request, res: Response) => {
-  const { year, employee } = req.query;
-  const employeeId = (employee as string) || req.user!.id;
-  const result = await LeaveService.getBalances(employeeId, year ? Number(year) : undefined);
+  const { year } = req.query;
+  const result = await LeaveService.getBalances(req.user!.id, year ? Number(year) : undefined);
   ResponseHandler.success(res, result, 'My leave balances fetched successfully');
 });
 

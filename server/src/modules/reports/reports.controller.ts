@@ -60,7 +60,7 @@ const getScheduledExportConfig = asyncHandler(async (_req: Request, res: Respons
 });
 
 const saveScheduledExportConfig = asyncHandler(async (req: Request, res: Response) => {
-  const result = await ReportsService.saveScheduledExportConfig(req.body);
+  const result = await ReportsService.saveScheduledExportConfig(req.body, req.user?.id);
   ResponseHandler.success(res, result, 'Scheduled export config saved');
 });
 

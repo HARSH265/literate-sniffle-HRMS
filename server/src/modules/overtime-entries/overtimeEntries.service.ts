@@ -15,6 +15,11 @@ export class OvertimeEntriesService {
       const start = new Date(Number(queryParams.year), Number(queryParams.month) - 1, 1);
       const end = new Date(Number(queryParams.year), Number(queryParams.month), 0);
       filter.date = { $gte: start, $lte: end };
+    } else if (queryParams.startDate && queryParams.endDate) {
+      filter.date = {
+        $gte: new Date(queryParams.startDate as string),
+        $lte: new Date(queryParams.endDate as string),
+      };
     }
 
     const skip = PaginationUtil.getSkip(page, limit);

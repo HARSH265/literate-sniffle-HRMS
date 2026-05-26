@@ -23,7 +23,8 @@ export type Permission =
   | 'view-loans'
   | 'apply-loan'
   | 'manage-statutory'
-  | 'view-statutory';
+  | 'view-statutory'
+  | 'manage-audit';
 
 export function authorize(...allowedPermissions: Permission[]) {
   return (_req: Request, _res: Response, next: NextFunction): void => {

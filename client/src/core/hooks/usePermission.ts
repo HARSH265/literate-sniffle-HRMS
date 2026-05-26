@@ -1,4 +1,5 @@
 import { useAuthStore } from '../stores/authStore';
+import { ROLE_PERMISSIONS } from '../constants/permissions';
 
 export function usePermission() {
   const user = useAuthStore((state) => state.user);
@@ -8,9 +9,11 @@ export function usePermission() {
     return roles.includes(user.role);
   };
 
-  const hasPermission = (_permission: string) => {
+  const hasPermission = (permission: string) => {
     if (!user) return false;
-    return true;
+    const userPermissions = ROLE_PERMISSIONS[user.role];
+    if (!userPermissions) return false;
+    return userPermissions.includes(permission);
   };
 
   const isAllowed = (permission: string) => {

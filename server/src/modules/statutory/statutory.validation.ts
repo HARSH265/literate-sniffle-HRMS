@@ -28,3 +28,7 @@ export const calculateStatutorySchema = z.object({
   grossPay: z.number().min(0, 'Gross pay must be non-negative'),
   month: z.string().regex(/^\d{4}-\d{2}$/, 'Invalid month format (YYYY-MM)'),
 });
+
+export const monthParamSchema = z.object({
+  month: z.string().regex(/^\d{4}-\d{2}$/, 'Invalid month format (YYYY-MM)'),
+});

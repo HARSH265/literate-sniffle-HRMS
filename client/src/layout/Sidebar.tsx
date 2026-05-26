@@ -64,7 +64,11 @@ export function Sidebar({ collapsed }: SidebarProps) {
     return '/overtime';
   }
     if (path.includes('/payroll') || path.includes('/salary-slips')) return '/payroll';
-    if (path.includes('/loans')) return '/loans';
+    if (path.includes('/loans')) {
+      if (path.includes('/loans/types')) return '/loans/types';
+      if (path.includes('/loans/apply')) return '/loans/apply';
+      return '/loans';
+    }
     if (path.includes('/statutory')) return '/statutory';
     if (path.includes('/reports')) return '/reports';
     if (path.includes('/users')) return '/users';
@@ -106,6 +110,7 @@ export function Sidebar({ collapsed }: SidebarProps) {
         { key: '/designations', icon: <TrophyOutlined />, label: 'Designations' },
         { key: '/shifts', icon: <ClockCircleOutlined />, label: 'Shifts' },
         { key: '/holidays', icon: <GiftOutlined />, label: 'Holidays' },
+        { key: '/weekly-off-rules', icon: <CalendarOutlined />, label: 'Weekly Off Rules' },
       ]
     },
     { key: '/attendance', icon: <FieldTimeOutlined />, label: 'Attendance', permission: 'manage-attendance' },
@@ -133,7 +138,17 @@ export function Sidebar({ collapsed }: SidebarProps) {
         { key: '/salary-slips', icon: <FileTextOutlined />, label: 'Salary Slips' },
       ]
     },
-    { key: '/loans', icon: <CreditCardOutlined />, label: 'Loans', permission: 'view-loans' },
+    {
+      key: 'loans',
+      icon: <CreditCardOutlined />,
+      label: 'Loans',
+      permission: 'view-loans',
+      children: [
+        { key: '/loans', icon: <UnorderedListOutlined />, label: 'Loan List' },
+        { key: '/loans/apply', icon: <PlusOutlined />, label: 'Apply Loan' },
+        { key: '/loans/types', icon: <SettingOutlined />, label: 'Loan Types' },
+      ]
+    },
     { key: '/statutory', icon: <SafetyCertificateOutlined />, label: 'Statutory', permission: 'view-statutory' },
     { key: '/reports', icon: <BarChartOutlined />, label: 'Reports', permission: 'view-reports' },
     { key: '/users', icon: <UserOutlined />, label: 'Users', permission: 'manage-users' },

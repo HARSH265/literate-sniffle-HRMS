@@ -1,6 +1,7 @@
 node_modules/
 dist/
 docs/
+*.tsbuildinfo
 .notes.md
 .env
 .env.example

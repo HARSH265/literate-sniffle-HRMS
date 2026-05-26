@@ -39,7 +39,14 @@ export class SalarySlipsService {
     }
 
     const payrollItems = await PayrollItem.find(query)
-      .populate('employee', 'fullName employeeCode')
+      .populate({
+        path: 'employee',
+        select: 'fullName employeeCode department designation',
+        populate: [
+          { path: 'department', select: 'name' },
+          { path: 'designation', select: 'name' },
+        ],
+      })
       .lean();
 
     const monthDate = new Date(run.month + '-01');
@@ -65,12 +72,20 @@ export class SalarySlipsService {
           ? deductions.map((d: any) => `<tr><td style="padding: 4px 8px;">${d.name}</td><td style="text-align: right; padding: 4px 8px;">₹${d.calculatedValue?.toLocaleString() || 0}</td></tr>`).join('')
           : '<tr><td colspan="2" style="padding: 4px 8px; color: #999;">No deductions</td></tr>';
 
+        const emp = item.employee || {};
+        const deptName = typeof emp.department === 'object' && emp.department !== null
+          ? (emp.department as any).name || 'N/A'
+          : 'N/A';
+        const desigName = typeof emp.designation === 'object' && emp.designation !== null
+          ? (emp.designation as any).name || 'N/A'
+          : 'N/A';
+
         return {
           id: String(item.employee?._id || item.employee),
           name: item.employee?.fullName || 'N/A',
           employeeCode: item.employee?.employeeCode || 'N/A',
-          department: 'N/A',
-          designation: 'N/A',
+          department: deptName,
+          designation: desigName,
           basicSalary: item.basicEarnings || 0,
           totalEarnings: item.grossEarnings || 0,
           totalDeductions: item.totalDeductions || 0,

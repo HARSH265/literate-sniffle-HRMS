@@ -9,41 +9,44 @@ import { Spin } from 'antd';
 const LoginPage = lazy(() => import('./features/auth/pages/LoginPage').then(m => ({ default: m.LoginPage })));
 const LandingPage = lazy(() => import('./features/auth/pages/LandingPage').then(m => ({ default: m.LandingPage })));
 
-import { DashboardPage } from './features/auth/pages/DashboardPage';
-import { EmployeesPage } from './features/employees/pages/EmployeesPage';
-import { EmployeeNewPage } from './features/employees/pages/EmployeeNewPage';
-import { EmployeeEditPage } from './features/employees/pages/EmployeeEditPage';
-import { EmployeeDetailPage } from './features/employees/pages/EmployeeDetailPage';
-import { DepartmentsPage } from './features/departments/pages/DepartmentsPage';
-import { DesignationsPage } from './features/designations/pages/DesignationsPage';
-import { ShiftsPage } from './features/shifts/pages/ShiftsPage';
-import { HolidaysPage } from './features/holidays/pages/HolidaysPage';
-import { AttendancePage } from './features/attendance/pages/AttendancePage';
-import { OvertimePage } from './features/overtime/pages/OvertimePage';
-import { PayrollPage } from './features/payroll/pages/PayrollPage';
-import { PayrollDetailsPage } from './features/payroll/pages/PayrollDetailsPage';
-import { SalarySlipsPage } from './features/payroll/pages/SalarySlipsPage';
-import { SalarySlipDetailsPage } from './features/payroll/pages/SalarySlipDetailsPage';
-import { ReportsPage } from './features/reports/pages/ReportsPage';
-import { StatutoryDashboard } from './features/statutory/pages/StatutoryDashboard';
-import { LoansPage } from './features/loans/pages/LoansPage';
-import { LoanDetailPage } from './features/loans/pages/LoanDetailPage';
-import { LeaveTypesPage } from './features/leave/pages/LeaveTypesPage';
-import { LeaveApplyPage } from './features/leave/pages/LeaveApplyPage';
-import { LeaveApprovalsPage } from './features/leave/pages/LeaveApprovalsPage';
-import { LeaveBalancesPage } from './features/leave/pages/LeaveBalancesPage';
-import { LeaveApplicationsPage } from './features/leave/pages/LeaveApplicationsPage';
-import { SettingsPage } from './features/settings/pages/SettingsPage';
-import { UsersPage } from './features/users/pages/UsersPage';
-import { UserNewPage } from './features/users/pages/UserNewPage';
-import { UserEditPage } from './features/users/pages/UserEditPage';
-import { UserActivityPage } from './features/users/pages/UserActivityPage';
-import { AuditLogsPage } from './features/audit/pages/AuditLogsPage';
-import { NotificationsPage } from './features/notifications/pages/NotificationsPage';
-import { RuleBookPage } from './features/rule-book/pages/RuleBookPage';
-import { KioskPage } from './features/kiosk/pages/KioskPage';
-import { ScanPage } from './features/attendance-qr/pages/ScanPage';
-import { TOTPEnrollPage } from './features/totp/pages/TOTPEnrollPage';
+const DashboardPage = lazy(() => import('./features/auth/pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
+const EmployeesPage = lazy(() => import('./features/employees/pages/EmployeesPage').then(m => ({ default: m.EmployeesPage })));
+const EmployeeNewPage = lazy(() => import('./features/employees/pages/EmployeeNewPage').then(m => ({ default: m.EmployeeNewPage })));
+const EmployeeEditPage = lazy(() => import('./features/employees/pages/EmployeeEditPage').then(m => ({ default: m.EmployeeEditPage })));
+const EmployeeDetailPage = lazy(() => import('./features/employees/pages/EmployeeDetailPage').then(m => ({ default: m.EmployeeDetailPage })));
+const DepartmentsPage = lazy(() => import('./features/departments/pages/DepartmentsPage').then(m => ({ default: m.DepartmentsPage })));
+const DesignationsPage = lazy(() => import('./features/designations/pages/DesignationsPage').then(m => ({ default: m.DesignationsPage })));
+const ShiftsPage = lazy(() => import('./features/shifts/pages/ShiftsPage').then(m => ({ default: m.ShiftsPage })));
+const HolidaysPage = lazy(() => import('./features/holidays/pages/HolidaysPage').then(m => ({ default: m.HolidaysPage })));
+const AttendancePage = lazy(() => import('./features/attendance/pages/AttendancePage').then(m => ({ default: m.AttendancePage })));
+const OvertimePage = lazy(() => import('./features/overtime/pages/OvertimePage').then(m => ({ default: m.OvertimePage })));
+const WeeklyOffRulesPage = lazy(() => import('./features/weekly-off-rules/pages/WeeklyOffRulesPage').then(m => ({ default: m.WeeklyOffRulesPage })));
+const LoanApplyPage = lazy(() => import('./features/loans/pages/LoanApplyPage').then(m => ({ default: m.LoanApplyPage })));
+const LoanTypesPage = lazy(() => import('./features/loans/pages/LoanTypesPage').then(m => ({ default: m.LoanTypesPage })));
+const PayrollPage = lazy(() => import('./features/payroll/pages/PayrollPage').then(m => ({ default: m.PayrollPage })));
+const PayrollDetailsPage = lazy(() => import('./features/payroll/pages/PayrollDetailsPage').then(m => ({ default: m.PayrollDetailsPage })));
+const SalarySlipsPage = lazy(() => import('./features/payroll/pages/SalarySlipsPage').then(m => ({ default: m.SalarySlipsPage })));
+const SalarySlipDetailsPage = lazy(() => import('./features/payroll/pages/SalarySlipDetailsPage').then(m => ({ default: m.SalarySlipDetailsPage })));
+const ReportsPage = lazy(() => import('./features/reports/pages/ReportsPage').then(m => ({ default: m.ReportsPage })));
+const StatutoryDashboard = lazy(() => import('./features/statutory/pages/StatutoryDashboard').then(m => ({ default: m.StatutoryDashboard })));
+const LoansPage = lazy(() => import('./features/loans/pages/LoansPage').then(m => ({ default: m.LoansPage })));
+const LoanDetailPage = lazy(() => import('./features/loans/pages/LoanDetailPage').then(m => ({ default: m.LoanDetailPage })));
+const LeaveTypesPage = lazy(() => import('./features/leave/pages/LeaveTypesPage').then(m => ({ default: m.LeaveTypesPage })));
+const LeaveApplyPage = lazy(() => import('./features/leave/pages/LeaveApplyPage').then(m => ({ default: m.LeaveApplyPage })));
+const LeaveApprovalsPage = lazy(() => import('./features/leave/pages/LeaveApprovalsPage').then(m => ({ default: m.LeaveApprovalsPage })));
+const LeaveBalancesPage = lazy(() => import('./features/leave/pages/LeaveBalancesPage').then(m => ({ default: m.LeaveBalancesPage })));
+const LeaveApplicationsPage = lazy(() => import('./features/leave/pages/LeaveApplicationsPage').then(m => ({ default: m.LeaveApplicationsPage })));
+const SettingsPage = lazy(() => import('./features/settings/pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
+const UsersPage = lazy(() => import('./features/users/pages/UsersPage').then(m => ({ default: m.UsersPage })));
+const UserNewPage = lazy(() => import('./features/users/pages/UserNewPage').then(m => ({ default: m.UserNewPage })));
+const UserEditPage = lazy(() => import('./features/users/pages/UserEditPage').then(m => ({ default: m.UserEditPage })));
+const UserActivityPage = lazy(() => import('./features/users/pages/UserActivityPage').then(m => ({ default: m.UserActivityPage })));
+const AuditLogsPage = lazy(() => import('./features/audit/pages/AuditLogsPage').then(m => ({ default: m.AuditLogsPage })));
+const NotificationsPage = lazy(() => import('./features/notifications/pages/NotificationsPage').then(m => ({ default: m.NotificationsPage })));
+const RuleBookPage = lazy(() => import('./features/rule-book/pages/RuleBookPage').then(m => ({ default: m.RuleBookPage })));
+const KioskPage = lazy(() => import('./features/kiosk/pages/KioskPage').then(m => ({ default: m.KioskPage })));
+const ScanPage = lazy(() => import('./features/attendance-qr/pages/ScanPage').then(m => ({ default: m.ScanPage })));
+const TOTPEnrollPage = lazy(() => import('./features/totp/pages/TOTPEnrollPage').then(m => ({ default: m.TOTPEnrollPage })));
 
 const PageLoader = () => (
   <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
@@ -87,6 +90,7 @@ function App() {
             <Route path="designations" element={<DesignationsPage />} />
             <Route path="shifts" element={<ShiftsPage />} />
             <Route path="holidays" element={<HolidaysPage />} />
+            <Route path="weekly-off-rules" element={<WeeklyOffRulesPage />} />
             <Route path="attendance" element={<AttendancePage />} />
             <Route path="overtime" element={<OvertimePage />} />
             <Route path="payroll" element={<PayrollPage />} />
@@ -99,6 +103,8 @@ function App() {
             <Route path="leave/balances" element={<LeaveBalancesPage />} />
             <Route path="leave/applications" element={<LeaveApplicationsPage />} />
             <Route path="loans" element={<LoansPage />} />
+            <Route path="loans/apply" element={<LoanApplyPage />} />
+            <Route path="loans/types" element={<LoanTypesPage />} />
             <Route path="loans/:id" element={<LoanDetailPage />} />
             <Route path="statutory" element={<StatutoryDashboard />} />
             <Route path="reports" element={<ReportsPage />} />
@@ -107,7 +113,7 @@ function App() {
             <Route path="rule-book" element={<RuleBookPage />} />
             <Route path="users" element={<UsersPage />} />
             <Route path="users/new" element={<UserNewPage />} />
-            <Route path="users/:id" element={<UsersPage />} />
+            <Route path="users/:id" element={<Navigate to="activity" replace />} />
             <Route path="users/:id/edit" element={<UserEditPage />} />
             <Route path="users/:id/activity" element={<UserActivityPage />} />
             <Route path="audit-logs" element={<AuditLogsPage />} />

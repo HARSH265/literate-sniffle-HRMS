@@ -68,18 +68,15 @@ export class HolidaysService {
       throw new AppError('Holiday with this name already exists for the year', 400);
     }
 
+    const dateStrNormalized = date.toISOString().split('T')[0];
     const existingByDate = await Holiday.findOne({
       date: {
-        $gte: new Date(year, 0, 1),
-        $lte: new Date(year, 11, 31),
+        $gte: new Date(dateStrNormalized + 'T00:00:00.000Z'),
+        $lte: new Date(dateStrNormalized + 'T23:59:59.999Z'),
       },
     });
-    const dateStrNormalized = date.toISOString().split('T')[0];
     if (existingByDate) {
-      const existingDateStr = new Date(existingByDate.date).toISOString().split('T')[0];
-      if (existingDateStr === dateStrNormalized) {
-        throw new AppError(`A holiday already exists on ${dateStrNormalized}`, 400);
-      }
+      throw new AppError(`A holiday already exists on ${dateStrNormalized}`, 400);
     }
 
     const holiday = await Holiday.create({

@@ -23,6 +23,7 @@ export const permissions: Record<string, Permission[]> = {
     'apply-loan',
     'manage-statutory',
     'view-statutory',
+    'manage-audit',
   ],
   [ROLES.HR_ADMIN]: [
     'manage-employees',
@@ -70,6 +71,7 @@ export const permissions: Record<string, Permission[]> = {
     'view-statutory',
   ],
   [ROLES.MANAGER]: [
+    'view-employees',
     'view-departments',
     'view-reports',
     'approve-leave',

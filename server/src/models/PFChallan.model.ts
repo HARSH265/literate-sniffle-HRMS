@@ -19,6 +19,7 @@ export interface IPFChallan extends Document {
   challanId?: string;
   remarks?: string;
   generatedBy: mongoose.Types.ObjectId;
+  updatedBy?: mongoose.Types.ObjectId;
 }
 
 interface PFChallanModel extends Model<IPFChallan> {}
@@ -47,6 +48,7 @@ const PFChallanSchema = new Schema<IPFChallan>(
     challanId: { type: String },
     remarks: { type: String },
     generatedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    updatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
   },
   { timestamps: true },
 );

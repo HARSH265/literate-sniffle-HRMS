@@ -1,0 +1,16 @@
+export { ProfileSection } from './ProfileSection';
+export { CompanySection } from './CompanySection';
+export { AuthSection } from './AuthSection';
+export { EmailSection } from './EmailSection';
+export { PayrollSection } from './PayrollSection';
+export { AttendanceSection } from './AttendanceSection';
+export { AllowancesSection } from './AllowancesSection';
+export { OvertimeSection } from './OvertimeSection';
+export { WeeklyOffSection } from './WeeklyOffSection';
+export { HolidaysSection } from './HolidaysSection';
+export { CodeConfigSection } from './CodeConfigSection';
+export { LeaveSection } from './LeaveSection';
+export { ReportsSection } from './ReportsSection';
+export { LoanTypesSection } from './LoanTypesSection';
+export { LoanConfigSection } from './LoanConfigSection';
+export { StatutoryConfigSection } from './StatutoryConfigSection';

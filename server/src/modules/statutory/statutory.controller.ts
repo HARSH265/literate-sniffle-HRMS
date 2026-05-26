@@ -65,7 +65,7 @@ export async function getChallanHandler(req: Request, res: Response, next: NextF
 
 export async function patchChallanHandler(req: Request, res: Response, next: NextFunction) {
   try {
-    const data = await updateChallan(req.params.id, req.body);
+    const data = await updateChallan(req.params.id, req.body, (req as any).user?.id);
     if (!data) return res.status(404).json({ success: false, message: 'Challan not found' });
     res.json({ success: true, data });
   } catch (err) {
@@ -106,7 +106,7 @@ export async function getReportHandler(req: Request, res: Response, next: NextFu
 
 export async function patchReportHandler(req: Request, res: Response, next: NextFunction) {
   try {
-    const data = await updateReport(req.params.id, req.body);
+    const data = await updateReport(req.params.id, req.body, (req as any).user?.id);
     if (!data) return res.status(404).json({ success: false, message: 'Report not found' });
     res.json({ success: true, data });
   } catch (err) {

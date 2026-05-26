@@ -57,7 +57,6 @@ const PayrollRunSchema = new Schema<IPayrollRun>(
     finalizedAt: { type: Date },
     remarks: { type: String },
     revisions: { type: [revisionSchema], default: [] },
-  },
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
   },
   { timestamps: true },

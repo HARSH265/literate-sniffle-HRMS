@@ -20,6 +20,7 @@ import {
   generateReportSchema,
   updateChallanSchema,
   updateReportSchema,
+  monthParamSchema,
 } from './statutory.validation.js';
 
 const router = Router();
@@ -30,9 +31,9 @@ router.get('/defaults', authorize('view-statutory'), getDefaultsHandler);
 
 router.post('/calculate', authorize('manage-statutory'), validate(calculateStatutorySchema), calculateHandler);
 
-router.get('/summary/:month', authorize('view-statutory'), getSummaryHandler);
+router.get('/summary/:month', authorize('view-statutory'), validate(monthParamSchema, 'params'), getSummaryHandler);
 
-router.post('/challans/generate/:month', authorize('manage-statutory'), generateChallanHandler);
+router.post('/challans/generate/:month', authorize('manage-statutory'), validate(monthParamSchema, 'params'), generateChallanHandler);
 router.get('/challans', authorize('view-statutory'), listChallansHandler);
 router.get('/challans/:id', authorize('view-statutory'), getChallanHandler);
 router.patch('/challans/:id', authorize('manage-statutory'), validate(updateChallanSchema), patchChallanHandler);

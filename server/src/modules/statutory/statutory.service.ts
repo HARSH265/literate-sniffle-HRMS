@@ -205,8 +205,9 @@ export async function getChallanById(id: string) {
     .lean();
 }
 
-export async function updateChallan(id: string, data: any) {
-  return PFChallan.findByIdAndUpdate(id, { $set: data }, { new: true }).lean();
+export async function updateChallan(id: string, data: any, userId?: string) {
+  const updateData = userId ? { ...data, updatedBy: userId } : data;
+  return PFChallan.findByIdAndUpdate(id, { $set: updateData }, { new: true }).lean();
 }
 
 export async function generateStatutoryReport(
@@ -347,8 +348,9 @@ export async function getReportById(id: string) {
     .lean();
 }
 
-export async function updateReport(id: string, data: any) {
-  return StatutoryReport.findByIdAndUpdate(id, { $set: data }, { new: true }).lean();
+export async function updateReport(id: string, data: any, userId?: string) {
+  const updateData = userId ? { ...data, updatedBy: userId } : data;
+  return StatutoryReport.findByIdAndUpdate(id, { $set: updateData }, { new: true }).lean();
 }
 
 export async function getStatutorySummary(month: string) {
