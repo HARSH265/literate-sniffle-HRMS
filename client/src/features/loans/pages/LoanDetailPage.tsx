@@ -1,7 +1,8 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { Card, Descriptions, Tag, Button, Space, Table, message, Modal, Input, Row, Col, Statistic, Popconfirm } from 'antd';
+import { Card, Descriptions, Tag, Button, Space, message, Modal, Input, Row, Col, Statistic, Popconfirm } from 'antd';
 import { ArrowLeftOutlined, CheckCircleOutlined, CloseCircleOutlined, DollarOutlined, StopOutlined } from '@ant-design/icons';
 import { PageHeader } from '../../../core/components/PageHeader';
+import { DataTable } from '../../../core/components/DataTable';
 import { loanService } from '../services/loanService';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
@@ -114,9 +115,13 @@ export function LoanDetailPage() {
       </Card>
 
       {loan.repayments && loan.repayments.length > 0 && (
-        <Card title="Repayment Schedule">
-          <Table dataSource={loan.repayments} columns={repaymentsColumns} rowKey="month" size="small" pagination={false} />
-        </Card>
+        <DataTable
+          dataSource={loan.repayments}
+          columns={repaymentsColumns}
+          rowKey="month"
+          hidePagination
+          toolbarLeft={<strong style={{ fontSize: 16 }}>Repayment Schedule</strong>}
+        />
       )}
 
       <Modal title="Reject Loan" open={rejectModalOpen} onCancel={() => setRejectModalOpen(false)} onOk={() => rejectMutation.mutate()} okText="Reject" okButtonProps={{ danger: true }}>

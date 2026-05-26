@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Table, Select, DatePicker, Space, Tag, Typography, Card, Row, Col, Button, Modal, message, Statistic, Tooltip } from 'antd';
-import { DownloadOutlined, DeleteOutlined, ReloadOutlined, InfoCircleOutlined } from '@ant-design/icons';
+import { Select, DatePicker, Space, Tag, Typography, Card, Row, Col, Button, Modal, message, Statistic, Tooltip, Input } from 'antd';
+import { DownloadOutlined, DeleteOutlined, ReloadOutlined, InfoCircleOutlined, SearchOutlined } from '@ant-design/icons';
 import { PageHeader } from '../../../core/components/PageHeader';
+import { DataTable } from '../../../core/components/DataTable';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { auditService } from '../services/auditService';
 import dayjs from 'dayjs';
@@ -35,15 +36,16 @@ const actionColors: Record<string, string> = {
 
 export function AuditLogsPage() {
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(20);
+  const [limit, setLimit] = useState(10);
+  const [search, setSearch] = useState('');
   const [filters, setFilters] = useState<{ module?: string; action?: string; startDate?: string; endDate?: string }>({});
   const [cleanupModalOpen, setCleanupModalOpen] = useState(false);
   const [cleanupDays, setCleanupDays] = useState(90);
   const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery({
-    queryKey: ['audit-logs', page, limit, filters],
-    queryFn: () => auditService.list({ page, limit, ...filters }),
+    queryKey: ['audit-logs', page, limit, search, filters],
+    queryFn: () => auditService.list({ page, limit, search, ...filters }),
   });
 
   const { data: modules } = useQuery({
@@ -240,9 +242,29 @@ export function AuditLogsPage() {
         </Row>
       )}
 
-      <div className="hrms-table-card">
-        <div className="hrms-table-toolbar">
-          <div className="hrms-table-toolbar-left">
+      <DataTable
+        columns={columns}
+        dataSource={data?.data || []}
+        rowKey="_id"
+        loading={isLoading}
+        total={data?.meta?.total || 0}
+        page={page}
+        pageSize={limit}
+        onPaginationChange={(p, l) => { setPage(p); setLimit(l || 10); }}
+        pageSizeOptions={['10', '20', '50', '100']}
+        disableRowClick
+        toolbarLeft={
+          <Input.Search
+            placeholder="Search by user, module, action, or details..."
+            onSearch={(val) => { setSearch(val); setPage(1); }}
+            style={{ width: 300 }}
+            allowClear
+            prefix={<SearchOutlined style={{ color: 'var(--hrms-text-muted)' }} />}
+            enterButton={false}
+          />
+        }
+        filterContent={
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <Select
               placeholder="Module"
               allowClear
@@ -273,32 +295,13 @@ export function AuditLogsPage() {
               Clear
             </Button>
           </div>
-          <div className="hrms-table-toolbar-right">
-            <Text style={{ fontSize: 12, color: 'var(--hrms-text-muted)' }}>
-              {data?.meta?.total ?? 0} entries
-            </Text>
-          </div>
-        </div>
-
-        <Table
-          columns={columns}
-          dataSource={data?.data || []}
-          rowKey="_id"
-          loading={isLoading}
-          size="small"
-          style={{ fontSize: 12 }}
-          pagination={{
-            current: page,
-            pageSize: limit,
-            total: data?.meta?.total || 0,
-            onChange: (p, l) => { setPage(p); setLimit(l || 20); },
-            showSizeChanger: true,
-            pageSizeOptions: ['10', '20', '50', '100'],
-            showTotal: (t) => `Total ${t} logs`,
-          }}
-          scroll={{ x: 1100 }}
-        />
-      </div>
+        }
+        toolbarRight={
+          <Text style={{ fontSize: 12, color: 'var(--hrms-text-muted)' }}>
+            {data?.meta?.total ?? 0} entries
+          </Text>
+        }
+      />
 
       <Modal
         title="Cleanup Old Audit Logs"

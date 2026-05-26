@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { PageHeader } from '../../../core/components/PageHeader';
-import { Table, Button, Modal, Form, Input, message, Tag, Card, Row, Col, Statistic, Space, Timeline, Tabs, InputNumber, Tooltip } from 'antd';
+import { DataTable } from '../../../core/components/DataTable';
+import { Button, Modal, Form, Input, message, Tag, Card, Row, Col, Statistic, Space, Timeline, Tabs, InputNumber, Tooltip } from 'antd';
 import { CheckCircleOutlined, EditOutlined, UndoOutlined, ArrowLeftOutlined, SendOutlined, StopOutlined, HistoryOutlined, ExperimentOutlined, SaveOutlined, CloseOutlined } from '@ant-design/icons';
 import { payrollService, PayrollItem } from '../services/payrollService';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -204,13 +205,13 @@ export function PayrollDetailsPage() {
             key: 'items',
             label: 'Payroll Items',
             children: (
-              <Table
+              <DataTable
                 columns={detailColumns}
                 dataSource={run?.items || []}
                 rowKey="id"
                 loading={isLoading}
-                size="small"
-                pagination={false}
+                hidePagination
+                noCard
                 scroll={{ x: 1400 }}
               />
             ),

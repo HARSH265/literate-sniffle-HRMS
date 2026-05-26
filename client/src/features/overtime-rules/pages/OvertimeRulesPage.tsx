@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Table, Button, Modal, Form, Input, Select, InputNumber, message, Popconfirm, Tag, Tooltip, Row, Col, Statistic, Card } from 'antd';
+import { Button, Modal, Form, Input, Select, InputNumber, message, Popconfirm, Tag, Tooltip, Row, Col, Statistic, Card } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { PlusOutlined, EditOutlined, DeleteOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import { PageHeader } from '../../../core/components/PageHeader';
+import { DataTable } from '../../../core/components/DataTable';
 import { overtimeRuleService, OvertimeRule, CreateOvertimeRule } from '../services/overtimeRuleService';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -147,7 +148,15 @@ export function OvertimeRulesPage() {
 
   return (
     <div style={{ padding: '0 4px' }}>
-      <PageHeader title="Overtime Rules" subtitle="Configure overtime policies and limits" />
+      <PageHeader
+        title="Overtime Rules"
+        subtitle="Configure overtime policies and limits"
+        actions={
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => setIsModalOpen(true)}>
+            Add Rule
+          </Button>
+        }
+      />
 
       <Row gutter={16} style={{ marginBottom: 24 }}>
         <Col span={6}>
@@ -172,36 +181,22 @@ export function OvertimeRulesPage() {
         </Col>
       </Row>
 
-      <div className="hrms-table-card">
-        <div className="hrms-table-toolbar">
-          <div className="hrms-table-toolbar-left">
-            <span style={{ fontSize: 13, color: 'var(--hrms-text-muted)' }}>
-              {data?.meta?.total ?? 0} rules
-            </span>
-          </div>
-          <div className="hrms-table-toolbar-right">
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => setIsModalOpen(true)}>
-              Add Rule
-            </Button>
-          </div>
-        </div>
-
-        <Table
-          columns={columns}
-          dataSource={data?.data}
-          rowKey="id"
-          loading={isLoading}
-          pagination={{
-            current: page,
-            defaultPageSize: 20,
-            pageSize: limit,
-            total: data?.meta?.total ?? 0,
-            onChange: (p, size) => { setPage(p); setLimit(size ?? 20); },
-            showSizeChanger: true,
-            pageSizeOptions: ['10', '20', '50'],
-          }}
-        />
-      </div>
+      <DataTable
+        columns={columns}
+        dataSource={data?.data}
+        rowKey="id"
+        loading={isLoading}
+        total={data?.meta?.total ?? 0}
+        page={page}
+        pageSize={limit}
+        onPaginationChange={(p, size) => { setPage(p); setLimit(size ?? 10); }}
+        pageSizeOptions={['10', '20', '50']}
+        toolbarRight={
+          <span style={{ fontSize: 13, color: 'var(--hrms-text-muted)' }}>
+            {data?.meta?.total ?? 0} rules
+          </span>
+        }
+      />
 
       <Modal
         title={editingId ? 'Edit Rule' : 'Add Overtime Rule'}

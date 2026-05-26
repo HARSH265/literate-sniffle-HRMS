@@ -1,7 +1,8 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { PageHeader } from '../../../core/components/PageHeader';
-import { Table, Button, Descriptions, Card, message, Breadcrumb } from 'antd';
+import { DataTable } from '../../../core/components/DataTable';
+import { Button, Descriptions, Card, message, Breadcrumb } from 'antd';
 import { FilePdfOutlined } from '@ant-design/icons';
 import { salarySlipService } from '../services/salarySlipService';
 import { ROUTES } from '../../../core/constants/routes';
@@ -101,29 +102,18 @@ export function SalarySlipDetailsPage() {
         </Descriptions>
       </Card>
 
-      <Card title={`Employees (${slipData?.employees?.length || 0})`}>
-        <Table
-          dataSource={slipData?.employees}
-          rowKey="employeeCode"
-          loading={isLoading}
-          pagination={{ pageSize: 20 }}
-          columns={columns}
-          summary={() => (
-            <Table.Summary fixed>
-              <Table.Summary.Row style={{ background: '#f0f0f0', fontWeight: 'bold' }}>
-                <Table.Summary.Cell index={0}><strong>Total</strong></Table.Summary.Cell>
-                <Table.Summary.Cell index={1}></Table.Summary.Cell>
-                <Table.Summary.Cell index={2}></Table.Summary.Cell>
-                <Table.Summary.Cell index={3}><strong>₹{totals.basic?.toLocaleString()}</strong></Table.Summary.Cell>
-                <Table.Summary.Cell index={4}><strong>₹{totals.earnings?.toLocaleString()}</strong></Table.Summary.Cell>
-                <Table.Summary.Cell index={5}><strong>₹{totals.deductions?.toLocaleString()}</strong></Table.Summary.Cell>
-                <Table.Summary.Cell index={6}><strong style={{ color: 'var(--hrms-success)' }}>₹{totals.net?.toLocaleString()}</strong></Table.Summary.Cell>
-                <Table.Summary.Cell index={7}></Table.Summary.Cell>
-              </Table.Summary.Row>
-            </Table.Summary>
-          )}
-        />
-      </Card>
+      <DataTable
+        dataSource={slipData?.employees}
+        rowKey="employeeCode"
+        loading={isLoading}
+        columns={columns}
+        pagination={{ pageSize: 20 }}
+        toolbarRight={
+          <span style={{ fontWeight: 600 }}>
+            Total — Basic: ₹{totals.basic?.toLocaleString()} &nbsp;|&nbsp; Earnings: ₹{totals.earnings?.toLocaleString()} &nbsp;|&nbsp; Deductions: ₹{totals.deductions?.toLocaleString()} &nbsp;|&nbsp; <span style={{ color: 'var(--hrms-success)' }}>Net: ₹{totals.net?.toLocaleString()}</span>
+          </span>
+        }
+      />
     </div>
   );
 }

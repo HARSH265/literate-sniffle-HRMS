@@ -19,6 +19,7 @@ export const createLoanTypeSchema = z.object({
 export const updateLoanTypeSchema = createLoanTypeSchema.partial();
 
 export const applyLoanSchema = z.object({
+  employee: z.string().min(1, 'Employee is required'),
   loanType: z.string().min(1, 'Loan type is required'),
   amount: z.number().positive('Amount must be positive'),
   tenure: z.number().int().min(1, 'Tenure must be at least 1 month'),

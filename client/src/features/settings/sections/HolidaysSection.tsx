@@ -1,5 +1,6 @@
-import { Table, Button, Popconfirm, Tag, message } from 'antd';
+import { Button, Popconfirm, Tag, message } from 'antd';
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
+import { DataTable } from '../../../core/components/DataTable';
 import { holidayService, Holiday } from '../../holidays/services/holidayService';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import dayjs from 'dayjs';
@@ -24,13 +25,13 @@ export function HolidaysSection({ onAdd }: { onAdd: () => void }) {
           Add Holiday
         </Button>
       </div>
-      <Table
-        size="small"
+      <DataTable
         dataSource={data?.data}
         loading={isLoading}
         rowKey="id"
-        pagination={false}
-        locale={{ emptyText: 'No holidays configured.' }}
+        hidePagination
+        noCard
+        disableRowClick
         columns={[
           { title: 'Date', dataIndex: 'date', key: 'date', render: (d: string) => d ? dayjs(d).format('DD MMM YYYY') : '-' },
           { title: 'Name', dataIndex: 'name', key: 'name' },

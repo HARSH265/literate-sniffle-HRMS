@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Table, Card, Select, Row, Col, Tag, Space, Progress } from 'antd';
+import { Card, Select, Row, Col, Tag, Space, Progress } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import { leaveService, LeaveBalance } from '../services/leaveService';
 import { employeeService } from '../../employees/services/employeeService';
 import { PageHeader } from '../../../core/components/PageHeader';
+import { DataTable } from '../../../core/components/DataTable';
 import { QUERY_KEYS } from '../../../core/constants/queryKeys';
 
 export function LeaveBalancesPage() {
@@ -86,15 +87,13 @@ export function LeaveBalancesPage() {
       </Card>
 
       {selectedEmployee ? (
-        <div className="hrms-table-card">
-          <Table
-            dataSource={balances?.data || []}
-            columns={columns}
-            rowKey={(r) => r.leaveType.id}
-            loading={isLoading}
-            pagination={false}
-          />
-        </div>
+        <DataTable
+          dataSource={balances?.data || []}
+          columns={columns}
+          rowKey={(r) => r.leaveType.id}
+          loading={isLoading}
+          hidePagination
+        />
       ) : (
         <Card><div style={{ textAlign: 'center', padding: 40, color: 'var(--hrms-text-muted)' }}>Select an employee to view balances</div></Card>
       )}

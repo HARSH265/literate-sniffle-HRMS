@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Table, Button, Modal, Form, Input, InputNumber, Select, Switch, Space, Tag, message, Popconfirm, Row, Col } from 'antd';
+import { Button, Modal, Form, Input, InputNumber, Select, Switch, Space, Tag, message, Popconfirm, Row, Col } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { DataTable } from '../../../core/components/DataTable';
 import { loanService, LoanType } from '../../loans/services/loanService';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -70,7 +71,7 @@ export function LoanTypesSection() {
         <h3 style={{ margin: 0 }}>Loan Types</h3>
         <Button type="primary" icon={<PlusOutlined />} onClick={() => setModalOpen(true)}>Add Loan Type</Button>
       </div>
-      <Table dataSource={data?.data?.loanTypes || []} columns={columns} rowKey="id" loading={isLoading} pagination={false} size="small" locale={{ emptyText: 'No loan types configured.' }} />
+      <DataTable dataSource={data?.data?.loanTypes || []} columns={columns} rowKey="id" loading={isLoading} hidePagination noCard disableRowClick />
 
       <Modal title={editingId ? 'Edit Loan Type' : 'Create Loan Type'} open={modalOpen} onCancel={closeModal} onOk={form.submit} okText={editingId ? 'Update' : 'Create'} width={640}>
         <Form form={form} layout="vertical" onFinish={handleSubmit}>

@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Table, Button, Modal, Form, Input, Select, DatePicker, message, Tag, Row, Col, Tabs, Card, Badge } from 'antd';
+import { Button, Modal, Form, Input, Select, DatePicker, message, Tag, Row, Col, Tabs, Card, Badge, Table } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { SaveOutlined, CalendarOutlined, LeftOutlined, RightOutlined } from '@ant-design/icons';
 import { PageHeader } from '../../../core/components/PageHeader';
+import { DataTable } from '../../../core/components/DataTable';
 import { attendanceService, AttendanceEntry, MonthlyAttendanceView } from '../services/attendanceService';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
@@ -258,9 +259,17 @@ export function AttendancePage() {
             key: 'records',
             label: <span><CalendarOutlined /> Records</span>,
             children: (
-              <div className="hrms-table-card">
-                <div className="hrms-table-toolbar">
-                  <div className="hrms-table-toolbar-left" style={{ display: 'flex', gap: 8 }}>
+              <DataTable
+                columns={columns}
+                dataSource={data?.data}
+                rowKey="id"
+                loading={isLoading}
+                total={data?.meta?.total ?? 0}
+                page={page}
+                pageSize={limit}
+                onPaginationChange={(p, size) => { setPage(p); setLimit(size ?? 10); }}
+                toolbarLeft={
+                  <div style={{ display: 'flex', gap: 8 }}>
                     <DatePicker 
                       value={selectedDate} 
                       onChange={(date) => setSelectedDate(date || dayjs())}
@@ -276,27 +285,13 @@ export function AttendancePage() {
                       options={deptData?.data?.map((d: any) => ({ label: d.name, value: d.id })) || []}
                     />
                   </div>
-                  <div className="hrms-table-toolbar-right">
-                    <span style={{ fontSize: 13, color: 'var(--hrms-text-muted)' }}>
-                      {data?.meta?.total ?? 0} records
-                    </span>
-                  </div>
-                </div>
-                <Table
-                  columns={columns}
-                  dataSource={data?.data}
-                  rowKey="id"
-                  loading={isLoading}
-                  pagination={{
-                    current: page,
-                    defaultPageSize: 20,
-                    pageSize: limit,
-                    total: data?.meta?.total ?? 0,
-                    onChange: (p, size) => { setPage(p); setLimit(size ?? 20); },
-                    showSizeChanger: true,
-                  }}
-                />
-              </div>
+                }
+                toolbarRight={
+                  <span style={{ fontSize: 13, color: 'var(--hrms-text-muted)' }}>
+                    {data?.meta?.total ?? 0} records
+                  </span>
+                }
+              />
             ),
           },
           {

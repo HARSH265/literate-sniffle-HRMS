@@ -1,5 +1,6 @@
-import { Table, Button, Popconfirm, Tag, message } from 'antd';
+import { Button, Popconfirm, Tag, message } from 'antd';
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
+import { DataTable } from '../../../core/components/DataTable';
 import { weeklyOffRuleService, WeeklyOffRule } from '../../weekly-off-rules/services/weeklyOffRuleService';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -24,13 +25,13 @@ export function WeeklyOffSection({ onAdd }: { onAdd: () => void }) {
           Add Rule
         </Button>
       </div>
-      <Table
-        size="small"
+      <DataTable
         dataSource={data?.data}
         loading={isLoading}
         rowKey="id"
-        pagination={false}
-        locale={{ emptyText: 'No weekly off rules configured.' }}
+        hidePagination
+        noCard
+        disableRowClick
         columns={[
           { title: 'Name', dataIndex: 'name', key: 'name' },
           { title: 'Category', dataIndex: 'category', key: 'category', render: (c: string) => <Tag>{c === 'all' ? 'All' : c === 'worker' ? 'Worker' : 'Office Staff'}</Tag> },

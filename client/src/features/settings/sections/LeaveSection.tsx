@@ -1,6 +1,4 @@
-import { Form, InputNumber, Select, Switch, Button, Row, Col } from 'antd';
-import { SaveOutlined } from '@ant-design/icons';
-
+import { useState } from 'react';
 import { Form, InputNumber, Select, Switch, Button, Row, Col } from 'antd';
 import { SaveOutlined, SettingOutlined, DollarOutlined } from '@ant-design/icons';
 import { LeaveTypesSection } from './LeaveTypesSection';

@@ -727,6 +727,52 @@ body {
   display: none;
 }
 
+/* DataTable responsive enhancements */
+@media (max-width: 768px) {
+  .hrms-table-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding: 12px;
+  }
+  .hrms-table-toolbar-left {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+  .hrms-table-toolbar-left > * {
+    flex: 1 1 auto;
+    min-width: 120px;
+  }
+  .hrms-table-toolbar-right {
+    width: 100%;
+    justify-content: flex-end;
+  }
+  .hrms-table-card .ant-table-wrapper {
+    overflow-x: auto;
+  }
+}
+
+/* Sticky action column support */
+.hrms-table-card .ant-table-thead > tr > th.ant-table-cell-fix-right,
+.hrms-table-card .ant-table-tbody > tr > td.ant-table-cell-fix-right {
+  background: var(--hrms-surface);
+  z-index: 2;
+}
+
+/* Table row hover for clickable rows */
+.ant-table-row {
+  transition: background-color 0.15s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.hrms-table-card [class*="filter"] {
+  animation: fadeIn 0.15s ease;
+}
+
 @media (max-width: 900px) {
   .hrms-login-wrapper { flex-direction: column; }
   .hrms-login-left {

@@ -50,12 +50,12 @@ export function Sidebar({ collapsed }: SidebarProps) {
     else if (path.includes('/leave')) { setOpenKeys(['leave']); }
     else if (path.includes('/overtime')) { setOpenKeys(['overtime']); }
     else if (path.includes('/payroll') || path.includes('/salary-slips')) { setOpenKeys(['payroll']); }
-    else if (path.includes('/loans')) { setOpenKeys(['loans']); }
     else { setOpenKeys([]); }
   }, [location.pathname]);
 
   const getSelectedKey = () => {
     const path = location.pathname;
+    const state = location.state as Record<string, unknown> | null;
     if (path === '/dashboard') return '/dashboard';
     if (path === '/employees/new') return '/employees/new';
     if (path.includes('/employees')) return '/employees';
@@ -77,16 +77,15 @@ export function Sidebar({ collapsed }: SidebarProps) {
     return '/overtime';
   }
     if (path.includes('/payroll') || path.includes('/salary-slips')) return '/payroll';
-    if (path.includes('/loans')) {
-      if (path.includes('/loans/types')) return '/loans/types';
-      if (path.includes('/loans/apply')) return '/loans/apply';
-      return '/loans';
-    }
+    if (path.includes('/loans')) return '/loans';
     if (path.includes('/statutory')) return '/statutory';
     if (path.includes('/reports')) return '/reports';
     if (path.includes('/users')) return '/users';
     if (path.includes('/audit-logs')) return '/audit-logs';
-    if (path.includes('/settings')) return '/settings';
+    if (path.includes('/settings')) {
+      if (state?.section === 'totp') return '/settings/totp';
+      return '/settings';
+    }
     if (path.includes('/rule-book')) return '/rule-book';
     return path;
   }; // end getSelectedKey
@@ -141,32 +140,14 @@ export function Sidebar({ collapsed }: SidebarProps) {
         { key: '/salary-slips', icon: <FileTextOutlined />, label: 'Salary Slips' },
       ]
     },
-    {
-      key: 'loans',
-      icon: <CreditCardOutlined />,
-      label: 'Loans',
-      permission: 'view-loans',
-      children: [
-        { key: '/loans', icon: <UnorderedListOutlined />, label: 'Loan List' },
-        { key: '/loans/apply', icon: <PlusOutlined />, label: 'Apply Loan' },
-      ]
-    },
+    { key: '/loans', icon: <CreditCardOutlined />, label: 'Loans', permission: 'view-loans' },
     { key: '/statutory', icon: <SafetyCertificateOutlined />, label: 'Statutory', permission: 'view-statutory' },
     { key: '/reports', icon: <BarChartOutlined />, label: 'Reports', permission: 'view-reports' },
     { key: '/users', icon: <UserOutlined />, label: 'Users', permission: 'manage-users' },
     { key: '/audit-logs', icon: <FileDoneOutlined />, label: 'Audit Logs', permission: 'view-audit' },
     { key: '/notifications', icon: <BellOutlined />, label: 'Notifications', permission: undefined },
     { key: '/rule-book', icon: <BookOutlined />, label: 'User Guide' },
-    {
-      key: 'settings-menu',
-      icon: <SettingOutlined />,
-      label: 'Settings',
-      permission: 'manage-settings',
-      children: [
-        { key: '/settings', icon: <SettingOutlined />, label: 'General Settings' },
-        { key: '/settings/totp', icon: <SafetyCertificateOutlined />, label: 'TOTP Enrollment' },
-      ]
-    },
+    { key: '/settings', icon: <SettingOutlined />, label: 'Settings', permission: 'manage-settings' },
   ];
 
   const renderMenuItems = (items: typeof menuItems) => {

@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '../../../core/components/PageHeader';
-import { Table, Button, Select, message, Tag, Card, Row, Col } from 'antd';
+import { DataTable } from '../../../core/components/DataTable';
+import { Button, Select, message, Tag } from 'antd';
 import { FilePdfOutlined, EyeOutlined } from '@ant-design/icons';
 import { salarySlipService } from '../services/salarySlipService';
 import { useQuery } from '@tanstack/react-query';
@@ -116,33 +117,27 @@ export function SalarySlipsPage() {
         subtitle="View and download employee salary slips"
       />
 
-      <Card>
-        <Row gutter={16} style={{ marginBottom: 16 }}>
-          <Col>
-            <Select
-              placeholder="Filter by month"
-              allowClear
-              style={{ width: 200 }}
-              value={monthFilter}
-              onChange={setMonthFilter}
-              options={[
-                { value: '2026-01', label: 'January 2026' },
-                { value: '2025-12', label: 'December 2025' },
-                { value: '2025-11', label: 'November 2025' },
-                { value: '2025-10', label: 'October 2025' },
-              ]}
-            />
-          </Col>
-        </Row>
-
-        <Table
-          dataSource={data?.data}
-          columns={columns}
-          rowKey="id"
-          loading={isLoading}
-          pagination={{ pageSize: 10 }}
-        />
-      </Card>
+      <DataTable
+        dataSource={data?.data}
+        columns={columns}
+        rowKey="id"
+        loading={isLoading}
+        toolbarLeft={
+          <Select
+            placeholder="Filter by month"
+            allowClear
+            style={{ width: 200 }}
+            value={monthFilter}
+            onChange={setMonthFilter}
+            options={[
+              { value: '2026-01', label: 'January 2026' },
+              { value: '2025-12', label: 'December 2025' },
+              { value: '2025-11', label: 'November 2025' },
+              { value: '2025-10', label: 'October 2025' },
+            ]}
+          />
+        }
+      />
     </div>
   );
 }

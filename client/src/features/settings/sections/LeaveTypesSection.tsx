@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Table, Button, Tag, Modal, Form, Input, InputNumber, Select, Switch, Space, ColorPicker, Popconfirm, message, Tooltip, Row, Col } from 'antd';
+import { Button, Tag, Modal, Form, Input, InputNumber, Select, Switch, Space, ColorPicker, Popconfirm, message, Tooltip, Row, Col } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { DataTable } from '../../../core/components/DataTable';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { leaveService, LeaveType } from '../../leave/services/leaveService';
 
@@ -134,7 +135,7 @@ export function LeaveTypesSection() {
         <h3 style={{ margin: 0 }}>Leave Types</h3>
         <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>Add Leave Type</Button>
       </div>
-      <Table dataSource={data?.data || []} columns={columns} rowKey="id" loading={isLoading} pagination={false} size="small" locale={{ emptyText: 'No leave types configured.' }} />
+      <DataTable dataSource={data?.data || []} columns={columns} rowKey="id" loading={isLoading} hidePagination noCard disableRowClick />
 
       <Modal
         title={editingType ? 'Edit Leave Type' : 'Create Leave Type'}

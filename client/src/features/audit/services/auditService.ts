@@ -3,6 +3,7 @@ import apiClient from '../../../core/api/apiClient';
 interface AuditLogQuery {
   page?: number;
   limit?: number;
+  search?: string;
   module?: string;
   action?: string;
   userId?: string;

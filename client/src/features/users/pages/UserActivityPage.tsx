@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Table, Button, Card, Row, Col, Tag, Typography, Statistic, Spin } from 'antd';
+import { Button, Card, Row, Col, Tag, Typography, Statistic, Spin } from 'antd';
 import { ArrowLeftOutlined, ClockCircleOutlined, HistoryOutlined } from '@ant-design/icons';
 import { PageHeader } from '../../../core/components/PageHeader';
+import { DataTable } from '../../../core/components/DataTable';
 import { userService } from '../services/userService';
 import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
@@ -236,34 +237,24 @@ export function UserActivityPage() {
         </Col>
       </Row>
 
-      <div className="hrms-table-card">
-        <div className="hrms-table-toolbar">
-          <div className="hrms-table-toolbar-left">
-            <Text strong style={{ fontSize: 14 }}>Activity Log</Text>
-          </div>
-          <div className="hrms-table-toolbar-right">
-            <Button size="small" onClick={handleExportActivity}>Export Activity</Button>
-          </div>
-        </div>
-
-        <Table
-          columns={activityColumns}
-          dataSource={activityData?.data || []}
-          rowKey="_id"
-          loading={activityLoading}
-          size="small"
-          pagination={{
-            current: page,
-            pageSize: limit,
-            total: activityData?.meta?.total || 0,
-            onChange: (p, l) => { setPage(p); setLimit(l || 20); },
-            showSizeChanger: true,
-            pageSizeOptions: ['10', '20', '50', '100'],
-            showTotal: (t) => `Total ${t} entries`,
-          }}
-          scroll={{ x: 800 }}
-        />
-      </div>
+      <DataTable
+        columns={activityColumns}
+        dataSource={activityData?.data || []}
+        rowKey="_id"
+        loading={activityLoading}
+        total={activityData?.meta?.total || 0}
+        page={page}
+        pageSize={limit}
+        onPaginationChange={(p, l) => { setPage(p); setLimit(l || 20); }}
+        pageSizeOptions={['10', '20', '50', '100']}
+        disableRowClick
+        toolbarLeft={
+          <Text strong style={{ fontSize: 14 }}>Activity Log</Text>
+        }
+        toolbarRight={
+          <Button size="small" onClick={handleExportActivity}>Export Activity</Button>
+        }
+      />
     </div>
   );
 }

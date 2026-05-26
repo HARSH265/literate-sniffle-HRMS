@@ -1,9 +1,10 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Table, Button, message, Popconfirm, Avatar, Tooltip, Select, Input, Upload } from 'antd';
+import { Button, message, Popconfirm, Avatar, Tooltip, Select, Input, Upload } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, SearchOutlined, UserOutlined, DownloadOutlined, UploadOutlined } from '@ant-design/icons';
 import { PageHeader } from '../../../core/components/PageHeader';
+import { DataTable } from '../../../core/components/DataTable';
 import { employeeService, Employee } from '../services/employeeService';
 import { departmentService } from '../../departments/services/departmentService';
 import { designationService } from '../../designations/services/designationService';
@@ -171,7 +172,7 @@ const { data, isLoading, isFetching } = useQuery({
       title: '',
       key: 'actions',
       width: 120,
-      fixed: 'right',
+      fixed: 'right' as const,
       render: (_: unknown, record: Employee) => (
         <div className="action-group" onClick={(e) => e.stopPropagation()}>
           <Tooltip title="View">
@@ -216,18 +217,29 @@ const { data, isLoading, isFetching } = useQuery({
         }
       />
 
-      <div className="hrms-table-card">
-        <div className="hrms-table-toolbar">
-          <div className="hrms-table-toolbar-left">
-            <Input.Search
-              placeholder="Search by code, name, or father's name..."
-              onSearch={(val) => { setSearch(val); setPage(1); }}
-              style={{ width: 280 }}
-              allowClear
-              prefix={<SearchOutlined style={{ color: 'var(--hrms-text-muted)' }} />}
-              enterButton={false}
-              loading={isFetching}
-            />
+      <DataTable
+        columns={columns}
+        dataSource={data?.data}
+        rowKey="id"
+        loading={isLoading}
+        total={data?.meta?.total ?? 0}
+        page={page}
+        pageSize={limit}
+        onPaginationChange={(p, size) => { setPage(p); setLimit(size ?? 10); }}
+        onRowClick={(record) => navigate(`/employees/${record.id}`)}
+        toolbarLeft={
+          <Input.Search
+            placeholder="Search by code, name, or father's name..."
+            onSearch={(val) => { setSearch(val); setPage(1); }}
+            style={{ width: 280 }}
+            allowClear
+            prefix={<SearchOutlined style={{ color: 'var(--hrms-text-muted)' }} />}
+            enterButton={false}
+            loading={isFetching}
+          />
+        }
+        filterContent={
+          <>
             <Select
               placeholder="Status"
               allowClear
@@ -257,34 +269,12 @@ const { data, isLoading, isFetching } = useQuery({
               options={desigData?.data?.map((d: any) => ({ label: d.name, value: d.id })) || []}
               disabled={!departmentFilter}
             />
-          </div>
-          <div className="hrms-table-toolbar-right">
-            <span style={{ fontSize: 13, color: 'var(--hrms-text-muted)' }}>{data?.meta?.total ?? 0} employees</span>
-          </div>
-        </div>
-
-        <Table
-          columns={columns}
-          dataSource={data?.data}
-          rowKey="id"
-          loading={isLoading}
-          scroll={{ x: 1100 }}
-          onRow={(record) => ({
-            onClick: () => navigate(`/employees/${record.id}`),
-            style: { cursor: 'pointer' },
-          })}
-          pagination={{
-            current: page,
-            defaultPageSize: 10,
-            pageSize: limit,
-            total: data?.meta?.total ?? 0,
-            onChange: (p, size) => { setPage(p); setLimit(size ?? 10); },
-            showSizeChanger: true,
-            pageSizeOptions: ['10', '20', '50', '100'],
-            showTotal: (total, range) => `${range[0]}–${range[1]} of ${total}`,
-          }}
-        />
-      </div>
+          </>
+        }
+        toolbarRight={
+          <span style={{ fontSize: 13, color: 'var(--hrms-text-muted)' }}>{data?.meta?.total ?? 0} employees</span>
+        }
+      />
     </div>
   );
 }

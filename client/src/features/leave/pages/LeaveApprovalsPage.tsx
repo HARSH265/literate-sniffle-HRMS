@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { Table, Tag, Button, Modal, Input, Space, message, Statistic, Row, Col, Card } from 'antd';
+import { Tag, Button, Modal, Input, Space, message, Statistic, Row, Col, Card } from 'antd';
 import { CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { leaveService, LeaveApplication } from '../services/leaveService';
 import { PageHeader } from '../../../core/components/PageHeader';
+import { DataTable } from '../../../core/components/DataTable';
 import { QUERY_KEYS } from '../../../core/constants/queryKeys';
 
 export function LeaveApprovalsPage() {
@@ -65,9 +66,9 @@ export function LeaveApprovalsPage() {
     { title: 'Days', dataIndex: 'totalDays', key: 'days', width: 60 },
     { title: 'Reason', dataIndex: 'reason', key: 'reason', ellipsis: true },
     {
-      title: 'Actions', key: 'actions', width: 150,
+      title: 'Actions', key: 'actions', width: 150, fixed: 'right' as const,
       render: (_: any, r: LeaveApplication) => (
-        <Space>
+        <Space onClick={(e) => e.stopPropagation()}>
           <Button type="primary" size="small" icon={<CheckCircleOutlined />} onClick={() => openApproveModal(r, 'approved')}>Approve</Button>
           <Button danger size="small" icon={<CloseCircleOutlined />} onClick={() => openApproveModal(r, 'rejected')}>Reject</Button>
         </Space>
@@ -125,22 +126,24 @@ export function LeaveApprovalsPage() {
       </Row>
 
       <Card title="Pending Approvals" style={{ marginBottom: 24 }}>
-        <Table
+        <DataTable
           dataSource={pending?.data || []}
           columns={pendingColumns}
           rowKey="id"
           loading={isLoading}
-          pagination={false}
+          hidePagination
+          noCard
+          disableRowClick
         />
       </Card>
 
       <Card title="All Applications" style={{ marginBottom: 24 }}>
-        <Table
+        <DataTable
           dataSource={allApps?.data || []}
           columns={allColumns}
           rowKey="id"
           loading={isLoading}
-          pagination={{ pageSize: 20 }}
+          noCard
         />
       </Card>
 

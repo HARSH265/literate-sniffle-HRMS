@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { Table, Tag, Select, Row, Col, Card, Button, message, Modal, Form, Input, DatePicker } from 'antd';
+import { Tag, Select, Button, message, Modal, Form, Input, DatePicker } from 'antd';
 import { PlusOutlined, SendOutlined } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { leaveService, LeaveApplication } from '../services/leaveService';
 import { employeeService } from '../../employees/services/employeeService';
 import { PageHeader } from '../../../core/components/PageHeader';
+import { DataTable } from '../../../core/components/DataTable';
 import { QUERY_KEYS } from '../../../core/constants/queryKeys';
 
 export function LeaveApplicationsPage() {
@@ -88,10 +89,10 @@ export function LeaveApplicationsPage() {
     },
     { title: 'Applied', dataIndex: 'createdAt', key: 'createdAt', render: (v: string) => dayjs(v).format('DD-MMM-YYYY') },
     {
-      title: 'Actions', key: 'actions', width: 100,
+      title: 'Actions', key: 'actions', width: 100, fixed: 'right' as const,
       render: (_: any, r: LeaveApplication) => (
         r.status === 'pending' ? (
-          <Button type="link" danger onClick={() => { setSelectedApp(r); setCancelModalOpen(true); }}>Cancel</Button>
+          <Button type="link" danger onClick={(e) => { e.stopPropagation(); setSelectedApp(r); setCancelModalOpen(true); }}>Cancel</Button>
         ) : null
       ),
     },
@@ -105,35 +106,29 @@ export function LeaveApplicationsPage() {
         actions={<Button type="primary" icon={<PlusOutlined />} onClick={() => setApplyModalOpen(true)}>Apply Leave</Button>}
       />
 
-      <Card style={{ marginBottom: 24 }}>
-        <Row gutter={16}>
-          <Col span={6}>
-            <Select
-              placeholder="Filter by status"
-              allowClear
-              style={{ width: '100%' }}
-              value={statusFilter || undefined}
-              onChange={(v) => setStatusFilter(v || '')}
-              options={[
-                { label: 'Pending', value: 'pending' },
-                { label: 'Approved', value: 'approved' },
-                { label: 'Rejected', value: 'rejected' },
-                { label: 'Cancelled', value: 'cancelled' },
-              ]}
-            />
-          </Col>
-        </Row>
-      </Card>
-
-      <div className="hrms-table-card">
-        <Table
-          dataSource={data?.data || []}
-          columns={columns}
-          rowKey="id"
-          loading={isLoading}
-          pagination={{ pageSize: 20 }}
-        />
-      </div>
+      <DataTable
+        dataSource={data?.data || []}
+        columns={columns}
+        rowKey="id"
+        loading={isLoading}
+        total={data?.meta?.total ?? 0}
+        pageSize={20}
+        filterContent={
+          <Select
+            placeholder="Filter by status"
+            allowClear
+            style={{ width: 200 }}
+            value={statusFilter || undefined}
+            onChange={(v) => setStatusFilter(v || '')}
+            options={[
+              { label: 'Pending', value: 'pending' },
+              { label: 'Approved', value: 'approved' },
+              { label: 'Rejected', value: 'rejected' },
+              { label: 'Cancelled', value: 'cancelled' },
+            ]}
+          />
+        }
+      />
 
       <Modal title="Apply for Leave" open={applyModalOpen} onOk={handleApplySubmit} onCancel={() => { setApplyModalOpen(false); applyForm.resetFields(); }} confirmLoading={createMutation.isPending} okText="Submit" okButtonProps={{ icon: <SendOutlined /> }} width={520}>
         <Form form={applyForm} layout="vertical" style={{ paddingTop: 8 }}>

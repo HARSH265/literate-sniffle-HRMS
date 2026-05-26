@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Table, Button, Modal, Form, Select, DatePicker, InputNumber, message, Popconfirm, Tag, Card, Input } from 'antd';
+import { Button, Modal, Form, Select, DatePicker, InputNumber, message, Popconfirm, Tag, Input } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined } from '@ant-design/icons';
 import { PageHeader } from '../../../core/components/PageHeader';
+import { DataTable } from '../../../core/components/DataTable';
 import { overtimeEntryService, OvertimeEntry, CreateOvertimeEntry } from '../services/overtimeEntryService';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
@@ -133,7 +134,7 @@ export function OvertimePage() {
       title: 'Actions',
       key: 'actions',
       width: 100,
-      fixed: 'right',
+      fixed: 'right' as const,
       render: (_, record) => (
         <div style={{ display: 'flex', gap: 8 }}>
           <Button type="text" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
@@ -180,14 +181,27 @@ export function OvertimePage() {
 
   return (
     <div>
-      <PageHeader 
-        title="Overtime Entries" 
+      <PageHeader
+        title="Overtime Entries"
         subtitle="Track and manage employee overtime hours"
+        actions={
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditingId(null); form.resetFields(); setIsModalOpen(true); }}>
+            Add Overtime
+          </Button>
+        }
       />
 
-      <Card>
-        <div className="hrms-table-toolbar">
-          <div className="hrms-table-toolbar-left">
+      <DataTable
+        columns={columns}
+        dataSource={data?.data}
+        rowKey="id"
+        loading={isLoading}
+        total={data?.meta?.total ?? 0}
+        page={page}
+        pageSize={limit}
+        onPaginationChange={(p, l) => { setPage(p); setLimit(l); }}
+        toolbarLeft={
+          <>
             <Select
               value={monthFilter}
               onChange={setMonthFilter}
@@ -215,29 +229,14 @@ export function OvertimePage() {
               enterButton={false}
               loading={isLoading}
             />
-          </div>
-          <div className="hrms-table-toolbar-right">
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditingId(null); form.resetFields(); setIsModalOpen(true); }}>
-              Add Overtime
-            </Button>
-          </div>
-        </div>
-
-        <Table
-          columns={columns}
-          dataSource={data?.data}
-          rowKey="id"
-          loading={isLoading}
-          pagination={{
-            current: page,
-            pageSize: limit,
-            total: data?.meta?.total,
-            onChange: (p, l) => { setPage(p); setLimit(l); },
-            showSizeChanger: true,
-            showTotal: (total) => `Total ${total} entries`,
-          }}
-        />
-      </Card>
+          </>
+        }
+        toolbarRight={
+          <span style={{ fontSize: 13, color: 'var(--hrms-text-muted)' }}>
+            {data?.meta?.total ?? 0} entries
+          </span>
+        }
+      />
 
       <Modal
         title={editingId ? 'Edit Overtime Entry' : 'Add Overtime Entry'}

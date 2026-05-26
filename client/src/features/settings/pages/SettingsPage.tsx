@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { PageHeader } from '../../../core/components/PageHeader';
 import { Form, Card, Row, Col, message, Modal, Input, InputNumber, Switch, Select, DatePicker, Button, Alert, Typography } from 'antd';
@@ -39,16 +39,17 @@ const SETTINGS_MENU = [
   { key: 'reports', label: 'Reports', icon: <BarChartOutlined /> },
   { key: 'loans', label: 'Loans', icon: <DollarOutlined /> },
   { key: 'statutory', label: 'Statutory', icon: <SafetyCertificateOutlined /> },
+  { key: 'totp', label: 'TOTP Enrollment', icon: <SafetyCertificateOutlined /> },
 ];
 
 export function SettingsPage() {
   const location = useLocation();
   const [activeSection, setActiveSection] = useState((location.state as any)?.section || 'profile');
+  const initialSectionRef = useRef((location.state as any)?.section);
   const [otModalOpen, setOtModalOpen] = useState(false);
   const [woModalOpen, setWoModalOpen] = useState(false);
   const [holidayModalOpen, setHolidayModalOpen] = useState(false);
   const [allowanceModalOpen, setAllowanceModalOpen] = useState(false);
-  const [totpModalOpen, setTotpModalOpen] = useState(false);
   const [totpEmployee, setTotpEmployee] = useState<string>('');
   const [totpQrUrl, setTotpQrUrl] = useState<string>('');
   const [totpSecret, setTotpSecret] = useState<string>('');
@@ -116,16 +117,16 @@ export function SettingsPage() {
   }, [data, companyForm]);
 
   useEffect(() => {
-    if (activeSection === 'totp') {
-      setTotpModalOpen(true);
-      setActiveSection('profile');
+    if (initialSectionRef.current === 'totp') {
+      setActiveSection('totp');
+      initialSectionRef.current = null;
     }
-  }, [activeSection]);
+  }, []);
 
   const { data: employees } = useQuery({
     queryKey: ['employees'],
     queryFn: () => employeeService.list({ limit: 500, status: 'active' }),
-    enabled: totpModalOpen,
+    enabled: true,
   });
 
   const handleTotpEnroll = async () => {
@@ -187,6 +188,69 @@ export function SettingsPage() {
         return <LoanConfigSection form={companyForm} onSave={handleSaveCompany} />;
       case 'statutory':
         return <StatutoryConfigSection form={companyForm} onSave={handleSaveCompany} />;
+      case 'totp':
+        return (
+          <Card title="TOTP Enrollment" style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+            <div style={{ paddingTop: 8 }}>
+              <div style={{ marginBottom: 24 }}>
+                <div style={{ marginBottom: 8, fontWeight: 500 }}>Select Employee</div>
+                <Select
+                  showSearch
+                  style={{ width: '100%' }}
+                  placeholder="Search employee by name or code"
+                  value={totpEmployee || undefined}
+                  onChange={(val) => { setTotpEmployee(val); setTotpQrUrl(''); setTotpSecret(''); }}
+                  filterOption={(input, option) =>
+                    (option?.label as string || '').toLowerCase().includes(input.toLowerCase())
+                  }
+                  options={(employees?.data || []).map((emp: any) => ({
+                    label: `${emp.fullName} (${emp.employeeCode})`,
+                    value: emp.id,
+                  }))}
+                  size="large"
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: 12, marginBottom: 24 }}>
+                <Button type="primary" icon={<SafetyCertificateOutlined />} onClick={handleTotpEnroll} loading={totpLoading} size="large">
+                  Generate TOTP Secret
+                </Button>
+                <Button danger icon={<SafetyCertificateOutlined />} onClick={handleTotpDisable} size="large">
+                  Disable TOTP
+                </Button>
+              </div>
+
+              {totpQrUrl && (
+                <Alert
+                  type="success"
+                  showIcon
+                  message="TOTP Enrolled Successfully"
+                  description={
+                    <div>
+                      <Paragraph>
+                        Ask the employee to scan this QR code with their authenticator app
+                        (Google Authenticator, Microsoft Authenticator, or Authy).
+                      </Paragraph>
+                      <div style={{ textAlign: 'center', margin: '16px 0' }}>
+                        <img src={totpQrUrl} alt="TOTP QR Code" style={{ width: 200, height: 200 }} />
+                      </div>
+                      <Paragraph copyable={{ text: totpSecret }}>
+                        <Text type="secondary">OTPAuth URI: {totpSecret}</Text>
+                      </Paragraph>
+                    </div>
+                  }
+                />
+              )}
+
+              {!totpQrUrl && (
+                <div style={{ textAlign: 'center', padding: 40, color: '#888' }}>
+                  <SafetyCertificateOutlined style={{ fontSize: 48, marginBottom: 12 }} />
+                  <div>Select an employee and click "Generate TOTP Secret" to enroll</div>
+                </div>
+              )}
+            </div>
+          </Card>
+        );
       default:
         return null;
     }
@@ -381,67 +445,6 @@ export function SettingsPage() {
             <Switch defaultChecked />
           </Form.Item>
         </Form>
-      </Modal>
-
-      <Modal title="TOTP Enrollment" open={totpModalOpen} onCancel={() => { setTotpModalOpen(false); setTotpQrUrl(''); setTotpSecret(''); setTotpEmployee(''); }} width={520} footer={null}>
-        <div style={{ paddingTop: 8 }}>
-          <div style={{ marginBottom: 24 }}>
-            <div style={{ marginBottom: 8, fontWeight: 500 }}>Select Employee</div>
-            <Select
-              showSearch
-              style={{ width: '100%' }}
-              placeholder="Search employee by name or code"
-              value={totpEmployee || undefined}
-              onChange={(val) => { setTotpEmployee(val); setTotpQrUrl(''); setTotpSecret(''); }}
-              filterOption={(input, option) =>
-                (option?.label as string || '').toLowerCase().includes(input.toLowerCase())
-              }
-              options={(employees?.data || []).map((emp: any) => ({
-                label: `${emp.fullName} (${emp.employeeCode})`,
-                value: emp.id,
-              }))}
-              size="large"
-            />
-          </div>
-
-          <div style={{ display: 'flex', gap: 12, marginBottom: 24 }}>
-            <Button type="primary" icon={<SafetyCertificateOutlined />} onClick={handleTotpEnroll} loading={totpLoading} size="large">
-              Generate TOTP Secret
-            </Button>
-            <Button danger icon={<SafetyCertificateOutlined />} onClick={handleTotpDisable} size="large">
-              Disable TOTP
-            </Button>
-          </div>
-
-          {totpQrUrl && (
-            <Alert
-              type="success"
-              showIcon
-              message="TOTP Enrolled Successfully"
-              description={
-                <div>
-                  <Paragraph>
-                    Ask the employee to scan this QR code with their authenticator app
-                    (Google Authenticator, Microsoft Authenticator, or Authy).
-                  </Paragraph>
-                  <div style={{ textAlign: 'center', margin: '16px 0' }}>
-                    <img src={totpQrUrl} alt="TOTP QR Code" style={{ width: 200, height: 200 }} />
-                  </div>
-                  <Paragraph copyable={{ text: totpSecret }}>
-                    <Text type="secondary">OTPAuth URI: {totpSecret}</Text>
-                  </Paragraph>
-                </div>
-              }
-            />
-          )}
-
-          {!totpQrUrl && (
-            <div style={{ textAlign: 'center', padding: 40, color: '#888' }}>
-              <SafetyCertificateOutlined style={{ fontSize: 48, marginBottom: 12 }} />
-              <div>Select an employee and click "Generate TOTP Secret" to enroll</div>
-            </div>
-          )}
-        </div>
       </Modal>
     </div>
   );

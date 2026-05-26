@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Card, Table, Tag, Select, Space, Button, message, Row, Col, Statistic, Modal, Form, Input, InputNumber, Descriptions } from 'antd';
+import { Card, Tag, Select, Space, Button, message, Row, Col, Statistic, Modal, Form, Input, InputNumber, Descriptions } from 'antd';
 import { EyeOutlined, PlusOutlined, DollarOutlined } from '@ant-design/icons';
 import { PageHeader } from '../../../core/components/PageHeader';
+import { DataTable } from '../../../core/components/DataTable';
 import { loanService, Loan } from '../services/loanService';
 import { employeeService } from '../../employees/services/employeeService';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -94,7 +95,7 @@ export function LoansPage() {
     { title: 'Interest', dataIndex: 'interestRate', key: 'interestRate', render: (v: number) => `${v}%` },
     { title: 'Status', dataIndex: 'status', key: 'status', render: (s: string) => <Tag color={STATUS_COLORS[s] || 'default'}>{s.toUpperCase()}</Tag> },
     { title: 'Applied', dataIndex: 'createdAt', key: 'createdAt', render: (d: string) => d ? dayjs(d).format('DD MMM YYYY') : '-' },
-    { title: '', key: 'actions', width: 180, render: (_: any, r: Loan) => (
+    { title: '', key: 'actions', width: 180, fixed: 'right' as const, render: (_: any, r: Loan) => (
       <Space>
         <Button type="link" size="small" icon={<EyeOutlined />} onClick={() => navigate(`/loans/${r.id}`)}>View</Button>
         {['applied', 'approved'].includes(r.status) && (
@@ -113,15 +114,18 @@ export function LoansPage() {
         <Col span={6}><Card><Statistic title="Approved" value={stats.approved} valueStyle={{ color: '#52c41a' }} /></Card></Col>
         <Col span={6}><Card><Statistic title="Active" value={stats.active} valueStyle={{ color: '#faad14' }} /></Card></Col>
       </Row>
-      <Card extra={
-        <Space>
+      <DataTable
+        dataSource={loans}
+        columns={columns}
+        rowKey="id"
+        loading={isLoading}
+        pageSize={20}
+        toolbarLeft={<Button type="primary" icon={<PlusOutlined />} onClick={() => setApplyModalOpen(true)}>Apply Loan</Button>}
+        filterContent={
           <Select allowClear placeholder="Filter by status" style={{ width: 160 }} value={statusFilter} onChange={setStatusFilter}
             options={['applied', 'approved', 'rejected', 'active', 'closed', 'cancelled'].map(s => ({ label: s.charAt(0).toUpperCase() + s.slice(1), value: s }))} />
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => setApplyModalOpen(true)}>Apply Loan</Button>
-        </Space>
-      }>
-        <Table dataSource={loans} columns={columns} rowKey="id" loading={isLoading} pagination={{ pageSize: 20 }} size="small" />
-      </Card>
+        }
+      />
 
       <Modal title="Apply for Loan" open={applyModalOpen} onCancel={() => { setApplyModalOpen(false); applyForm.resetFields(); setCalculatedEMI(null); }} width={600}
         onOk={() => applyForm.submit()} okText="Submit Application" confirmLoading={applyMutation.isPending}>

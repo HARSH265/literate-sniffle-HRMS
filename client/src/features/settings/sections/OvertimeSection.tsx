@@ -1,5 +1,6 @@
-import { Table, Button, Popconfirm, Tag, message } from 'antd';
+import { Button, Popconfirm, Tag, message } from 'antd';
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
+import { DataTable } from '../../../core/components/DataTable';
 import { overtimeRuleService, OvertimeRule } from '../../overtime-rules/services/overtimeRuleService';
 import { useQuery, useMutation } from '@tanstack/react-query';
 
@@ -23,13 +24,13 @@ export function OvertimeSection({ onAdd }: { onAdd: () => void }) {
           Add Rule
         </Button>
       </div>
-      <Table
-        size="small"
+      <DataTable
         dataSource={data?.data}
         loading={isLoading}
         rowKey="id"
-        pagination={false}
-        locale={{ emptyText: 'No overtime rules configured.' }}
+        hidePagination
+        noCard
+        disableRowClick
         columns={[
           { title: 'Name', dataIndex: 'name', key: 'name' },
           { title: 'Category', dataIndex: 'applicableTo', key: 'applicableTo', render: (c: string) => <Tag color={c === 'worker' ? 'blue' : c === 'office-staff' ? 'purple' : 'green'}>{c === 'all' ? 'All' : c}</Tag> },

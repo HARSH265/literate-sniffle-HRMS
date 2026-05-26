@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Table, Button, Select, message, Empty, Tag } from 'antd';
+import { Button, Select, message, Tag } from 'antd';
 import { CheckOutlined } from '@ant-design/icons';
 import { PageHeader } from '../../../core/components/PageHeader';
+import { DataTable } from '../../../core/components/DataTable';
 import { notificationService, Notification } from '../services/notificationService';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
@@ -111,6 +112,7 @@ export function NotificationsPage() {
       title: '',
       key: 'actions',
       width: 80,
+      fixed: 'right' as const,
       render: (_: unknown, r: Notification) => (
         !r.isRead && (
           <Button
@@ -142,9 +144,19 @@ export function NotificationsPage() {
         }
       />
 
-      <div className="hrms-table-card">
-        <div className="hrms-table-toolbar">
-          <div className="hrms-table-toolbar-left">
+      <DataTable
+        columns={columns}
+        dataSource={data?.data?.notifications}
+        rowKey={(r) => r.id || r._id || ''}
+        loading={isLoading}
+        total={data?.data?.pagination?.total ?? 0}
+        page={page}
+        pageSize={limit}
+        onPaginationChange={(p, size) => { setPage(p); setLimit(size ?? 20); }}
+        pageSizeOptions={['10', '20', '50', '100']}
+        disableRowClick
+        toolbarLeft={
+          <>
             <Select
               placeholder="Filter by module"
               allowClear
@@ -169,39 +181,14 @@ export function NotificationsPage() {
                 { label: 'Read', value: 'true' },
               ]}
             />
-          </div>
-          <div className="hrms-table-toolbar-right">
-            <span style={{ fontSize: 13, color: 'var(--hrms-text-muted)' }}>
-              {data?.data?.pagination?.total ?? 0} notifications
-            </span>
-          </div>
-        </div>
-
-        {data?.data?.notifications?.length === 0 ? (
-          <Empty
-            description="No notifications yet"
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
-            style={{ padding: '60px 0' }}
-          />
-        ) : (
-          <Table
-            columns={columns}
-            dataSource={data?.data?.notifications}
-            rowKey={(r) => r.id || r._id || ''}
-            loading={isLoading}
-            pagination={{
-              current: page,
-              defaultPageSize: 20,
-              pageSize: limit,
-              total: data?.data?.pagination?.total ?? 0,
-              onChange: (p, size) => { setPage(p); setLimit(size ?? 20); },
-              showSizeChanger: true,
-              pageSizeOptions: ['10', '20', '50', '100'],
-              showTotal: (t, r) => `${r[0]}–${r[1]} of ${t}`,
-            }}
-          />
-        )}
-      </div>
+          </>
+        }
+        toolbarRight={
+          <span style={{ fontSize: 13, color: 'var(--hrms-text-muted)' }}>
+            {data?.data?.pagination?.total ?? 0} notifications
+          </span>
+        }
+      />
     </div>
   );
 }

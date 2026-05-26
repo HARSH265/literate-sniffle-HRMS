@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Table, Button, Input, message, Modal, Form, Select, Tooltip, Popconfirm, Upload, Tag } from 'antd';
+import { Button, Input, message, Modal, Form, Select, Tooltip, Popconfirm, Upload, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { PlusOutlined, EditOutlined, SearchOutlined, DownloadOutlined, UploadOutlined, LockOutlined, CheckCircleOutlined, EyeOutlined } from '@ant-design/icons';
 import { PageHeader } from '../../../core/components/PageHeader';
+import { DataTable } from '../../../core/components/DataTable';
 import { userService, User, CreateUser } from '../services/userService';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
@@ -180,6 +181,7 @@ export function UsersPage() {
       title: '',
       key: 'actions',
       width: 140,
+      fixed: 'right' as const,
       render: (_: unknown, r: User) => (
         <div className="action-group">
           <Tooltip title="View Activity">
@@ -218,21 +220,25 @@ export function UsersPage() {
         }
       />
 
-      <div className="hrms-table-card">
-        <div className="hrms-table-toolbar">
-          <div className="hrms-table-toolbar-left">
-            <Input.Search placeholder="Search users..." onSearch={(val) => { setSearch(val); setPage(1); }} style={{ width: 260 }} allowClear prefix={<SearchOutlined style={{ color: 'var(--hrms-text-muted)' }} />} enterButton={false} loading={isFetching} />
-            <Select placeholder="Status" allowClear style={{ width: 120 }} value={statusFilter || undefined} onChange={(val) => { setStatusFilter(val || ''); setPage(1); }} options={[{ label: 'Active', value: 'active' }, { label: 'Inactive', value: 'inactive' }]} />
-          </div>
-          <div className="hrms-table-toolbar-right">
-            <span style={{ fontSize: 13, color: 'var(--hrms-text-muted)' }}>{data?.meta?.total ?? 0} users</span>
-          </div>
-        </div>
-
-        <Table columns={columns} dataSource={data?.data} rowKey="id" loading={isLoading} size="small" scroll={{ x: 800 }}
-          pagination={{ current: page, defaultPageSize: 10, pageSize: limit, total: data?.meta?.total ?? 0, onChange: (p, size) => { setPage(p); setLimit(size ?? 10); }, showSizeChanger: true, pageSizeOptions: ['10', '20', '50', '100'], showTotal: (t, r) => `${r[0]}–${r[1]} of ${t}` }}
-        />
-      </div>
+      <DataTable
+        columns={columns}
+        dataSource={data?.data}
+        rowKey="id"
+        loading={isLoading}
+        total={data?.meta?.total ?? 0}
+        page={page}
+        pageSize={limit}
+        onPaginationChange={(p, size) => { setPage(p); setLimit(size ?? 10); }}
+        toolbarLeft={
+          <Input.Search placeholder="Search users..." onSearch={(val) => { setSearch(val); setPage(1); }} style={{ width: 260 }} allowClear prefix={<SearchOutlined style={{ color: 'var(--hrms-text-muted)' }} />} enterButton={false} loading={isFetching} />
+        }
+        filterContent={
+          <Select placeholder="Status" allowClear style={{ width: 120 }} value={statusFilter || undefined} onChange={(val) => { setStatusFilter(val || ''); setPage(1); }} options={[{ label: 'Active', value: 'active' }, { label: 'Inactive', value: 'inactive' }]} />
+        }
+        toolbarRight={
+          <span style={{ fontSize: 13, color: 'var(--hrms-text-muted)' }}>{data?.meta?.total ?? 0} users</span>
+        }
+      />
 
       <Modal title={editingId ? 'Edit User' : 'New User'} open={isModalOpen}
         onOk={() => form.validateFields().then(v => editingId ? updateMutation.mutate({ id: editingId, payload: v }) : createMutation.mutate(v as CreateUser))}

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { PageHeader } from '../../../core/components/PageHeader';
-import { Row, Col, Card, Statistic, Table, Tag, Button, message, Select, Modal, Form, Descriptions } from 'antd';
+import { DataTable } from '../../../core/components/DataTable';
+import { Row, Col, Card, Statistic, Tag, Button, message, Select, Modal, Form, Descriptions } from 'antd';
 import { BankOutlined, DollarOutlined, SafetyCertificateOutlined, FileTextOutlined, PlusOutlined, EyeOutlined } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { statutoryService, PFChallan, StatutoryReport } from '../services/statutoryService';
@@ -72,7 +73,7 @@ export function StatutoryDashboard() {
     { title: 'EPS', dataIndex: 'epsContribution', key: 'epsContribution', render: (v: number) => `₹${(v || 0).toLocaleString()}` },
     { title: 'Total', dataIndex: 'totalAmount', key: 'totalAmount', render: (v: number) => <strong>₹${(v || 0).toLocaleString()}</strong> },
     { title: 'Status', dataIndex: 'status', key: 'status', render: (s: string) => <Tag color={STATUS_COLORS[s] || 'default'}>{s}</Tag> },
-    { title: 'Actions', key: 'actions', render: (_: any, r: PFChallan) => (
+    { title: 'Actions', key: 'actions', fixed: 'right' as const, render: (_: any, r: PFChallan) => (
       <Button type="link" size="small" icon={<EyeOutlined />} onClick={() => { setViewData(r); setViewModalOpen(true); }}>View</Button>
     )},
   ];
@@ -84,7 +85,7 @@ export function StatutoryDashboard() {
     { title: 'Status', dataIndex: 'status', key: 'status', render: (s: string) => <Tag color={STATUS_COLORS[s] || 'default'}>{s}</Tag> },
     { title: 'Generated', dataIndex: 'generatedAt', key: 'generatedAt', render: (d: string) => d ? dayjs(d).format('DD MMM YYYY HH:mm') : '-' },
     { title: 'File', dataIndex: 'fileName', key: 'fileName', render: (f: string) => f || '-' },
-    { title: 'Actions', key: 'actions', render: (_: any, r: StatutoryReport) => (
+    { title: 'Actions', key: 'actions', fixed: 'right' as const, render: (_: any, r: StatutoryReport) => (
       <Button type="link" size="small" icon={<EyeOutlined />} onClick={() => { setViewData(r); setViewModalOpen(true); }}>View</Button>
     )},
   ];
@@ -137,55 +138,75 @@ export function StatutoryDashboard() {
       </Row>
 
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-        {summary?.pf && (
-          <Col xs={24} sm={8}>
-            <Card size="small" title="PF Breakdown" loading={summaryLoading}>
-              <Descriptions column={1} size="small">
-                <Descriptions.Item label="Total Wages">₹{summary.pf.totalWages.toLocaleString()}</Descriptions.Item>
-                <Descriptions.Item label="Employee Contribution">₹{summary.pf.employeeContribution.toLocaleString()}</Descriptions.Item>
-                <Descriptions.Item label="Employer Contribution">₹{summary.pf.employerContribution.toLocaleString()}</Descriptions.Item>
-                <Descriptions.Item label="EPS">₹{summary.pf.eps.toLocaleString()}</Descriptions.Item>
-                <Descriptions.Item label="EDLI">₹{summary.pf.edli.toLocaleString()}</Descriptions.Item>
-              </Descriptions>
-            </Card>
-          </Col>
-        )}
-        {summary?.esi && (
-          <Col xs={24} sm={8}>
-            <Card size="small" title="ESI Breakdown" loading={summaryLoading}>
-              <Descriptions column={1} size="small">
-                <Descriptions.Item label="Total Wages">₹{summary.esi.totalWages.toLocaleString()}</Descriptions.Item>
-                <Descriptions.Item label="Employee (0.75%)">₹{summary.esi.employeeContribution.toLocaleString()}</Descriptions.Item>
-                <Descriptions.Item label="Employer (3.25%)">₹{summary.esi.employerContribution.toLocaleString()}</Descriptions.Item>
-              </Descriptions>
-            </Card>
-          </Col>
-        )}
-        {summary?.pt && (
-          <Col xs={24} sm={8}>
-            <Card size="small" title="PT Breakdown" loading={summaryLoading}>
-              <Descriptions column={1} size="small">
-                <Descriptions.Item label="Applicable Employees">{summary.pt.applicableEmployees}</Descriptions.Item>
-                <Descriptions.Item label="Total PT Amount">₹{summary.pt.totalAmount.toLocaleString()}</Descriptions.Item>
-              </Descriptions>
-            </Card>
-          </Col>
-        )}
-      </Row>
+  {summary?.pf && (
+    <Col xs={24} sm={8} style={{ display: 'flex' }}>
+      <Card 
+        size="small" 
+        title="PF Breakdown" 
+        loading={summaryLoading}
+        style={{ width: '100%', display: 'flex', flexDirection: 'column' }}
+        styles={{ body: { flex: 1 } }}
+      >
+        <Descriptions column={1} size="small">
+          <Descriptions.Item label="Total Wages">₹{summary.pf.totalWages.toLocaleString()}</Descriptions.Item>
+          <Descriptions.Item label="EPS">₹{summary.pf.eps.toLocaleString()}</Descriptions.Item>
+          <Descriptions.Item label="EDLI">₹{summary.pf.edli.toLocaleString()}</Descriptions.Item>
+          <Descriptions.Item label="Employee Contribution">₹{summary.pf.employeeContribution.toLocaleString()}</Descriptions.Item>
+          <Descriptions.Item label="Employer Contribution">₹{summary.pf.employerContribution.toLocaleString()}</Descriptions.Item>
+          
+        </Descriptions>
+      </Card>
+    </Col>
+  )}
+  {summary?.esi && (
+    <Col xs={24} sm={8} style={{ display: 'flex' }}>
+      <Card 
+        size="small" 
+        title="ESI Breakdown" 
+        loading={summaryLoading}
+        style={{ width: '100%', display: 'flex', flexDirection: 'column' }}
+        styles={{ body: { flex: 1 } }}
+      >
+        <Descriptions column={1} size="small">
+          <Descriptions.Item label="Total Wages">₹{summary.esi.totalWages.toLocaleString()}</Descriptions.Item>
+          <Descriptions.Item label="Employee (0.75%)">₹{summary.esi.employeeContribution.toLocaleString()}</Descriptions.Item>
+          <Descriptions.Item label="Employer (3.25%)">₹{summary.esi.employerContribution.toLocaleString()}</Descriptions.Item>
+        </Descriptions>
+      </Card>
+    </Col>
+  )}
+  {summary?.pt && (
+    <Col xs={24} sm={8} style={{ display: 'flex' }}>
+      <Card 
+        size="small" 
+        title="PT Breakdown" 
+        loading={summaryLoading}
+        style={{ width: '100%', display: 'flex', flexDirection: 'column' }}
+        styles={{ body: { flex: 1 } }}
+      >
+        <Descriptions column={1} size="small">
+          <Descriptions.Item label="Applicable Employees">{summary.pt.applicableEmployees}</Descriptions.Item>
+          <Descriptions.Item label="Total PT Amount">₹{summary.pt.totalAmount.toLocaleString()}</Descriptions.Item>
+        </Descriptions>
+      </Card>
+    </Col>
+  )}
+</Row>
+
 
       <Card
         title={<span><BankOutlined /> PF Challans</span>}
         style={{ marginBottom: 24 }}
         extra={<Button type="primary" icon={<PlusOutlined />} onClick={() => setChallanModalOpen(true)}>Generate Challan</Button>}
       >
-        <Table dataSource={challans || []} columns={challanColumns} rowKey="id" loading={challansLoading} pagination={false} size="small" locale={{ emptyText: 'No challans generated for this month.' }} />
+        <DataTable dataSource={challans || []} columns={challanColumns} rowKey="id" loading={challansLoading} hidePagination noCard disableRowClick />
       </Card>
 
       <Card
         title={<span><FileTextOutlined /> Statutory Reports</span>}
         extra={<Button type="primary" icon={<PlusOutlined />} onClick={() => setReportModalOpen(true)}>Generate Report</Button>}
       >
-        <Table dataSource={reports || []} columns={reportColumns} rowKey="id" loading={reportsLoading} pagination={false} size="small" locale={{ emptyText: 'No reports generated for this month.' }} />
+        <DataTable dataSource={reports || []} columns={reportColumns} rowKey="id" loading={reportsLoading} hidePagination noCard disableRowClick />
       </Card>
 
       <Modal title="Generate PF Challan" open={challanModalOpen} onCancel={() => setChallanModalOpen(false)} onOk={() => generateChallanMutation.mutate()} confirmLoading={generateChallanMutation.isPending}>

@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Card, Table, Button, Modal, Form, Input, InputNumber, Select, Switch, Space, message, Tag, Popconfirm, Row, Col } from 'antd';
+import { Button, Modal, Form, Input, InputNumber, Select, Switch, Space, message, Tag, Popconfirm, Row, Col } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { PageHeader } from '../../../core/components/PageHeader';
+import { DataTable } from '../../../core/components/DataTable';
 import { loanService, LoanType } from '../services/loanService';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -59,7 +60,7 @@ export function LoanTypesPage() {
     { title: 'Applicable To', dataIndex: 'applicableTo', key: 'applicableTo', render: (v: string) => <Tag>{v}</Tag> },
     { title: 'Max Active', dataIndex: 'maxActiveLoans', key: 'maxActiveLoans' },
     { title: 'Status', dataIndex: 'isActive', key: 'isActive', render: (s: boolean) => <Tag color={s ? 'green' : 'red'}>{s ? 'Active' : 'Inactive'}</Tag> },
-    { title: '', key: 'actions', width: 120, render: (_: any, r: LoanType) => (
+    { title: '', key: 'actions', width: 120, fixed: 'right' as const, render: (_: any, r: LoanType) => (
       <Space>
         <Button type="text" size="small" icon={<EditOutlined />} onClick={() => handleEdit(r)} />
         <Popconfirm title="Delete this loan type?" onConfirm={() => deleteMutation.mutate(r.id)}>
@@ -72,9 +73,14 @@ export function LoanTypesPage() {
   return (
     <div>
       <PageHeader title="Loan Types" subtitle="Configure loan types and their rules" />
-      <Card extra={<Button type="primary" icon={<PlusOutlined />} onClick={() => setModalOpen(true)}>Add Loan Type</Button>}>
-        <Table dataSource={data?.data?.loanTypes || []} columns={columns} rowKey="id" loading={isLoading} pagination={false} size="small" />
-      </Card>
+      <DataTable
+        dataSource={data?.data?.loanTypes || []}
+        columns={columns}
+        rowKey="id"
+        loading={isLoading}
+        hidePagination
+        toolbarLeft={<Button type="primary" icon={<PlusOutlined />} onClick={() => setModalOpen(true)}>Add Loan Type</Button>}
+      />
 
       <Modal title={editingId ? 'Edit Loan Type' : 'Create Loan Type'} open={modalOpen} onCancel={closeModal} onOk={form.submit} okText={editingId ? 'Update' : 'Create'} width={640}>
         <Form form={form} layout="vertical" onFinish={handleSubmit}>

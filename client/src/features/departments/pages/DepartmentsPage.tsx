@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Table, Button, Modal, Form, Input, message, Popconfirm, Tooltip, Tag } from 'antd';
+import { Button, Modal, Form, Input, message, Popconfirm, Tooltip, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, SettingOutlined } from '@ant-design/icons';
 import { PageHeader } from '../../../core/components/PageHeader';
+import { DataTable } from '../../../core/components/DataTable';
 import { departmentService, Department, CreateDepartment, UpdateDepartment } from '../services/departmentService';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
@@ -125,7 +126,7 @@ export function DepartmentsPage() {
       title: '',
       key: 'actions',
       width: 100,
-      fixed: 'right',
+      fixed: 'right' as const,
       render: (_: unknown, record: Department) => (
         <div className="action-group">
           <Tooltip title="Edit">
@@ -156,44 +157,32 @@ export function DepartmentsPage() {
         }
       />
 
-      <div className="hrms-table-card">
-        <div className="hrms-table-toolbar">
-          <div className="hrms-table-toolbar-left">
-            <Input.Search
-              placeholder="Search by name or code..."
-              onSearch={(val) => { setSearch(val); setPage(1); }}
-              style={{ width: 280 }}
-              allowClear
-              prefix={<SearchOutlined style={{ color: 'var(--hrms-text-muted)' }} />}
-              enterButton={false}
-              loading={isLoading}
-            />
-          </div>
-          <div className="hrms-table-toolbar-right">
-            <span style={{ fontSize: 13, color: 'var(--hrms-text-muted)' }}>
-              {data?.meta?.total ?? 0} total
-            </span>
-          </div>
-        </div>
-
-        <Table
-          columns={columns}
-          dataSource={data?.data}
-          rowKey="id"
-          loading={isLoading}
-          scroll={{ x: 600 }}
-          pagination={{
-            current: page,
-            defaultPageSize: 20,
-            pageSize: limit,
-            total: data?.meta?.total ?? 0,
-            onChange: (p, size) => { setPage(p); setLimit(size ?? 10); },
-            showSizeChanger: true,
-            pageSizeOptions: ['10', '20', '50', '100'],
-            showTotal: (total, range) => `${range[0]}–${range[1]} of ${total}`,
-          }}
-        />
-      </div>
+      <DataTable
+        columns={columns}
+        dataSource={data?.data}
+        rowKey="id"
+        loading={isLoading}
+        total={data?.meta?.total ?? 0}
+        page={page}
+        pageSize={limit}
+        onPaginationChange={(p, size) => { setPage(p); setLimit(size ?? 10); }}
+        toolbarLeft={
+          <Input.Search
+            placeholder="Search by name or code..."
+            onSearch={(val) => { setSearch(val); setPage(1); }}
+            style={{ width: 280 }}
+            allowClear
+            prefix={<SearchOutlined style={{ color: 'var(--hrms-text-muted)' }} />}
+            enterButton={false}
+            loading={isLoading}
+          />
+        }
+        toolbarRight={
+          <span style={{ fontSize: 13, color: 'var(--hrms-text-muted)' }}>
+            {data?.meta?.total ?? 0} total
+          </span>
+        }
+      />
 
       <Modal
         title={

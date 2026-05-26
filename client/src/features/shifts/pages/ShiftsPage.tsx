@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Table, Button, Input, message, Modal, Form, Select, InputNumber, Tooltip, Tag } from 'antd';
+import { Button, Input, message, Modal, Form, Select, InputNumber, Tooltip, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined } from '@ant-design/icons';
 import { PageHeader } from '../../../core/components/PageHeader';
+import { DataTable } from '../../../core/components/DataTable';
 import { shiftService, Shift } from '../services/shiftService';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -81,20 +82,22 @@ const { data, isLoading, isFetching } = useQuery({
     <div style={{ padding: '0 4px' }}>
       <PageHeader title="Shifts" subtitle="Configure work schedules and timing" actions={<Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditingId(null); form.resetFields(); setIsModalOpen(true); }}>Add Shift</Button>} />
 
-      <div className="hrms-table-card">
-        <div className="hrms-table-toolbar">
-          <div className="hrms-table-toolbar-left">
-            <Input.Search placeholder="Search shifts..." onSearch={(val) => { setSearch(val); setPage(1); }} style={{ width: 260 }} allowClear prefix={<SearchOutlined style={{ color: 'var(--hrms-text-muted)' }} />} enterButton={false} loading={isFetching} />
-          </div>
-          <div className="hrms-table-toolbar-right">
-            <span style={{ fontSize: 13, color: 'var(--hrms-text-muted)' }}>{data?.meta?.total ?? 0} shifts</span>
-          </div>
-        </div>
-
-        <Table columns={columns} dataSource={data?.data} rowKey="id" loading={isLoading} scroll={{ x: 800 }}
-          pagination={{ current: page, defaultPageSize: 10, pageSize: limit, total: data?.meta?.total ?? 0, onChange: (p, size) => { setPage(p); setLimit(size ?? 10); }, showSizeChanger: true, pageSizeOptions: ['10', '20', '50', '100'], showTotal: (t, r) => `${r[0]}–${r[1]} of ${t}` }}
-        />
-      </div>
+      <DataTable
+        columns={columns}
+        dataSource={data?.data}
+        rowKey="id"
+        loading={isLoading}
+        total={data?.meta?.total ?? 0}
+        page={page}
+        pageSize={limit}
+        onPaginationChange={(p, size) => { setPage(p); setLimit(size ?? 10); }}
+        toolbarLeft={
+          <Input.Search placeholder="Search shifts..." onSearch={(val) => { setSearch(val); setPage(1); }} style={{ width: 260 }} allowClear prefix={<SearchOutlined style={{ color: 'var(--hrms-text-muted)' }} />} enterButton={false} loading={isFetching} />
+        }
+        toolbarRight={
+          <span style={{ fontSize: 13, color: 'var(--hrms-text-muted)' }}>{data?.meta?.total ?? 0} shifts</span>
+        }
+      />
 
       <Modal title={editingId ? 'Edit Shift' : 'New Shift'} open={isModalOpen}
         onOk={() => form.validateFields().then(v => editingId ? updateMutation.mutate({ id: editingId, payload: v }) : createMutation.mutate(v))}

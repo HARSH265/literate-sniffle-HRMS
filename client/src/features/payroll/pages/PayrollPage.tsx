@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '../../../core/components/PageHeader';
+import { DataTable } from '../../../core/components/DataTable';
 import { Table, Button, Modal, Form, DatePicker, message, Tag, Popconfirm, Space } from 'antd';
 import { PlayCircleOutlined, CheckCircleOutlined, EyeOutlined, DeleteOutlined, UndoOutlined, SendOutlined, StopOutlined, ExperimentOutlined } from '@ant-design/icons';
 import { payrollService, PayrollRun } from '../services/payrollService';
@@ -160,18 +161,15 @@ export function PayrollPage() {
         }
       />
 
-      <Table
+      <DataTable
         columns={columns}
         dataSource={(runsData as any)?.data || []}
         rowKey="id"
         loading={isLoading}
-        pagination={{
-          current: page,
-          pageSize: limit,
-          total: (runsData as any)?.meta?.total ?? 0,
-          onChange: (p, size) => { setPage(p); setLimit(size ?? 10); },
-          showSizeChanger: true,
-        }}
+        total={(runsData as any)?.meta?.total ?? 0}
+        page={page}
+        pageSize={limit}
+        onPaginationChange={(p, size) => { setPage(p); setLimit(size ?? 10); }}
       />
 
       <Modal title="Run Payroll" open={isRunModalOpen} onOk={handleRun} onCancel={() => { setIsRunModalOpen(false); form.resetFields(); }} confirmLoading={runMutation.isPending} okText="Process Payroll">

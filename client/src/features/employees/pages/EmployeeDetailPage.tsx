@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Row, Col, Avatar, Button, Spin, Card, Descriptions, Tag, message, Upload, Select, Popconfirm, Modal, Tabs, Table } from 'antd';
+import { Row, Col, Avatar, Button, Spin, Card, Descriptions, Tag, message, Upload, Select, Popconfirm, Modal, Tabs } from 'antd';
 import { ArrowLeftOutlined, EditOutlined, UserOutlined, CheckCircleOutlined, CloseCircleOutlined, DeleteOutlined, UploadOutlined, FileTextOutlined, EyeOutlined, CalendarOutlined, DollarOutlined } from '@ant-design/icons';
 import { PageHeader } from '../../../core/components/PageHeader';
+import { DataTable } from '../../../core/components/DataTable';
 import { employeeService } from '../services/employeeService';
 import { attendanceService } from '../../attendance/services/attendanceService';
 import { payrollService } from '../../payroll/services/payrollService';
@@ -314,11 +315,12 @@ export function EmployeeDetailPage() {
                     key: 'attendance',
                     label: <span><CalendarOutlined /> Attendance History</span>,
                     children: (
-                      <Table
+                      <DataTable
                         dataSource={attendanceData || []}
                         rowKey="id"
-                        size="small"
-                        pagination={{ pageSize: 10 }}
+                        hidePagination
+                        noCard
+                        disableRowClick
                         columns={[
                           { title: 'Date', dataIndex: 'date', key: 'date', render: (d: string) => dayjs(d).format('DD MMM YYYY') },
                           { title: 'Status', dataIndex: 'status', key: 'status', render: (s: string) => <Tag color={s === 'present' ? 'green' : s === 'absent' ? 'red' : 'default'}>{s}</Tag> },
@@ -327,7 +329,6 @@ export function EmployeeDetailPage() {
                           { title: 'Shift', dataIndex: ['shift', 'name'], key: 'shift' },
                           { title: 'Late', dataIndex: 'isLate', key: 'isLate', render: (late: boolean) => late ? <Tag color="orange">Late</Tag> : '-' },
                         ]}
-                        locale={{ emptyText: 'No attendance records found' }}
                       />
                     ),
                   },
@@ -335,11 +336,12 @@ export function EmployeeDetailPage() {
                     key: 'payroll',
                     label: <span><DollarOutlined /> Payroll History</span>,
                     children: (
-                      <Table
+                      <DataTable
                         dataSource={payrollData || []}
                         rowKey="id"
-                        size="small"
-                        pagination={{ pageSize: 10 }}
+                        hidePagination
+                        noCard
+                        disableRowClick
                         columns={[
                           { title: 'Month', dataIndex: 'month', key: 'month', render: (m: string) => dayjs(m + '-01').format('MMM YYYY') },
                           { title: 'Present Days', dataIndex: 'presentDays', key: 'presentDays' },
@@ -349,7 +351,6 @@ export function EmployeeDetailPage() {
                           { title: 'Net Pay', dataIndex: 'netPay', key: 'netPay', render: (v: number) => <span style={{ fontWeight: 600, color: 'var(--hrms-success)' }}>₹{v?.toLocaleString()}</span> },
                           { title: 'Status', dataIndex: 'status', key: 'status', render: (s: string) => <Tag color={s === 'finalized' ? 'green' : 'orange'}>{s}</Tag> },
                         ]}
-                        locale={{ emptyText: 'No payroll records found' }}
                       />
                     ),
                   },

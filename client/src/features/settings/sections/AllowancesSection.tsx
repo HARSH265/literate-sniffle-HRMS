@@ -1,5 +1,6 @@
-import { Table, Button, Popconfirm, Tag } from 'antd';
+import { Button, Popconfirm, Tag } from 'antd';
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
+import { DataTable } from '../../../core/components/DataTable';
 
 export function AllowancesSection({ form, onAdd }: { form: any; onAdd: () => void }) {
   const allowances = form.getFieldValue('allowanceConfig') || [];
@@ -18,12 +19,12 @@ export function AllowancesSection({ form, onAdd }: { form: any; onAdd: () => voi
         </Button>
       </div>
 
-      <Table
-        size="small"
+      <DataTable
         dataSource={allowances}
         rowKey="key"
-        pagination={false}
-        locale={{ emptyText: 'No allowances configured. Add one to get started.' }}
+        hidePagination
+        noCard
+        disableRowClick
         columns={[
           { title: 'Name', dataIndex: 'name', key: 'name' },
           { title: 'Type', dataIndex: 'type', key: 'type', render: (t: string) => <Tag>{t}</Tag> },
