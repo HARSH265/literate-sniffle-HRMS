@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Card, Tag, Select, Space, Button, message, Row, Col, Statistic, Modal, Form, Input, InputNumber, Descriptions } from 'antd';
+import { Card, Tag, Select, Space, Button, message, Row, Col, Statistic, Modal, Form, Input, InputNumber, Descriptions, Popconfirm } from 'antd';
 import { EyeOutlined, PlusOutlined, DollarOutlined } from '@ant-design/icons';
 import { PageHeader } from '../../../core/components/PageHeader';
 import { DataTable } from '../../../core/components/DataTable';
@@ -99,7 +99,9 @@ export function LoansPage() {
       <Space>
         <Button type="link" size="small" icon={<EyeOutlined />} onClick={() => navigate(`/loans/${r.id}`)}>View</Button>
         {['applied', 'approved'].includes(r.status) && (
-          <Button type="link" size="small" danger onClick={() => cancelMutation.mutate(r.id)}>Cancel</Button>
+          <Popconfirm title="Cancel this loan?" description="This action cannot be undone." onConfirm={() => cancelMutation.mutate(r.id)} okText="Yes, Cancel" okButtonProps={{ danger: true }} cancelText="No">
+            <Button type="link" size="small" danger>Cancel</Button>
+          </Popconfirm>
         )}
       </Space>
     )},

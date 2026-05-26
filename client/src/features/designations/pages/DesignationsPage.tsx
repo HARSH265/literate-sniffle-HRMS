@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, Input, Select, message, Modal, Form, Tooltip } from 'antd';
+import { Button, Input, Select, message, Modal, Form, Tooltip, Popconfirm } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined } from '@ant-design/icons';
 import { PageHeader } from '../../../core/components/PageHeader';
@@ -73,11 +73,11 @@ const { data, isLoading, isFetching } = useQuery({
       render: (_: unknown, r: Designation) => (
         <div className="action-group">
           <Tooltip title="Edit"><Button type="text" size="small" icon={<EditOutlined />} onClick={() => { setEditingId(r.id); form.setFieldsValue({ name: r.name, department: r.department?.id }); setIsModalOpen(true); }} style={{ color: 'var(--hrms-text-muted)', borderRadius: 6 }} /></Tooltip>
-          <Tooltip title="Delete">
-            <Button type="text" size="small" icon={<DeleteOutlined />}
-              onClick={() => deleteMutation.mutate(r.id)}
-              style={{ color: '#ef4444', borderRadius: 6 }} />
-          </Tooltip>
+          <Popconfirm title="Delete this designation?" description="This cannot be undone." onConfirm={() => deleteMutation.mutate(r.id)} okText="Delete" okButtonProps={{ danger: true }} cancelText="Cancel">
+            <Tooltip title="Delete">
+              <Button type="text" size="small" icon={<DeleteOutlined />} style={{ color: '#ef4444', borderRadius: 6 }} />
+            </Tooltip>
+          </Popconfirm>
         </div>
       ),
     },
