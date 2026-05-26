@@ -28,7 +28,7 @@ export function Header() {
       ]);
       setNotifications(notifs.data.notifications);
       setUnreadCount(count.data.count);
-    } catch {}
+    } catch { /* ignore */ }
   };
 
   useEffect(() => {

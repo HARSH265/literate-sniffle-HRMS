@@ -138,7 +138,7 @@ export function ReportsPage() {
       let filename = '';
 
       switch (type) {
-        case 'employees':
+        case 'employees': {
           const params = new URLSearchParams();
           if (filters.status) params.append('status', filters.status);
           if (filters.category) params.append('category', filters.category);
@@ -146,7 +146,8 @@ export function ReportsPage() {
           url = `/reports/employees?${params.toString()}`;
           filename = 'employees';
           break;
-        case 'attendance':
+        }
+        case 'attendance': {
           const attParams = new URLSearchParams();
           if (dateRange) {
             attParams.append('startDate', dateRange[0].format('YYYY-MM-DD'));
@@ -159,7 +160,8 @@ export function ReportsPage() {
           url = `/reports/attendance?${attParams.toString()}`;
           filename = 'attendance';
           break;
-        case 'payroll':
+        }
+        case 'payroll': {
           const payParams = new URLSearchParams();
           if (dateRange) {
             payParams.append('startDate', dateRange[0].format('YYYY-MM-DD'));
@@ -171,7 +173,8 @@ export function ReportsPage() {
           url = `/reports/payroll?${payParams.toString()}`;
           filename = 'payroll';
           break;
-        case 'overtime':
+        }
+        case 'overtime': {
           const otParams = new URLSearchParams();
           otParams.append('month', String(overtimeMonth.month() + 1));
           otParams.append('year', String(overtimeMonth.year()));
@@ -179,6 +182,7 @@ export function ReportsPage() {
           url = `/reports/overtime?${otParams.toString()}`;
           filename = 'overtime';
           break;
+        }
       }
 
       const response = await fetch(apiClient.getUri() + url, { credentials: 'include' });
