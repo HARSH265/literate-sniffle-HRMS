@@ -196,7 +196,7 @@ export function PayrollPage() {
             <p><strong>Employees:</strong> {previewData.totalEmployees}</p>
             <p><strong>Estimated Total Net Pay:</strong> ₹{previewData.totalNetPay.toLocaleString()}</p>
             <p style={{ fontSize: 12, color: '#888' }}>This is a what-if preview. No data has been saved.</p>
-            <Table
+            <DataTable
               dataSource={previewData.items?.slice(0, 10) || []}
               columns={[
                 { title: 'Employee', key: 'name', render: (_: any, r: any) => r.employee?.name },
@@ -206,9 +206,10 @@ export function PayrollPage() {
                 { title: 'Deductions', dataIndex: 'totalDeductions', key: 'ded', render: (v: number) => `₹${v.toLocaleString()}` },
                 { title: 'Net Pay', dataIndex: 'netPay', key: 'net', render: (v: number) => <strong>₹{v.toLocaleString()}</strong> },
               ]}
-              rowKey={(r: any) => r.employee?.id || Math.random()}
-              size="small"
-              pagination={false}
+              rowKey={(r: any) => r.employee?.id || String(Math.random())}
+              hidePagination
+              disableRowClick
+              noCard
             />
             {previewData.items?.length > 10 && <p style={{ textAlign: 'center', marginTop: 8, color: '#888' }}>...and {previewData.items.length - 10} more employees</p>}
           </div>

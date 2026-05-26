@@ -874,7 +874,7 @@ export class ReportsService {
     page?: number;
     limit?: number;
   }): Promise<Record<string, unknown>> {
-    const { entity, id, period, filters, page = 1, limit = 50 } = params;
+    const { entity, id, period, filters, page = 1, limit = 10 } = params;
     const skip = (page - 1) * limit;
 
     if (entity === 'attendance') {

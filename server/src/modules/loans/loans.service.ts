@@ -202,7 +202,7 @@ export class LoansService {
     if (query.loanType) filter.loanType = query.loanType;
 
     const page = parseInt(String(query.page || '1'));
-    const limit = parseInt(String(query.limit || '20'));
+    const limit = parseInt(String(query.limit || '10'));
     const skip = (page - 1) * limit;
 
     const [loans, total] = await Promise.all([

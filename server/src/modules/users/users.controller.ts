@@ -35,7 +35,7 @@ const activate = asyncHandler(async (req: Request, res: Response) => {
 
 const getUserActivity = asyncHandler(async (req: Request, res: Response) => {
   const page = parseInt(req.query.page as string) || 1;
-  const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
+  const limit = Math.min(parseInt(req.query.limit as string) || 10, 100);
   const result = await UsersService.getUserActivity(req.params.id, page, limit);
   ResponseHandler.paginated(res, result.data, result.meta, 'Activity fetched successfully');
 });

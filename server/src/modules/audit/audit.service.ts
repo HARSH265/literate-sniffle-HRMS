@@ -7,7 +7,7 @@ import { getActionLabel, getModuleLabel } from '../../core/audit/AuditUtils.js';
 export class AuditService {
   static async list(query: Record<string, unknown>, res: Response) {
     const page = Number(query.page) || 1;
-    const limit = Math.min(Number(query.limit) || 20, 100);
+    const limit = Math.min(Number(query.limit) || 10, 100);
     const skip = (page - 1) * limit;
     const sort = String(query.sort || 'createdAt');
     const order = query.order === 'asc' ? 1 : -1;

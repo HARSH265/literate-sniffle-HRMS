@@ -12,7 +12,7 @@ export class NotificationsService {
     notifications: Array<Record<string, unknown>>;
     pagination: { page: number; limit: number; total: number; pages: number };
   }> {
-    const limit = parseInt(query.limit || '20');
+    const limit = parseInt(query.limit || '10');
     const page = parseInt(query.page || '1');
     const skip = (page - 1) * limit;
 
