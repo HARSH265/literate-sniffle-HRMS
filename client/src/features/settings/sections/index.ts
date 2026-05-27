@@ -15,3 +15,5 @@ export { ReportsSection } from './ReportsSection';
 export { LoanTypesSection } from './LoanTypesSection';
 export { LoanConfigSection } from './LoanConfigSection';
 export { StatutoryConfigSection } from './StatutoryConfigSection';
+export { EssSection } from './EssSection';
+export { AnnouncementSection } from './AnnouncementSection';

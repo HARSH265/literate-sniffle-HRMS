@@ -99,6 +99,7 @@ body {
   border-bottom: 1px solid var(--hrms-border-light) !important;
   color: var(--hrms-text-primary) !important;
   font-size: 14px !important;
+  line-height: 1.6 !important;
 }
 .ant-table-tbody > tr:hover > td { background: #f8fafc !important; }
 .ant-table-tbody > tr:last-child > td { border-bottom: none !important; }

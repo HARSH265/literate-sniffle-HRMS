@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { Button, Input, message, Spin, Result, Typography } from 'antd';
 import { CameraOutlined, ScanOutlined, CheckCircleOutlined, QrcodeOutlined } from '@ant-design/icons';
 import { attendanceQRService } from '../services/attendanceQRService';
@@ -16,8 +16,120 @@ export function ScanPage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{ message: string; isLate?: boolean } | null>(null);
   const [deviceId, setDeviceId] = useState('');
+  const [cameraActive, setCameraActive] = useState(false);
+  const [cameraError, setCameraError] = useState('');
+  const [hasBarcodeDetector, setHasBarcodeDetector] = useState(true);
 
   const { Title, Text } = Typography;
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const scanTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const jsqrRef = useRef<any>(null);
+
+  const getJsqr = useCallback(async () => {
+    if (!jsqrRef.current) {
+      jsqrRef.current = await import('jsqr');
+    }
+    return jsqrRef.current;
+  }, []);
+
+  const stopCamera = useCallback(() => {
+    if (scanTimerRef.current) {
+      clearInterval(scanTimerRef.current);
+      scanTimerRef.current = null;
+    }
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(t => t.stop());
+      streamRef.current = null;
+    }
+  }, []);
+
+  const decodeQR = useCallback(async (video: HTMLVideoElement, canvas: HTMLCanvasElement): Promise<string | null> => {
+    const width = video.videoWidth;
+    const height = video.videoHeight;
+    if (!width || !height) return null;
+
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+
+    ctx.drawImage(video, 0, 0, width, height);
+    const imageData = ctx.getImageData(0, 0, width, height);
+
+    if ('BarcodeDetector' in window) {
+      try {
+        const detector = new (window as any).BarcodeDetector({ formats: ['qr_code'] });
+        const barcodes = await detector.detect(canvas);
+        if (barcodes.length > 0) return barcodes[0].rawValue;
+      } catch {
+        // BarcodeDetector failed, fall through to jsQR
+      }
+    }
+
+    const jsqrModule = await getJsqr();
+    const result = jsqrModule.default(imageData.data, width, height);
+    return result?.data || null;
+  }, [getJsqr]);
+
+  const startCamera = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment', width: { ideal: 640 }, height: { ideal: 480 } },
+      });
+      streamRef.current = stream;
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+
+        setCameraActive(true);
+        setCameraError('');
+
+        // Check if BarcodeDetector is available
+        setHasBarcodeDetector('BarcodeDetector' in window);
+
+        // Start scanning frames
+        scanTimerRef.current = setInterval(async () => {
+          const video = videoRef.current;
+          const canvas = canvasRef.current;
+          if (!video || !canvas) return;
+
+          const token = await decodeQR(video, canvas);
+          if (token) {
+            stopCamera();
+            setQrToken(token);
+            message.success('QR scanned successfully');
+            setStep('totp');
+          }
+        }, 500);
+      }
+    } catch (err: any) {
+      const msg = err?.message || '';
+      if (msg.includes('NotAllowed') || msg.includes('Permission')) {
+        setCameraError('Camera permission denied. Please allow camera access in your browser settings.');
+      } else if (msg.includes('NotFound')) {
+        setCameraError('No camera found on this device.');
+      } else if (msg.includes('NotReadable')) {
+        setCameraError('Camera is being used by another app.');
+      } else if (msg.includes('Security') || msg.includes('HTTP')) {
+        setCameraError('Camera access requires HTTPS. Use https:// or localhost.');
+      } else {
+        setCameraError('Camera unavailable — paste the QR token below.');
+      }
+      setCameraActive(false);
+    }
+  }, [stopCamera, decodeQR]);
+
+  useEffect(() => {
+    if (step === 'scan') {
+      startCamera();
+    } else {
+      stopCamera();
+    }
+    return stopCamera;
+  }, [step, startCamera, stopCamera]);
 
   const handleProcess = useCallback(async () => {
     if (!qrToken || !totpCode || !employeeId) {
@@ -47,7 +159,11 @@ export function ScanPage() {
     }
   }, [qrToken, totpCode, employeeId, deviceId, mode]);
 
-  const handleManualEntry = () => {
+  const handleContinue = () => {
+    if (!qrToken) {
+      message.warning('Please paste the QR token');
+      return;
+    }
     setStep('totp');
   };
 
@@ -57,6 +173,8 @@ export function ScanPage() {
     setTotpCode('');
     setResult(null);
     setEmployeeId('');
+    setCameraActive(false);
+    setCameraError('');
   };
 
   if (step === 'confirm' && result) {
@@ -95,13 +213,30 @@ export function ScanPage() {
           <div style={{ textAlign: 'center' }}>
             <div style={{
               border: '2px dashed #d9d9d9', borderRadius: 12,
-              padding: 40, marginBottom: 16, cursor: 'pointer',
+              marginBottom: 16, overflow: 'hidden', position: 'relative',
+              minHeight: 220, background: cameraActive ? '#000' : 'transparent',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
-              <ScanOutlined style={{ fontSize: 56, color: '#1677ff' }} />
+              {cameraActive ? (
+                <>
+                  <video ref={videoRef} playsInline style={{ width: '100%', display: 'block' }} />
+                  <canvas ref={canvasRef} style={{ display: 'none' }} />
+                </>
+              ) : (
+                <ScanOutlined style={{ fontSize: 56, color: '#1677ff' }} />
+              )}
             </div>
-            <Text type="secondary" style={{ display: 'block', marginBottom: 16 }}>
-              Scan the QR code displayed on the kiosk
-            </Text>
+
+            {cameraActive ? (
+              <Text type="success" style={{ display: 'block', marginBottom: 16 }}>
+                Camera active — point at kiosk QR code
+                {!hasBarcodeDetector && <span style={{ color: '#888', fontSize: 12 }}> (loading decoder...)</span>}
+              </Text>
+            ) : (
+              <Text type="secondary" style={{ display: 'block', marginBottom: 16 }}>
+                {cameraError || 'Starting camera...'}
+              </Text>
+            )}
 
             <div style={{ marginBottom: 12 }}>
               <Input placeholder="Or paste QR token here" value={qrToken} onChange={e => setQrToken(e.target.value)} size="large" />
@@ -111,7 +246,7 @@ export function ScanPage() {
             </div>
 
             <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-              <Button type="primary" size="large" block onClick={handleManualEntry} icon={<CameraOutlined />}>
+              <Button type="primary" size="large" block onClick={handleContinue} icon={<CameraOutlined />}>
                 Continue
               </Button>
             </div>

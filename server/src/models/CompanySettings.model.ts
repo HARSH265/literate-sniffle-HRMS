@@ -156,6 +156,32 @@ export interface ICompanySettings extends Document {
     }[];
   };
   updatedBy?: mongoose.Types.ObjectId;
+  employeeSelfService: {
+    essEnabled: boolean;
+    allowAddressUpdate: boolean;
+    allowBankUpdate: boolean;
+    allowEmergencyContactUpdate: boolean;
+    allowPhoneUpdate: boolean;
+    changeRequiresApproval: boolean;
+    maxChangesPerMonth: number;
+  };
+  announcementConfig: {
+    announcementsEnabled: boolean;
+    maxAnnouncementLength: number;
+    allowAttachments: boolean;
+    maxAttachmentSizeMb: number;
+    autoExpireDays: number;
+    allowScheduling: boolean;
+  };
+  helpdeskConfig: {
+    ticketsEnabled: boolean;
+    autoAssign: boolean;
+    maxAttachments: number;
+    slaHoursUrgent: number;
+    slaHoursHigh: number;
+    slaHoursNormal: number;
+    slaHoursLow: number;
+  };
 }
 
 interface CompanySettingsModel extends Model<ICompanySettings> {}
@@ -222,8 +248,8 @@ const CompanySettingsSchema = new Schema<ICompanySettings>(
       lateMarkThresholdMinutes: { type: Number, default: 15 },
       lateToHalfDayAfterOccurrences: { type: Number, default: 3 },
       qrKioskEnabled: { type: Boolean, default: false },
-      qrRefreshIntervalSeconds: { type: Number, default: 15 },
-      qrTokenExpirySeconds: { type: Number, default: 15 },
+      qrRefreshIntervalSeconds: { type: Number, default: 30 },
+      qrTokenExpirySeconds: { type: Number, default: 120 },
       geofencingEnabled: { type: Boolean, default: false },
       geofenceLatitude: { type: Number, default: 0 },
       geofenceLongitude: { type: Number, default: 0 },
@@ -362,6 +388,32 @@ const CompanySettingsSchema = new Schema<ICompanySettings>(
           ],
         },
       ]},
+    },
+    employeeSelfService: {
+      essEnabled: { type: Boolean, default: true },
+      allowAddressUpdate: { type: Boolean, default: false },
+      allowBankUpdate: { type: Boolean, default: false },
+      allowEmergencyContactUpdate: { type: Boolean, default: false },
+      allowPhoneUpdate: { type: Boolean, default: true },
+      changeRequiresApproval: { type: Boolean, default: true },
+      maxChangesPerMonth: { type: Number, default: 5 },
+    },
+    announcementConfig: {
+      announcementsEnabled: { type: Boolean, default: true },
+      maxAnnouncementLength: { type: Number, default: 5000 },
+      allowAttachments: { type: Boolean, default: true },
+      maxAttachmentSizeMb: { type: Number, default: 5 },
+      autoExpireDays: { type: Number, default: 30 },
+      allowScheduling: { type: Boolean, default: true },
+    },
+    helpdeskConfig: {
+      ticketsEnabled: { type: Boolean, default: true },
+      autoAssign: { type: Boolean, default: false },
+      maxAttachments: { type: Number, default: 5 },
+      slaHoursUrgent: { type: Number, default: 4 },
+      slaHoursHigh: { type: Number, default: 8 },
+      slaHoursNormal: { type: Number, default: 24 },
+      slaHoursLow: { type: Number, default: 72 },
     },
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
   },

@@ -35,7 +35,9 @@ export function LoginPage() {
       const { user, token, refreshToken } = res.data.data;
       login(user, token, refreshToken);
       message.success('Welcome back! Login successful.');
-      navigate('/dashboard');
+      const returnUrl = sessionStorage.getItem('returnUrl');
+      sessionStorage.removeItem('returnUrl');
+      navigate(returnUrl || (user.employeeId ? '/ess' : '/dashboard'));
     } catch {
       message.error('Invalid email or password. Please try again.');
     } finally {

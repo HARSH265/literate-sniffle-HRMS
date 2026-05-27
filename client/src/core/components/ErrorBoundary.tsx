@@ -46,9 +46,11 @@ export class ErrorBoundary extends Component<Props, State> {
                 <Button key="retry" type="primary" icon={<ReloadOutlined />} onClick={this.handleRetry}>
                   Try Again
                 </Button>,
-                <a href="/dashboard" key="home">
-                  <Button icon={<HomeOutlined />}>Go to Dashboard</Button>
-                </a>,
+                <Button key="home" icon={<HomeOutlined />} onClick={() => {
+                  window.location.href = window.location.pathname.startsWith('/ess') ? '/ess' : '/dashboard';
+                }}>
+                  Go to Dashboard
+                </Button>,
               ]}
             />
           </div>

@@ -53,6 +53,7 @@ export function Sidebar({ collapsed }: SidebarProps) {
     else if (path.includes('/leave')) { setOpenKeys(['leave']); }
     else if (path.includes('/attendance') || path.includes('/kiosk')) { setOpenKeys(['attendance']); }
     else if (path.includes('/overtime')) { setOpenKeys(['overtime']); }
+    else if (path.includes('/loans')) { setOpenKeys(['loans']); }
     else if (path.includes('/payroll') || path.includes('/salary-slips')) { setOpenKeys(['payroll']); }
     else { setOpenKeys([]); }
   }, [location.pathname]);
@@ -78,11 +79,15 @@ export function Sidebar({ collapsed }: SidebarProps) {
       return '/leave';
     }
     if (path.includes('/overtime')) {
-    if (path.includes('/overtime-rules')) return '/overtime-rules';
+    if (path.includes('/overtime/rules')) return '/overtime/rules';
     return '/overtime';
   }
     if (path.includes('/payroll') || path.includes('/salary-slips')) return '/payroll';
-    if (path.includes('/loans')) return '/loans';
+    if (path.includes('/loans')) {
+      if (path.includes('/loans/loan-types')) return '/loans/loan-types';
+      if (path.includes('/loans/apply')) return '/loans/apply';
+      return '/loans';
+    }
     if (path.includes('/statutory')) return '/statutory';
     if (path.includes('/reports')) return '/reports';
     if (path.includes('/users')) return '/users';
@@ -91,6 +96,8 @@ export function Sidebar({ collapsed }: SidebarProps) {
       if (state?.section === 'totp') return '/settings/totp';
       return '/settings';
     }
+    if (path.includes('/announcements')) return '/announcements';
+    if (path.includes('/helpdesk')) return '/helpdesk';
     if (path.includes('/rule-book')) return '/rule-book';
     return path;
   };
@@ -147,7 +154,16 @@ export function Sidebar({ collapsed }: SidebarProps) {
           { key: '/leave/balances', icon: <BarChartOutlined />, label: 'Balances' },
         ]
       },
-      { key: '/overtime', icon: <PlayCircleOutlined />, label: 'Overtime', permission: 'manage-overtime' },
+      {
+        key: 'overtime',
+        icon: <PlayCircleOutlined />,
+        label: 'Overtime',
+        permission: 'manage-overtime',
+        children: [
+          { key: '/overtime', icon: <PlayCircleOutlined />, label: 'Entries' },
+          { key: '/overtime/rules', icon: <SettingOutlined />, label: 'Rules' },
+        ]
+      },
       { 
         key: 'payroll', 
         icon: <DollarOutlined />, 
@@ -158,11 +174,23 @@ export function Sidebar({ collapsed }: SidebarProps) {
           { key: '/salary-slips', icon: <FileTextOutlined />, label: 'Salary Slips' },
         ]
       },
-      { key: '/loans', icon: <CreditCardOutlined />, label: 'Loans', permission: 'view-loans' },
+      {
+        key: 'loans',
+        icon: <CreditCardOutlined />,
+        label: 'Loans',
+        permission: 'view-loans',
+        children: [
+          { key: '/loans', icon: <CreditCardOutlined />, label: 'Applications' },
+          { key: '/loans/loan-types', icon: <UnorderedListOutlined />, label: 'Loan Types' },
+          { key: '/loans/apply', icon: <PlusOutlined />, label: 'Apply for Loan' },
+        ]
+      },
       { key: '/statutory', icon: <SafetyCertificateOutlined />, label: 'Statutory', permission: 'view-statutory' },
       { key: '/reports', icon: <BarChartOutlined />, label: 'Reports', permission: 'view-reports' },
       { key: '/users', icon: <UserOutlined />, label: 'Users', permission: 'manage-users' },
       { key: '/audit-logs', icon: <FileDoneOutlined />, label: 'Audit Logs', permission: 'view-audit' },
+      { key: '/announcements', icon: <BellOutlined />, label: 'Announcements', permission: 'view-announcements' },
+      { key: '/helpdesk', icon: <UnorderedListOutlined />, label: 'Help Desk', permission: 'view-tickets' },
       { key: '/notifications', icon: <BellOutlined />, label: 'Notifications', permission: undefined },
       { key: '/rule-book', icon: <BookOutlined />, label: 'User Guide' },
       { key: '/settings', icon: <SettingOutlined />, label: 'Settings', permission: 'manage-settings' },

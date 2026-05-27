@@ -3,9 +3,10 @@ import apiClient from '../../../core/api/apiClient';
 export interface KioskDevice {
   id: string;
   name: string;
+  deviceCode: string;
   address?: string;
-  lat?: number;
-  lng?: number;
+  latitude?: number;
+  longitude?: number;
   lastSeenAt?: string;
   isActive: boolean;
   createdAt: string;
@@ -15,15 +16,15 @@ export interface KioskDevice {
 export interface CreateKioskDevice {
   name: string;
   address?: string;
-  lat?: number;
-  lng?: number;
+  latitude?: number;
+  longitude?: number;
 }
 
 export interface UpdateKioskDevice {
   name?: string;
   address?: string;
-  lat?: number;
-  lng?: number;
+  latitude?: number;
+  longitude?: number;
   isActive?: boolean;
 }
 

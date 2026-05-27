@@ -11,10 +11,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        <ConfigProvider
-          message={{ top: 24, duration: 3, maxCount: 3 }}
-          modal={{ modalRender: (node) => <>{node}</> }}
-        >
+        <ConfigProvider>
           <AntApp>
             <App />
           </AntApp>

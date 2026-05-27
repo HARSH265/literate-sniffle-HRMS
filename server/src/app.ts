@@ -33,6 +33,9 @@ import loanRoutes from './modules/loans/loans.routes.js';
 import statutoryRoutes from './modules/statutory/statutory.routes.js';
 import notificationsRoutes from './modules/notifications/notifications.routes.js';
 import auditRoutes from './modules/audit/audit.routes.js';
+import essRoutes from './modules/ess/ess.routes.js';
+import announcementRoutes from './modules/announcements/announcement.routes.js';
+import helpdeskRoutes from './modules/helpdesk/helpdesk.routes.js';
 
 dotenv.config();
 
@@ -52,7 +55,9 @@ app.use((_req, res, next) => {
 app.use(helmet());
 app.use(
   cors({
-    origin: env.CLIENT_URL,
+    origin: env.NODE_ENV === 'development'
+      ? true
+      : env.allowedOrigins,
     credentials: true,
   }),
 );
@@ -104,26 +109,29 @@ app.get('/api/v1/health', async (_req, res) => {
 
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/users', auditMiddleware, userRoutes);
-app.use('/api/v1/departments', departmentRoutes);
-app.use('/api/v1/designations', designationRoutes);
-app.use('/api/v1/shifts', shiftRoutes);
-app.use('/api/v1/employees', employeeRoutes);
-app.use('/api/v1/holidays', holidayRoutes);
-app.use('/api/v1/weekly-off-rules', weeklyOffRuleRoutes);
-app.use('/api/v1/attendance', attendanceRoutes);
-app.use('/api/v1/attendance/qr', attendanceQRRoutes);
-app.use('/api/v1/kiosk', kioskRoutes);
-app.use('/api/v1/totp', totpRoutes);
-app.use('/api/v1/overtime-rules', overtimeRuleRoutes);
-app.use('/api/v1/overtime-entries', overtimeEntryRoutes);
-app.use('/api/v1/settings', settingsRoutes);
-app.use('/api/v1/leave', leaveRoutes);
-app.use('/api/v1/payroll', payrollRoutes);
-app.use('/api/v1/salary-slips', salarySlipRoutes);
+app.use('/api/v1/departments', auditMiddleware, departmentRoutes);
+app.use('/api/v1/designations', auditMiddleware, designationRoutes);
+app.use('/api/v1/shifts', auditMiddleware, shiftRoutes);
+app.use('/api/v1/employees', auditMiddleware, employeeRoutes);
+app.use('/api/v1/holidays', auditMiddleware, holidayRoutes);
+app.use('/api/v1/weekly-off-rules', auditMiddleware, weeklyOffRuleRoutes);
+app.use('/api/v1/attendance', auditMiddleware, attendanceRoutes);
+app.use('/api/v1/attendance/qr', auditMiddleware, attendanceQRRoutes);
+app.use('/api/v1/kiosk', auditMiddleware, kioskRoutes);
+app.use('/api/v1/totp', auditMiddleware, totpRoutes);
+app.use('/api/v1/overtime-rules', auditMiddleware, overtimeRuleRoutes);
+app.use('/api/v1/overtime-entries', auditMiddleware, overtimeEntryRoutes);
+app.use('/api/v1/settings', auditMiddleware, settingsRoutes);
+app.use('/api/v1/leave', auditMiddleware, leaveRoutes);
+app.use('/api/v1/payroll', auditMiddleware, payrollRoutes);
+app.use('/api/v1/salary-slips', auditMiddleware, salarySlipRoutes);
 app.use('/api/v1/reports', auditMiddleware, reportsRoutes);
 app.use('/api/v1/loans', auditMiddleware, loanRoutes);
 app.use('/api/v1/statutory', auditMiddleware, statutoryRoutes);
-app.use('/api/v1/notifications', notificationsRoutes);
+app.use('/api/v1/notifications', auditMiddleware, notificationsRoutes);
+app.use('/api/v1/ess', auditMiddleware, essRoutes);
+app.use('/api/v1/announcements', auditMiddleware, announcementRoutes);
+app.use('/api/v1/helpdesk', auditMiddleware, helpdeskRoutes);
 app.use('/api/v1/audit-logs', auditRoutes);
 
 app.use(errorHandler);

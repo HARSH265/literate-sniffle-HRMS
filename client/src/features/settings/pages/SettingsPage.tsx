@@ -1,24 +1,29 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
-import { PageHeader } from '../../../core/components/PageHeader';
-import { Form, Card, Row, Col, message, Modal, Input, InputNumber, Switch, Select, DatePicker, Button, Alert, Typography } from 'antd';
 import {
-  UserOutlined, BankOutlined, MailOutlined, DollarOutlined, CalendarOutlined,
-  GiftOutlined, ClockCircleOutlined, CodeOutlined, BarChartOutlined,
-  SafetyCertificateOutlined,
+  Card, Button, Form, Input, InputNumber, Select, Switch,
+  message, Tabs, Typography, Divider, Alert, Spin, Modal,
+  Row, Col, DatePicker,
+} from 'antd';
+import {
+  SafetyCertificateOutlined, UserOutlined, ClockCircleOutlined,
+  BankOutlined, MailOutlined, DollarOutlined, CalendarOutlined,
+  GiftOutlined, CodeOutlined, BarChartOutlined, BellOutlined,
 } from '@ant-design/icons';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { settingsService, CompanySettings } from '../services/settingsService';
+import { employeeService } from '../../employees/services/employeeService';
+import { totpService } from '../../attendance-qr/services/attendanceQRService';
 import { overtimeRuleService } from '../../overtime-rules/services/overtimeRuleService';
 import { weeklyOffRuleService } from '../../weekly-off-rules/services/weeklyOffRuleService';
 import { holidayService } from '../../holidays/services/holidayService';
-import { totpService } from '../../attendance-qr/services/attendanceQRService';
-import { employeeService } from '../../employees/services/employeeService';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { PageHeader } from '../../../core/components/PageHeader';
+import QRCode from 'qrcode-generator';
 import {
   ProfileSection, CompanySection, AuthSection, EmailSection, PayrollSection,
   AttendanceSection, AllowancesSection, OvertimeSection, WeeklyOffSection,
   HolidaysSection, CodeConfigSection, LeaveSection, ReportsSection,
-  LoanConfigSection, StatutoryConfigSection,
+  LoanConfigSection, StatutoryConfigSection, EssSection, AnnouncementSection,
 } from '../sections';
 
 const { Text, Paragraph } = Typography;
@@ -39,6 +44,8 @@ const SETTINGS_MENU = [
   { key: 'reports', label: 'Reports', icon: <BarChartOutlined /> },
   { key: 'loans', label: 'Loans', icon: <DollarOutlined /> },
   { key: 'statutory', label: 'Statutory', icon: <SafetyCertificateOutlined /> },
+  { key: 'ess', label: 'Employee Self-Service', icon: <UserOutlined /> },
+  { key: 'announcements', label: 'Announcements', icon: <BellOutlined /> },
   { key: 'totp', label: 'TOTP Enrollment', icon: <SafetyCertificateOutlined /> },
 ];
 
@@ -54,6 +61,32 @@ export function SettingsPage() {
   const [totpQrUrl, setTotpQrUrl] = useState<string>('');
   const [totpSecret, setTotpSecret] = useState<string>('');
   const [totpLoading, setTotpLoading] = useState(false);
+  const totpCanvasRef = useRef<HTMLCanvasElement>(null);
+
+  const drawTotpQR = useCallback(() => {
+    if (!totpCanvasRef.current || !totpQrUrl) return;
+    const qr = QRCode(0, 'M');
+    qr.addData(totpQrUrl);
+    qr.make();
+    const ctx = totpCanvasRef.current.getContext('2d');
+    if (!ctx) return;
+    const cellSize = 6;
+    const margin = 4;
+    const size = qr.getModuleCount();
+    const canvasSize = (size + margin * 2) * cellSize;
+    totpCanvasRef.current.width = canvasSize;
+    totpCanvasRef.current.height = canvasSize;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvasSize, canvasSize);
+    ctx.fillStyle = '#1a1a2e';
+    for (let row = 0; row < size; row++) {
+      for (let col = 0; col < size; col++) {
+        if (qr.isDark(row, col)) {
+          ctx.fillRect((col + margin) * cellSize, (row + margin) * cellSize, cellSize, cellSize);
+        }
+      }
+    }
+  }, [totpQrUrl]);
   const [otForm] = Form.useForm();
   const [woForm] = Form.useForm();
   const [holidayForm] = Form.useForm();
@@ -130,13 +163,17 @@ export function SettingsPage() {
     enabled: true,
   });
 
+  useEffect(() => {
+    if (totpQrUrl) setTimeout(drawTotpQR, 100);
+  }, [totpQrUrl, drawTotpQR]);
+
   const handleTotpEnroll = async () => {
     if (!totpEmployee) { message.warning('Select an employee'); return; }
     setTotpLoading(true);
     try {
       const res = await totpService.enroll(totpEmployee);
       setTotpQrUrl(res.data.qrUrl);
-      setTotpSecret(res.data.qrUrl);
+      setTotpSecret(res.data.secret);
       message.success('TOTP enrolled successfully');
     } catch (err: any) {
       message.error(err?.response?.data?.message || 'Failed to enroll TOTP');
@@ -184,9 +221,13 @@ export function SettingsPage() {
       case 'leave':
         return <LeaveSection form={companyForm} onSave={handleSaveCompany} />;
       case 'reports':
-        return <ReportsSection form={companyForm} onSave={handleSaveCompany} />;
+        return <ReportsSection form={companyForm} />;
       case 'loans':
         return <LoanConfigSection form={companyForm} onSave={handleSaveCompany} />;
+      case 'ess':
+        return <EssSection form={companyForm} onSave={handleSaveCompany} />;
+      case 'announcements':
+        return <AnnouncementSection form={companyForm} onSave={handleSaveCompany} />;
       case 'statutory':
         return <StatutoryConfigSection form={companyForm} onSave={handleSaveCompany} />;
       case 'totp':
@@ -233,10 +274,17 @@ export function SettingsPage() {
                         (Google Authenticator, Microsoft Authenticator, or Authy).
                       </Paragraph>
                       <div style={{ textAlign: 'center', margin: '16px 0' }}>
-                        <img src={totpQrUrl} alt="TOTP QR Code" style={{ width: 200, height: 200 }} />
+                        <canvas ref={totpCanvasRef} style={{ display: 'inline-block', borderRadius: 8 }} />
                       </div>
+                      <Paragraph copyable={{ text: totpQrUrl }}>
+                        <Text type="secondary" style={{ fontSize: 12, wordBreak: 'break-all' }}>
+                          OTPAuth URI: {totpQrUrl}
+                        </Text>
+                      </Paragraph>
                       <Paragraph copyable={{ text: totpSecret }}>
-                        <Text type="secondary">OTPAuth URI: {totpSecret}</Text>
+                        <Text type="secondary" style={{ fontSize: 12 }}>
+                          Secret: {totpSecret}
+                        </Text>
                       </Paragraph>
                     </div>
                   }

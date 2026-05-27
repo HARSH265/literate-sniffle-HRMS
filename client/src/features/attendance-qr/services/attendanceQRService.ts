@@ -34,6 +34,7 @@ export const attendanceQRService = {
 
 export const totpService = {
   async enroll(employeeId: string): Promise<{ success: boolean; data: { qrUrl: string; secret: string } }> {
+    // qrUrl is an otpauth:// URI; render it as QR code using qrcode-generator
     const { data } = await apiClient.post('/totp/enroll', { employeeId });
     return data;
   },

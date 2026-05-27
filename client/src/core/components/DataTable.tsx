@@ -141,9 +141,14 @@ export function DataTable<T extends object>({
       rowKey={rowKey ?? ('id' as string)}
       loading={loading}
       scroll={scroll ?? { x: 'max-content' }}
+      style={{ fontSize: 14 }}
       pagination={paginationConfig}
       onRow={(record) => ({
-        onClick: () => handleRowClick(record),
+        onClick: (event: React.MouseEvent) => {
+          const target = event.target as HTMLElement;
+          if (target.closest('.ant-btn, button, a, input, .ant-select, .ant-switch, .ant-checkbox, .ant-radio, .ant-tag')) return;
+          handleRowClick(record);
+        },
         style: { cursor: disableRowClick ? 'default' : 'pointer' },
       })}
       size="small"

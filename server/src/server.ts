@@ -3,6 +3,7 @@ import { connectDatabase } from './config/db.js';
 import { env } from './config/env.js';
 import { logger } from './core/logger/logger.js';
 import { initSocket } from './core/socket/socket.js';
+import { announcementService } from './modules/announcements/announcement.service.js';
 
 async function startServer() {
   await connectDatabase();
@@ -13,6 +14,15 @@ async function startServer() {
 
   initSocket(server);
   logger.info('Socket.io initialized');
+
+  setInterval(async () => {
+    try {
+      const count = await announcementService.processScheduled();
+      if (count > 0) logger.info(`Processed ${count} scheduled announcements`);
+    } catch (err) {
+      logger.error('Failed to process scheduled announcements:', err);
+    }
+  }, 60_000);
 
   const shutdown = (signal: string) => {
     logger.info(`${signal} received, shutting down gracefully`);

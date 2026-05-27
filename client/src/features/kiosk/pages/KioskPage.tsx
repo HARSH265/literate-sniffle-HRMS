@@ -1,18 +1,10 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import QRCode from 'qrcode-generator';
+import { connectKiosk, disconnectKiosk } from '../../../core/socket/socketClient';
+import { message } from 'antd';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-
-async function fetchQR(kioskId: string): Promise<string | null> {
-  try {
-    const res = await fetch(`${API_URL}/api/v1/kiosk/${kioskId}/qr/public`);
-    if (!res.ok) return null;
-    const body = await res.json();
-    return body?.data?.qrToken ?? null;
-  } catch {
-    return null;
-  }
-}
+const API_URL = import.meta.env.VITE_API_URL || '';
+const POLL_INTERVAL = 30_000;
 
 function drawQR(canvas: HTMLCanvasElement, qrData: string) {
   const qr = QRCode(0, 'M');
@@ -41,28 +33,78 @@ function drawQR(canvas: HTMLCanvasElement, qrData: string) {
   }
 }
 
+async function fetchQR(kioskId: string): Promise<string | null> {
+  try {
+    const res = await fetch(`${API_URL}/api/v1/kiosk/${kioskId}/qr/public`);
+    if (!res.ok) return null;
+    const body = await res.json();
+    return body?.data?.qrToken ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export function KioskPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [time, setTime] = useState(new Date());
   const [kioskId] = useState(() => new URLSearchParams(window.location.search).get('kioskId') || 'main-gate');
   const [connected, setConnected] = useState(false);
+  const [usingSocket, setUsingSocket] = useState(false);
+  const [rawToken, setRawToken] = useState('');
+  const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
+  const updateQR = useCallback((qrData: string) => {
+    setConnected(true);
+    setRawToken(qrData);
+    if (canvasRef.current) {
+      drawQR(canvasRef.current, qrData);
+    }
+  }, []);
+
+  const startPolling = useCallback(() => {
+    setUsingSocket(false);
+    if (pollTimerRef.current) clearInterval(pollTimerRef.current);
 
     const poll = async () => {
       const qrData = await fetchQR(kioskId);
-      if (cancelled) return;
-      setConnected(qrData !== null);
-      if (qrData && canvasRef.current) {
-        drawQR(canvasRef.current, qrData);
+      if (qrData) {
+        updateQR(qrData);
+      } else {
+        setConnected(false);
       }
     };
 
     poll();
-    const interval = setInterval(poll, 15_000);
-    return () => { cancelled = true; clearInterval(interval); };
-  }, [kioskId]);
+    pollTimerRef.current = setInterval(poll, POLL_INTERVAL);
+  }, [kioskId, updateQR]);
+
+  useEffect(() => {
+    const socket = connectKiosk(kioskId);
+
+    socket.on('qr-update', ({ qrData }: { qrData: string }) => {
+      setUsingSocket(true);
+      updateQR(qrData);
+    });
+
+    socket.on('connect', () => {
+      if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+    });
+
+    socket.on('disconnect', () => {
+      startPolling();
+    });
+
+    setTimeout(() => {
+      if (!usingSocket) {
+        startPolling();
+      }
+    }, 5000);
+
+    return () => {
+      disconnectKiosk();
+      if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+    };
+  }, [kioskId, startPolling, updateQR, usingSocket]);
 
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000);
@@ -91,15 +133,55 @@ export function KioskPage() {
         <canvas ref={canvasRef} style={{ display: 'block' }} />
       </div>
 
+      {rawToken && (
+        <div style={{ marginBottom: 24, maxWidth: 400, width: '100%' }}>
+          <div style={{ fontSize: 11, color: '#556677', marginBottom: 4 }}>
+            Raw Token (copy for manual entry):
+            <span
+              onClick={() => {
+                navigator.clipboard.writeText(rawToken);
+                message.success('Token copied');
+              }}
+              style={{ marginLeft: 8, cursor: 'pointer', color: '#1890ff', textDecoration: 'underline' }}
+            >
+              Copy
+            </span>
+          </div>
+          <div style={{
+            fontSize: 10, color: '#8899aa', wordBreak: 'break-all',
+            background: 'rgba(255,255,255,0.05)', padding: '8px 12px',
+            borderRadius: 8, fontFamily: 'monospace', maxHeight: 60, overflowY: 'auto',
+          }}>
+            {rawToken}
+          </div>
+        </div>
+      )}
+
       <div style={{ fontSize: 20, fontWeight: 600, marginBottom: 8 }}>Scan to Check In / Out</div>
       <div style={{ fontSize: 14, color: '#8899aa', textAlign: 'center', maxWidth: 400, lineHeight: 1.6 }}>
-        1. Open your Orian app on your phone<br />
-        2. Scan this QR code<br />
-        3. Enter your TOTP code from authenticator app
+        {rawToken ? (
+          <>
+            1. Click <strong>Copy</strong> above to copy the token<br />
+            2. Open the scan page in another tab<br />
+            3. Paste the token and enter your TOTP code
+          </>
+        ) : (
+          <>
+            1. Open your Orian app on your phone<br />
+            2. Scan this QR code<br />
+            3. Enter your TOTP code from authenticator app
+          </>
+        )}
       </div>
 
       <div style={{ position: 'absolute', bottom: 24, fontSize: 12, color: '#556677' }}>
-        Orian HRMS — Kiosk: {kioskId} {connected ? '🟢 Connected' : '🔴 Disconnected'}
+        Orian HRMS — Kiosk: {kioskId}
+        <span style={{ marginLeft: 8 }}>
+          {connected ? '🟢 Connected' : '🔴 Disconnected'}
+        </span>
+        <span style={{ marginLeft: 8, opacity: 0.5 }}>
+          {usingSocket ? '(realtime)' : '(polling)'}
+        </span>
       </div>
     </div>
   );

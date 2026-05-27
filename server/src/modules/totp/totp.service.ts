@@ -39,7 +39,7 @@ export class TOTPService {
       details: { employeeCode: employee.employeeCode },
     });
 
-    return { qrUrl };
+    return { qrUrl, secret };
   }
 
   static async verifyEmployeeCode(employeeId: string, token: string): Promise<boolean> {

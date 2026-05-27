@@ -7,6 +7,8 @@ export const env = {
   PORT: parseInt(process.env.PORT || '5000', 10),
   CLIENT_URL: process.env.CLIENT_URL || 'http://localhost:5173',
 
+  allowedOrigins: (process.env.CLIENT_URL || 'http://localhost:5173').split(',').map(s => s.trim()),
+
   MONGODB_URI: process.env.MONGODB_URI || '',
 
   JWT_SECRET: process.env.JWT_SECRET || 'default-secret-change-me',

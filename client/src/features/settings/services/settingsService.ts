@@ -84,6 +84,15 @@ export interface CompanySettings {
     maxRepaymentPeriodMonths: number;
     deductionPriority: 'before-tax' | 'after-tax';
   };
+  employeeSelfService?: {
+    essEnabled: boolean;
+    allowAddressUpdate: boolean;
+    allowBankUpdate: boolean;
+    allowEmergencyContactUpdate: boolean;
+    allowPhoneUpdate: boolean;
+    changeRequiresApproval: boolean;
+    maxChangesPerMonth: number;
+  };
 }
 
 export const settingsService = {

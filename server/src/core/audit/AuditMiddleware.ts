@@ -86,5 +86,8 @@ function getModuleFromPath(path: string): string | null {
   if (path.includes('/audit-logs')) return 'audit';
   if (path.includes('/weekly-off-rules') || path.includes('/weeklyoff')) return 'weekly-off';
   if (path.includes('/overtime-rules')) return 'overtime-rules';
+  if (path.includes('/ess')) return 'ess';
+  if (path.includes('/announcements')) return 'announcements';
+  if (path.includes('/helpdesk') || path.includes('/tickets')) return 'helpdesk';
   return null;
 }

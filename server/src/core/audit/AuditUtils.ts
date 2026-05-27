@@ -80,7 +80,12 @@ export function getModuleLabel(module: string): string {
     holidays: 'Holiday Management',
     notifications: 'Notifications',
     overtime: 'Overtime',
+    'overtime-rules': 'Overtime Rules',
+    'weekly-off': 'Weekly Off Rules',
     audit: 'Audit Logs',
+    ess: 'Employee Self-Service',
+    announcements: 'Announcements',
+    helpdesk: 'Help Desk',
   };
   return labels[module] || module;
 }

@@ -7,7 +7,10 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "lint": "eslint src --ext .ts",
-    "seed": "tsx src/seeds/index.ts"
+    "seed": "tsx src/seeds/index.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "bcrypt": "^5.1.1",
@@ -49,11 +52,15 @@
     "@types/node": "^20.12.12",
     "@types/nodemailer": "^6.4.23",
     "@types/pdfkit": "^0.17.6",
+    "@types/supertest": "^6.0.3",
     "@typescript-eslint/eslint-plugin": "^8.0.0",
     "@typescript-eslint/parser": "^8.0.0",
     "eslint": "^9.0.0",
+    "mongodb-memory-server": "^10.4.3",
     "prettier": "^3.3.2",
+    "supertest": "^7.2.2",
     "tsx": "^4.11.2",
-    "typescript": "^5.4.5"
+    "typescript": "^5.4.5",
+    "vitest": "^3.2.4"
   }
 }

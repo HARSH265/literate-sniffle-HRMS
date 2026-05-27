@@ -91,6 +91,7 @@ export class AuthService {
         name: user.name,
         email: user.email,
         role: user.role,
+        employeeId: user.employeeId?.toString() || null,
       },
       token,
       refreshToken,

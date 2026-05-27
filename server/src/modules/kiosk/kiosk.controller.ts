@@ -35,4 +35,16 @@ const startBroadcast = asyncHandler(async (req: Request, res: Response) => {
   ResponseHandler.success(res, null, 'QR broadcast started');
 });
 
-export const kioskController = { register, list, qr, validate, startBroadcast };
+const update = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const result = await KioskService.updateDevice(id, req.body, req.user!.id);
+  ResponseHandler.success(res, result, 'Kiosk device updated');
+});
+
+const remove = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  await KioskService.deleteDevice(id, req.user!.id);
+  ResponseHandler.noContent(res);
+});
+
+export const kioskController = { register, list, qr, validate, startBroadcast, update, remove };

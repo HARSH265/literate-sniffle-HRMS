@@ -24,7 +24,14 @@ export type Permission =
   | 'apply-loan'
   | 'manage-statutory'
   | 'view-statutory'
-  | 'manage-audit';
+  | 'manage-audit'
+  | 'view-own-profile'
+  | 'update-own-profile'
+  | 'manage-ess'
+  | 'view-announcements'
+  | 'manage-announcements'
+  | 'view-tickets'
+  | 'manage-tickets';
 
 export function authorize(...allowedPermissions: Permission[]) {
   return (_req: Request, _res: Response, next: NextFunction): void => {

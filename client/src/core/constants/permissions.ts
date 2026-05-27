@@ -25,6 +25,9 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     'manage-users', 'view-reports', 'view-audit', 'manage-leave-types',
     'manage-leave-applications', 'approve-leave', 'view-leave', 'manage-loans',
     'view-loans', 'apply-loan', 'manage-statutory', 'view-statutory', 'manage-audit',
+    'view-own-profile', 'update-own-profile', 'manage-ess',
+    'view-announcements', 'manage-announcements',
+    'view-tickets', 'manage-tickets',
   ],
   'hr-admin': [
     'manage-employees', 'view-employees', 'manage-departments', 'view-departments',
@@ -32,17 +35,26 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     'manage-users', 'view-reports', 'view-audit', 'manage-leave-types',
     'manage-leave-applications', 'approve-leave', 'view-leave', 'manage-loans',
     'view-loans', 'apply-loan', 'manage-statutory', 'view-statutory',
+    'view-own-profile', 'update-own-profile', 'manage-ess',
+    'view-announcements', 'manage-announcements',
+    'view-tickets', 'manage-tickets',
   ],
   'hr-staff': [
     'view-employees', 'view-departments', 'manage-attendance', 'manage-overtime',
     'view-reports', 'manage-leave-applications', 'approve-leave', 'view-leave',
     'view-loans', 'apply-loan', 'view-statutory',
+    'view-own-profile', 'update-own-profile',
   ],
   'accounts': [
     'view-departments', 'process-payroll', 'view-reports', 'view-leave',
     'view-loans', 'manage-loans', 'manage-statutory', 'view-statutory',
+    'view-own-profile',
+    'view-announcements',
+    'view-tickets',
   ],
   'manager': [
     'view-employees', 'view-departments', 'view-reports', 'approve-leave', 'view-leave',
+    'view-own-profile',
+    'view-announcements',
   ],
 };
