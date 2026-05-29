@@ -21,6 +21,7 @@ router.get('/attendance', authorize('view-own-profile'), essController.getMyAtte
 router.get('/leave/balances', authorize('view-own-profile'), essController.getMyLeaveBalances);
 router.get('/leave/applications', authorize('view-own-profile'), essController.getMyLeaveApplications);
 router.get('/documents', authorize('view-own-profile'), essController.getMyDocuments);
+router.get('/assets', authorize('view-own-profile'), essController.getMyAssets);
 router.get('/payslips', authorize('view-own-profile'), essController.getMyPayslips);
 router.get('/change-requests', authorize('view-own-profile'), essController.getChangeRequests);
 router.get('/change-requests/all', authorize('manage-employees'), essController.getAllChangeRequests);

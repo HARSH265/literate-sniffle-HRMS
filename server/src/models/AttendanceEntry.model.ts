@@ -33,7 +33,7 @@ export interface IAttendanceEntry extends Document {
   };
 }
 
-interface AttendanceEntryModel extends Model<IAttendanceEntry> {}
+type AttendanceEntryModel = Model<IAttendanceEntry>;
 
 const AttendanceEntrySchema = new Schema<IAttendanceEntry>(
   {

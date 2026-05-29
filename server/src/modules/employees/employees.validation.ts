@@ -60,3 +60,8 @@ export const listEmployeesSchema = z.object({
   category: z.string().optional(),
   department: z.string().optional(),
 }).default({});
+
+export const bulkAssignShiftSchema = z.object({
+  employeeIds: z.array(z.string().refine((val) => mongoose.Types.ObjectId.isValid(val), { message: 'Invalid employee ID' })).min(1, 'At least one employee is required'),
+  shiftId: z.string().refine((val) => mongoose.Types.ObjectId.isValid(val), { message: 'Invalid shift ID' }),
+});

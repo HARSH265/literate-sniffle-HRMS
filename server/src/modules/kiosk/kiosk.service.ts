@@ -168,6 +168,7 @@ export class KioskService {
 
   static async startQRBroadcast(kioskId: string): Promise<void> {
     const device = await KioskService.findByKioskId(kioskId);
+    void device;
     const settings = await CompanySettings.findOne().lean();
     const config = (settings?.attendanceConfig as any) || {};
     const refreshInterval = (config.qrRefreshIntervalSeconds || 15) * 1000;

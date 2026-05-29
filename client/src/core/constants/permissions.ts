@@ -8,6 +8,9 @@ export const PERMISSIONS = {
   MANAGE_USERS: 'manage-users',
   VIEW_REPORTS: 'view-reports',
   VIEW_AUDIT: 'view-audit',
+  VIEW_SHIFT_SWAPS: 'view-shift-swaps',
+  MANAGE_SHIFT_SWAPS: 'manage-shift-swaps',
+  REQUEST_SHIFT_SWAP: 'request-shift-swap',
 } as const;
 
 export const ROLES = {
@@ -28,6 +31,9 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     'view-own-profile', 'update-own-profile', 'manage-ess',
     'view-announcements', 'manage-announcements',
     'view-tickets', 'manage-tickets',
+    'view-shift-swaps', 'manage-shift-swaps', 'request-shift-swap', 'view-own-shifts',
+    'view-assets', 'manage-assets',
+    'view-documents', 'manage-documents',
   ],
   'hr-admin': [
     'manage-employees', 'view-employees', 'manage-departments', 'view-departments',
@@ -38,23 +44,36 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     'view-own-profile', 'update-own-profile', 'manage-ess',
     'view-announcements', 'manage-announcements',
     'view-tickets', 'manage-tickets',
+    'view-shift-swaps', 'manage-shift-swaps', 'request-shift-swap', 'view-own-shifts',
+    'view-assets', 'manage-assets',
+    'view-documents', 'manage-documents',
   ],
   'hr-staff': [
     'view-employees', 'view-departments', 'manage-attendance', 'manage-overtime',
     'view-reports', 'manage-leave-applications', 'approve-leave', 'view-leave',
     'view-loans', 'apply-loan', 'view-statutory',
     'view-own-profile', 'update-own-profile',
+    'view-own-shifts',
+    'request-shift-swap',
+    'view-assets',
+    'view-documents',
   ],
   'accounts': [
     'view-departments', 'process-payroll', 'view-reports', 'view-leave',
     'view-loans', 'manage-loans', 'manage-statutory', 'view-statutory',
     'view-own-profile',
     'view-announcements',
-    'view-tickets',
+    'view-own-shifts',
+    'request-shift-swap',
+    'view-documents',
   ],
   'manager': [
     'view-employees', 'view-departments', 'view-reports', 'approve-leave', 'view-leave',
     'view-own-profile',
     'view-announcements',
+    'view-own-shifts',
+    'request-shift-swap',
+    'view-assets',
+    'view-documents',
   ],
 };

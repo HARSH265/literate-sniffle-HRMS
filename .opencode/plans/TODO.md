@@ -107,14 +107,14 @@
 ## Phase 2: Operational Management
 
 ### 2.1 Asset Management
-- [ ] Server: Model, Service, Controller, Routes, Validation, Config, Tests
-- [ ] Client: Module, Pages, Components, Routes, Tests
-- [ ] Verify: Lifecycle, History, Settings toggle
+- [x] ✅ Server: Model, Service, Controller, Routes, Validation, Config
+- [x] ✅ Client: Module, Pages, Components, Routes
+- [x] ✅ Verify: Lifecycle, History, Settings toggle, Tests (25/25 passing)
 
 ### 2.2 Document Repository
-- [ ] Server: Model, Service, Controller, Routes, Validation, Config, Tests
-- [ ] Client: Module, Pages, Components, Routes, Tests
-- [ ] Verify: Upload, Versions, Expiry, Access control, Settings toggle
+- [x] ✅ Server: Model, Service, Controller, Routes, Validation, Config
+- [x] ✅ Client: Module, Pages, Components, Routes
+- [x] ✅ Verify: Upload, Versions, Expiry, Access control, Settings toggle, Tests (17/17 passing)
 
 ### 2.3 Shift Swap / Preferences
 - [ ] Server: Model, Service, Controller, Routes, Validation, Config, Tests

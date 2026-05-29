@@ -21,6 +21,7 @@ describe('attendance validation schemas', () => {
 
     it('rejects missing employee', () => {
       const { employee, ...rest } = validPayload;
+      void employee;
       const result = createAttendanceEntrySchema.safeParse(rest);
       expect(result.success).toBe(false);
     });

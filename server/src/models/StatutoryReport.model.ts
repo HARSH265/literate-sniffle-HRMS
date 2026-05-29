@@ -15,7 +15,7 @@ export interface IStatutoryReport extends Document {
   acknowledgementNo?: string;
 }
 
-interface StatutoryReportModel extends Model<IStatutoryReport> {}
+type StatutoryReportModel = Model<IStatutoryReport>;
 
 const StatutoryReportSchema = new Schema<IStatutoryReport>(
   {

@@ -11,7 +11,7 @@ export interface IHoliday extends Document {
   updatedBy?: mongoose.Types.ObjectId;
 }
 
-interface HolidayModel extends Model<IHoliday> {}
+type HolidayModel = Model<IHoliday>;
 
 const HolidaySchema = new Schema<IHoliday>(
   {

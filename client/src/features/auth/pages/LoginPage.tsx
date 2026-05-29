@@ -6,6 +6,7 @@ import {
   BarChartOutlined, FieldTimeOutlined,
 } from '@ant-design/icons';
 import { useAuthStore } from '../../../core/stores/authStore';
+import { ROLES } from '../../../core/constants/permissions';
 import apiClient from '../../../core/api/apiClient';
 
 function getPasswordStrength(password: string): { score: number; label: string; color: string } {
@@ -37,7 +38,8 @@ export function LoginPage() {
       message.success('Welcome back! Login successful.');
       const returnUrl = sessionStorage.getItem('returnUrl');
       sessionStorage.removeItem('returnUrl');
-      navigate(returnUrl || (user.employeeId ? '/ess' : '/dashboard'));
+      const isBackOfficeRole = user.role && Object.values(ROLES).includes(user.role);
+      navigate(returnUrl || (user.employeeId && !isBackOfficeRole ? '/ess' : '/dashboard'));
     } catch {
       message.error('Invalid email or password. Please try again.');
     } finally {

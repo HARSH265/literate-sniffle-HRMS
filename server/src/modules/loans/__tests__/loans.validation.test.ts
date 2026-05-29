@@ -18,6 +18,7 @@ describe('loans validation schemas', () => {
 
     it('rejects missing name', () => {
       const { name, ...rest } = valid;
+      void name;
       const result = createLoanTypeSchema.safeParse(rest);
       expect(result.success).toBe(false);
     });

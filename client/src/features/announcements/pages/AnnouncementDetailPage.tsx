@@ -2,10 +2,10 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Card, Spin, Descriptions, Tag, Typography, Button, Space, Divider } from 'antd';
 import { ArrowLeftOutlined, BellOutlined } from '@ant-design/icons';
 import { PageHeader } from '../../../core/components/PageHeader';
-import { useAnnouncement, useMarkAsRead } from '../hooks/useAnnouncements';
+import { useAnnouncement } from '../hooks/useAnnouncements';
 import dayjs from 'dayjs';
 
-const { Paragraph, Title } = Typography;
+const { Title } = Typography;
 
 const priorityColors: Record<string, string> = {
   low: 'default',
@@ -18,7 +18,6 @@ export function AnnouncementDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { data, isLoading } = useAnnouncement(id!);
-  const markAsRead = useMarkAsRead();
 
   const announcement = data?.data;
 

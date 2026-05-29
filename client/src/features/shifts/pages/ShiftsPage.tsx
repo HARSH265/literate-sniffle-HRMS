@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { Button, Input, message, Modal, Form, Select, InputNumber, Tooltip, Tag, Popconfirm } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, SwapOutlined } from '@ant-design/icons';
 import { PageHeader } from '../../../core/components/PageHeader';
 import { DataTable } from '../../../core/components/DataTable';
 import { shiftService, Shift } from '../services/shiftService';
+import { employeeService } from '../../employees/services/employeeService';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 const APPLICABLE_OPTIONS = [
@@ -15,17 +16,32 @@ const APPLICABLE_OPTIONS = [
 
 export function ShiftsPage() {
   const [form] = Form.useForm();
+  const [bulkForm] = Form.useForm();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [bulkModalOpen, setBulkModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(20);
   const [search, setSearch] = useState('');
+  const [empSearch] = useState('');
   const queryClient = useQueryClient();
 
-const { data, isLoading, isFetching } = useQuery({
+  const { data, isLoading, isFetching } = useQuery({
     queryKey: ['shifts', page, limit, search],
     queryFn: () => shiftService.list({ page, limit, search }),
     staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: employees } = useQuery({
+    queryKey: ['employees', 'list', empSearch],
+    queryFn: () => employeeService.list({ limit: 500, search: empSearch, status: 'active' }),
+    enabled: bulkModalOpen,
+  });
+
+  const { data: shiftList } = useQuery({
+    queryKey: ['shifts', 'all'],
+    queryFn: () => shiftService.list({ limit: 100 }),
+    enabled: bulkModalOpen,
   });
 
   const createMutation = useMutation({
@@ -46,7 +62,11 @@ const { data, isLoading, isFetching } = useQuery({
     onError: (err: any) => message.error(err?.response?.data?.message || 'Failed to delete'),
   });
 
-  
+  const bulkMutation = useMutation({
+    mutationFn: ({ employeeIds, shiftId }: { employeeIds: string[]; shiftId: string }) => shiftService.bulkAssignShift(employeeIds, shiftId),
+    onSuccess: (res) => { message.success(res.message); setBulkModalOpen(false); bulkForm.resetFields(); },
+    onError: (err: any) => message.error(err?.response?.data?.message || 'Failed to assign shift'),
+  });
 
   const columns: ColumnsType<Shift> = [
     { title: 'Shift Name', dataIndex: 'name', key: 'name', render: (n: string) => <span style={{ fontWeight: 600, fontSize: 14 }}>{n}</span> },
@@ -82,7 +102,12 @@ const { data, isLoading, isFetching } = useQuery({
 
   return (
     <div style={{ padding: '0 4px' }}>
-      <PageHeader title="Shifts" subtitle="Configure work schedules and timing" actions={<Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditingId(null); form.resetFields(); setIsModalOpen(true); }}>Add Shift</Button>} />
+      <PageHeader title="Shifts" subtitle="Configure work schedules and timing" actions={
+        <div style={{ display: 'flex', gap: 8 }}>
+          <Button icon={<SwapOutlined />} onClick={() => { setBulkModalOpen(true); }}>Bulk Assign</Button>
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditingId(null); form.resetFields(); setIsModalOpen(true); }}>Add Shift</Button>
+        </div>
+      } />
 
       <DataTable
         columns={columns}
@@ -123,6 +148,36 @@ const { data, isLoading, isFetching } = useQuery({
           </div>
           <Form.Item name="applicableTo" label="Applicable To" rules={[{ required: true }]}>
             <Select options={APPLICABLE_OPTIONS} style={{ height: 40 }} />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal title="Bulk Assign Shift" open={bulkModalOpen}
+        onOk={() => bulkForm.validateFields().then(v => bulkMutation.mutate(v))}
+        onCancel={() => { setBulkModalOpen(false); bulkForm.resetFields(); }}
+        confirmLoading={bulkMutation.isPending}
+        okText="Assign" okButtonProps={{ style: { borderRadius: 8 } }} cancelButtonProps={{ style: { borderRadius: 8 } }}
+        width={600}
+      >
+        <Form form={bulkForm} layout="vertical" style={{ paddingTop: 8 }}>
+          <Form.Item name="shiftId" label="Select Shift" rules={[{ required: true, message: 'Select a shift' }]}>
+            <Select
+              showSearch
+              placeholder="Search and select a shift"
+              style={{ height: 40 }}
+              filterOption={(input, option) => (option?.label as string || '').toLowerCase().includes(input.toLowerCase())}
+              options={(shiftList?.data || []).map((s: Shift) => ({ label: `${s.name} (${s.startTime}-${s.endTime})`, value: s.id }))}
+            />
+          </Form.Item>
+          <Form.Item name="employeeIds" label="Select Employees" rules={[{ required: true, message: 'Select at least one employee' }]}>
+            <Select
+              mode="multiple"
+              showSearch
+              placeholder="Search and select employees"
+              style={{ height: 40 }}
+              filterOption={(input, option) => (option?.label as string || '').toLowerCase().includes(input.toLowerCase())}
+              options={(employees?.data || []).map((e: any) => ({ label: `${e.fullName} (${e.employeeCode})`, value: e.id }))}
+            />
           </Form.Item>
         </Form>
       </Modal>

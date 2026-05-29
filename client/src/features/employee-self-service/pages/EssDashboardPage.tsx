@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { Row, Col, Card, Statistic, Spin, Alert } from 'antd';
-import { UserOutlined, CalendarOutlined, FileTextOutlined, CheckCircleOutlined, QrcodeOutlined, InfoCircleOutlined, AppstoreOutlined } from '@ant-design/icons';
+import { UserOutlined, FileTextOutlined, CheckCircleOutlined, QrcodeOutlined, InfoCircleOutlined, AppstoreOutlined, SwapOutlined, LaptopOutlined } from '@ant-design/icons';
 import { useEssProfile, useChangeRequests } from '../hooks/useEssProfile';
 import { AnnouncementWidget } from '../../announcements/components/AnnouncementWidget';
 
@@ -127,6 +127,20 @@ export function EssDashboardPage() {
               <CheckCircleOutlined style={{ fontSize: 20, color: '#d97706', marginBottom: 4 }} />
               <div style={{ fontSize: 12, fontWeight: 600 }}>Payslips</div>
               <div style={{ fontSize: 11, color: '#888' }}>Download</div>
+            </Card>
+          </Col>
+          <Col span={12}>
+            <Card size="small" hoverable bodyStyle={{ padding: '14px 8px', textAlign: 'center' }} onClick={() => navigate('/ess/assets')}>
+              <LaptopOutlined style={{ fontSize: 20, color: '#0d9488', marginBottom: 4 }} />
+              <div style={{ fontSize: 12, fontWeight: 600 }}>Assets</div>
+              <div style={{ fontSize: 11, color: '#888' }}>View Allocated</div>
+            </Card>
+          </Col>
+          <Col span={12}>
+            <Card size="small" hoverable bodyStyle={{ padding: '14px 8px', textAlign: 'center' }} onClick={() => navigate('/ess/shift-swaps')}>
+              <SwapOutlined style={{ fontSize: 20, color: '#7c3aed', marginBottom: 4 }} />
+              <div style={{ fontSize: 12, fontWeight: 600 }}>Shift Swap</div>
+              <div style={{ fontSize: 11, color: '#888' }}>Request / View</div>
             </Card>
           </Col>
         </Row>

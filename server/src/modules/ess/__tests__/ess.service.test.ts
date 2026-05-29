@@ -1,5 +1,4 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
-import mongoose from 'mongoose';
 import Employee from '../../../models/Employee.model.js';
 import User from '../../../models/User.model.js';
 import Department from '../../../models/Department.model.js';
@@ -13,20 +12,23 @@ import { AppError } from '../../../core/errors/AppError.js';
 let employeeId: string;
 let userId: string;
 let userIdWithoutEmployee: string;
-let deptId: string;
-let desigId: string;
-let shiftId: string;
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+let _deptId: string;
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+let _desigId: string;
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+let _shiftId: string;
 
 beforeAll(async () => {
   await CompanySettings.deleteMany({});
   await CompanySettings.create({});
 
   const dept = await Department.create({ name: 'Test Dept', code: 'TEST', isActive: true });
-  deptId = dept._id.toString();
+  _deptId = dept._id.toString();
   const desig = await Designation.create({ name: 'Test Desig', department: dept._id, isActive: true });
-  desigId = desig._id.toString();
+  _desigId = desig._id.toString();
   const shift = await Shift.create({ name: 'Test Shift', startTime: '09:00', endTime: '18:00', workingHours: 9, isActive: true });
-  shiftId = shift._id.toString();
+  _shiftId = shift._id.toString();
 
   const emp = await Employee.create({
     employeeCode: 'ESS001',

@@ -2,6 +2,8 @@ import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AppLayout } from './layout/AppLayout';
 import { ErrorBoundary } from './core/components/ErrorBoundary';
 import { useAuthStore } from './core/stores/authStore';
+import { ROLES } from './core/constants/permissions';
+import { useIsMobile } from './core/hooks/useIsMobile';
 import { EssLayout } from './features/employee-self-service/layout/EssLayout';
 
 import { lazy, Suspense, useEffect, useState } from 'react';
@@ -50,12 +52,24 @@ const AnnouncementFormPage = lazy(() => import('./features/announcements/pages/A
 const HelpdeskPage = lazy(() => import('./features/helpdesk/pages/HelpdeskPage').then(m => ({ default: m.HelpdeskPage })));
 const TicketDetailPage = lazy(() => import('./features/helpdesk/pages/TicketDetailPage').then(m => ({ default: m.TicketDetailPage })));
 const TicketFormPage = lazy(() => import('./features/helpdesk/pages/TicketFormPage').then(m => ({ default: m.TicketFormPage })));
+const ShiftSwapsPage = lazy(() => import('./features/shift-swaps/pages/ShiftSwapsPage').then(m => ({ default: m.ShiftSwapsPage })));
+const ShiftSwapApprovalsPage = lazy(() => import('./features/shift-swaps/pages/ShiftSwapApprovalsPage').then(m => ({ default: m.ShiftSwapApprovalsPage })));
+const ShiftPreferencesPage = lazy(() => import('./features/shift-swaps/pages/ShiftPreferencesPage').then(m => ({ default: m.ShiftPreferencesPage })));
+const AssetsPage = lazy(() => import('./features/assets/pages/AssetsPage').then(m => ({ default: m.AssetsPage })));
+const AssetDetailPage = lazy(() => import('./features/assets/pages/AssetDetailPage').then(m => ({ default: m.AssetDetailPage })));
+const AssetFormPage = lazy(() => import('./features/assets/pages/AssetFormPage').then(m => ({ default: m.AssetFormPage })));
+const DocumentsPage = lazy(() => import('./features/documents/pages/DocumentsPage').then(m => ({ default: m.DocumentsPage })));
+const DocumentDetailPage = lazy(() => import('./features/documents/pages/DocumentDetailPage').then(m => ({ default: m.DocumentDetailPage })));
+const DocumentUploadPage = lazy(() => import('./features/documents/pages/DocumentUploadPage').then(m => ({ default: m.DocumentUploadPage })));
 const EssDashboardPageLazy = lazy(() => import('./features/employee-self-service/pages/EssDashboardPage').then(m => ({ default: m.EssDashboardPage })));
 const EssProfilePageLazy = lazy(() => import('./features/employee-self-service/pages/EssProfilePage').then(m => ({ default: m.EssProfilePage })));
 const EssDocumentsPageLazy = lazy(() => import('./features/employee-self-service/pages/EssDocumentsPage').then(m => ({ default: m.EssDocumentsPage })));
 const EssAttendancePageLazy = lazy(() => import('./features/employee-self-service/pages/EssAttendancePage').then(m => ({ default: m.EssAttendancePage })));
 const EssLeavePageLazy = lazy(() => import('./features/employee-self-service/pages/EssLeavePage').then(m => ({ default: m.EssLeavePage })));
 const EssPayslipsPageLazy = lazy(() => import('./features/employee-self-service/pages/EssPayslipsPage').then(m => ({ default: m.EssPayslipsPage })));
+const EssShiftSwapPageLazy = lazy(() => import('./features/employee-self-service/pages/EssShiftSwapPage').then(m => ({ default: m.EssShiftSwapPage })));
+const EssShiftPreferencePageLazy = lazy(() => import('./features/employee-self-service/pages/EssShiftPreferencePage').then(m => ({ default: m.EssShiftPreferencePage })));
+const EssAssetsPageLazy = lazy(() => import('./features/employee-self-service/pages/EssAssetsPage').then(m => ({ default: m.EssAssetsPage })));
 
 import { Spin } from 'antd';
 
@@ -75,7 +89,9 @@ function App() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const user = useAuthStore((state) => state.user);
   const [hydrated, setHydrated] = useState(false);
-  const authenticatedHomePath = user?.employeeId ? '/ess' : '/dashboard';
+  const isMobile = useIsMobile();
+  const isBackOfficeRole = user?.role && Object.values(ROLES).includes(user.role as any);
+  const authenticatedHomePath = isMobile || (user?.employeeId && !isBackOfficeRole) ? '/ess' : '/dashboard';
 
   useEffect(() => {
     if (useAuthStore.persist.hasHydrated()) {
@@ -124,6 +140,9 @@ function App() {
           <Route path="attendance" element={<Suspense fallback={<PageLoader />}><EssAttendancePageLazy /></Suspense>} />
           <Route path="leave" element={<Suspense fallback={<PageLoader />}><EssLeavePageLazy /></Suspense>} />
           <Route path="payslips" element={<Suspense fallback={<PageLoader />}><EssPayslipsPageLazy /></Suspense>} />
+          <Route path="shift-swaps" element={<Suspense fallback={<PageLoader />}><EssShiftSwapPageLazy /></Suspense>} />
+          <Route path="shift-swaps/preferences" element={<Suspense fallback={<PageLoader />}><EssShiftPreferencePageLazy /></Suspense>} />
+          <Route path="assets" element={<Suspense fallback={<PageLoader />}><EssAssetsPageLazy /></Suspense>} />
           <Route path="*" element={<Navigate to="/ess" replace />} />
         </Route>
         <Route path="/*" element={<AppLayout />}>
@@ -170,6 +189,17 @@ function App() {
             <Route path="helpdesk/new" element={<TicketFormPage />} />
             <Route path="helpdesk/:id" element={<TicketDetailPage />} />
             <Route path="helpdesk/:id/edit" element={<TicketFormPage />} />
+            <Route path="assets" element={<Suspense fallback={<PageLoader />}><AssetsPage /></Suspense>} />
+            <Route path="assets/new" element={<Suspense fallback={<PageLoader />}><AssetFormPage /></Suspense>} />
+            <Route path="assets/:id" element={<Suspense fallback={<PageLoader />}><AssetDetailPage /></Suspense>} />
+            <Route path="assets/:id/edit" element={<Suspense fallback={<PageLoader />}><AssetFormPage /></Suspense>} />
+            <Route path="documents" element={<Suspense fallback={<PageLoader />}><DocumentsPage /></Suspense>} />
+            <Route path="documents/new" element={<Suspense fallback={<PageLoader />}><DocumentUploadPage /></Suspense>} />
+            <Route path="documents/:id" element={<Suspense fallback={<PageLoader />}><DocumentDetailPage /></Suspense>} />
+            <Route path="documents/:id/edit" element={<Suspense fallback={<PageLoader />}><DocumentUploadPage /></Suspense>} />
+            <Route path="shift-swaps" element={<ShiftSwapsPage />} />
+            <Route path="shift-swaps/approvals" element={<ShiftSwapApprovalsPage />} />
+            <Route path="shift-swaps/preferences" element={<ShiftPreferencesPage />} />
             <Route path="*" element={<Navigate to={authenticatedHomePath} replace />} />
           </Route>
         </Routes>

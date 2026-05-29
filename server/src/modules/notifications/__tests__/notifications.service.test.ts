@@ -1,5 +1,4 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
-import mongoose from 'mongoose';
 import Notification from '../../../models/Notification.model.js';
 import User from '../../../models/User.model.js';
 import { NotificationsService } from '../notifications.service.js';

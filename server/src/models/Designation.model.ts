@@ -10,7 +10,7 @@ export interface IDesignation extends Document {
   updatedAt?: Date;
 }
 
-interface DesignationModel extends Model<IDesignation> {}
+type DesignationModel = Model<IDesignation>;
 
 const DesignationSchema = new Schema<IDesignation>(
   {

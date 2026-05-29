@@ -10,7 +10,7 @@ export interface ISalarySlip extends Document {
   isDownloaded: boolean;
 }
 
-interface SalarySlipModel extends Model<ISalarySlip> {}
+type SalarySlipModel = Model<ISalarySlip>;
 
 const SalarySlipSchema = new Schema<ISalarySlip>(
   {

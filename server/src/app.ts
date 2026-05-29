@@ -36,6 +36,9 @@ import auditRoutes from './modules/audit/audit.routes.js';
 import essRoutes from './modules/ess/ess.routes.js';
 import announcementRoutes from './modules/announcements/announcement.routes.js';
 import helpdeskRoutes from './modules/helpdesk/helpdesk.routes.js';
+import assetRoutes from './modules/assets/asset.routes.js';
+import documentRoutes from './modules/documents/document.routes.js';
+import shiftSwapRoutes from './modules/shift-swap/shiftSwap.routes.js';
 
 dotenv.config();
 
@@ -132,6 +135,9 @@ app.use('/api/v1/notifications', auditMiddleware, notificationsRoutes);
 app.use('/api/v1/ess', auditMiddleware, essRoutes);
 app.use('/api/v1/announcements', auditMiddleware, announcementRoutes);
 app.use('/api/v1/helpdesk', auditMiddleware, helpdeskRoutes);
+app.use('/api/v1/assets', auditMiddleware, assetRoutes);
+app.use('/api/v1/documents', auditMiddleware, documentRoutes);
+app.use('/api/v1/shift-swaps', auditMiddleware, shiftSwapRoutes);
 app.use('/api/v1/audit-logs', auditRoutes);
 
 app.use(errorHandler);

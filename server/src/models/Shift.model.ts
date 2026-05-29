@@ -11,7 +11,7 @@ export interface IShift extends Document {
   updatedBy?: mongoose.Types.ObjectId;
 }
 
-interface ShiftModel extends Model<IShift> {}
+type ShiftModel = Model<IShift>;
 
 const ShiftSchema = new Schema<IShift>(
   {

@@ -84,6 +84,16 @@ export interface CompanySettings {
     maxRepaymentPeriodMonths: number;
     deductionPriority: 'before-tax' | 'after-tax';
   };
+  documentConfig?: {
+    documentRepoEnabled: boolean;
+    maxFileSizeMb: number;
+    allowedFileTypes: string[];
+    autoExpireReminderDays: number;
+    enableVersioning: boolean;
+    maxVersions: number;
+    categories: { name: string; accessRoles: string[] }[];
+    tags: string[];
+  };
   employeeSelfService?: {
     essEnabled: boolean;
     allowAddressUpdate: boolean;

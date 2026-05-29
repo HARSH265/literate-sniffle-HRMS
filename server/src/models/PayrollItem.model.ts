@@ -46,7 +46,7 @@ export interface IPayrollItem extends Document {
   updatedBy?: mongoose.Types.ObjectId;
 }
 
-interface PayrollItemModel extends Model<IPayrollItem> {}
+type PayrollItemModel = Model<IPayrollItem>;
 
 const PayrollItemSchema = new Schema<IPayrollItem>(
   {

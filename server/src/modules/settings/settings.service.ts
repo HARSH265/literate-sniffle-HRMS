@@ -88,6 +88,56 @@ export class SettingsService {
       Object.assign(changes, defaultsChanges);
       (settings as any).employeeDefaults = { ...((settings as any).employeeDefaults?.toObject?.() || {}), ...data.employeeDefaults };
     }
+    if (data.leaveConfig) {
+      const sectionChanges = getChangedFields(oldSettings.leaveConfig, data.leaveConfig, 'leaveConfig');
+      Object.assign(changes, sectionChanges);
+      (settings as any).leaveConfig = { ...((settings as any).leaveConfig?.toObject?.() || {}), ...data.leaveConfig };
+    }
+    if (data.reportsConfig) {
+      const sectionChanges = getChangedFields(oldSettings.reportsConfig, data.reportsConfig, 'reportsConfig');
+      Object.assign(changes, sectionChanges);
+      (settings as any).reportsConfig = { ...((settings as any).reportsConfig?.toObject?.() || {}), ...data.reportsConfig };
+    }
+    if (data.loanConfig) {
+      const sectionChanges = getChangedFields(oldSettings.loanConfig, data.loanConfig, 'loanConfig');
+      Object.assign(changes, sectionChanges);
+      (settings as any).loanConfig = { ...((settings as any).loanConfig?.toObject?.() || {}), ...data.loanConfig };
+    }
+    if (data.statutoryConfig) {
+      const sectionChanges = getChangedFields(oldSettings.statutoryConfig, data.statutoryConfig, 'statutoryConfig');
+      Object.assign(changes, sectionChanges);
+      (settings as any).statutoryConfig = { ...((settings as any).statutoryConfig?.toObject?.() || {}), ...data.statutoryConfig };
+    }
+    if (data.employeeSelfService) {
+      const sectionChanges = getChangedFields(oldSettings.employeeSelfService, data.employeeSelfService, 'employeeSelfService');
+      Object.assign(changes, sectionChanges);
+      (settings as any).employeeSelfService = { ...((settings as any).employeeSelfService?.toObject?.() || {}), ...data.employeeSelfService };
+    }
+    if (data.announcementConfig) {
+      const sectionChanges = getChangedFields(oldSettings.announcementConfig, data.announcementConfig, 'announcementConfig');
+      Object.assign(changes, sectionChanges);
+      (settings as any).announcementConfig = { ...((settings as any).announcementConfig?.toObject?.() || {}), ...data.announcementConfig };
+    }
+    if (data.helpdeskConfig) {
+      const sectionChanges = getChangedFields(oldSettings.helpdeskConfig, data.helpdeskConfig, 'helpdeskConfig');
+      Object.assign(changes, sectionChanges);
+      (settings as any).helpdeskConfig = { ...((settings as any).helpdeskConfig?.toObject?.() || {}), ...data.helpdeskConfig };
+    }
+    if (data.assetConfig) {
+      const sectionChanges = getChangedFields(oldSettings.assetConfig, data.assetConfig, 'assetConfig');
+      Object.assign(changes, sectionChanges);
+      (settings as any).assetConfig = { ...((settings as any).assetConfig?.toObject?.() || {}), ...data.assetConfig };
+    }
+    if (data.documentConfig) {
+      const sectionChanges = getChangedFields(oldSettings.documentConfig, data.documentConfig, 'documentConfig');
+      Object.assign(changes, sectionChanges);
+      (settings as any).documentConfig = { ...((settings as any).documentConfig?.toObject?.() || {}), ...data.documentConfig };
+    }
+    if (data.shiftSwapConfig) {
+      const sectionChanges = getChangedFields(oldSettings.shiftSwapConfig, data.shiftSwapConfig, 'shiftSwapConfig');
+      Object.assign(changes, sectionChanges);
+      (settings as any).shiftSwapConfig = { ...((settings as any).shiftSwapConfig?.toObject?.() || {}), ...data.shiftSwapConfig };
+    }
 
     (settings as any).updatedBy = userId;
     await (settings as any).save();

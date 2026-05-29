@@ -20,6 +20,8 @@ export interface Ticket {
   attachments?: { url: string; name: string; size: number }[];
   resolvedAt?: string;
   closedAt?: string;
+  slaDeadline?: string;
+  slaBreached?: boolean;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;

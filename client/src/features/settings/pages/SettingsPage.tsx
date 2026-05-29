@@ -2,13 +2,14 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import {
   Card, Button, Form, Input, InputNumber, Select, Switch,
-  message, Tabs, Typography, Divider, Alert, Spin, Modal,
+  message, Typography, Alert, Modal,
   Row, Col, DatePicker,
 } from 'antd';
 import {
   SafetyCertificateOutlined, UserOutlined, ClockCircleOutlined,
   BankOutlined, MailOutlined, DollarOutlined, CalendarOutlined,
   GiftOutlined, CodeOutlined, BarChartOutlined, BellOutlined,
+  SwapOutlined, LaptopOutlined, FolderOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { settingsService, CompanySettings } from '../services/settingsService';
@@ -24,6 +25,7 @@ import {
   AttendanceSection, AllowancesSection, OvertimeSection, WeeklyOffSection,
   HolidaysSection, CodeConfigSection, LeaveSection, ReportsSection,
   LoanConfigSection, StatutoryConfigSection, EssSection, AnnouncementSection,
+  ShiftSwapSection, AssetSection, DocumentSection,
 } from '../sections';
 
 const { Text, Paragraph } = Typography;
@@ -46,6 +48,9 @@ const SETTINGS_MENU = [
   { key: 'statutory', label: 'Statutory', icon: <SafetyCertificateOutlined /> },
   { key: 'ess', label: 'Employee Self-Service', icon: <UserOutlined /> },
   { key: 'announcements', label: 'Announcements', icon: <BellOutlined /> },
+  { key: 'shiftSwap', label: 'Shift Swap', icon: <SwapOutlined /> },
+  { key: 'assets', label: 'Asset Management', icon: <LaptopOutlined /> },
+  { key: 'documents', label: 'Document Repository', icon: <FolderOutlined /> },
   { key: 'totp', label: 'TOTP Enrollment', icon: <SafetyCertificateOutlined /> },
 ];
 
@@ -228,6 +233,12 @@ export function SettingsPage() {
         return <EssSection form={companyForm} onSave={handleSaveCompany} />;
       case 'announcements':
         return <AnnouncementSection form={companyForm} onSave={handleSaveCompany} />;
+      case 'shiftSwap':
+        return <ShiftSwapSection form={companyForm} onSave={handleSaveCompany} />;
+      case 'assets':
+        return <AssetSection form={companyForm} onSave={handleSaveCompany} />;
+      case 'documents':
+        return <DocumentSection form={companyForm} onSave={handleSaveCompany} />;
       case 'statutory':
         return <StatutoryConfigSection form={companyForm} onSave={handleSaveCompany} />;
       case 'totp':

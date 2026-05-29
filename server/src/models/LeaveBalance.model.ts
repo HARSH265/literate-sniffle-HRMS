@@ -14,7 +14,7 @@ export interface ILeaveBalance extends Document {
   updatedBy?: mongoose.Types.ObjectId;
 }
 
-interface LeaveBalanceModel extends Model<ILeaveBalance> {}
+type LeaveBalanceModel = Model<ILeaveBalance>;
 
 const LeaveBalanceSchema = new Schema<ILeaveBalance>(
   {

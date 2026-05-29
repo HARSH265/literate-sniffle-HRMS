@@ -15,7 +15,7 @@ export interface ILoanRepayment extends Document {
   remarks?: string;
 }
 
-interface LoanRepaymentModel extends Model<ILoanRepayment> {}
+type LoanRepaymentModel = Model<ILoanRepayment>;
 
 const LoanRepaymentSchema = new Schema<ILoanRepayment>(
   {

@@ -35,7 +35,7 @@ export const helpdeskController = {
     try {
       const ticket = await helpdeskService.getById(req.params.id);
       if (!ticket) {
-        return res.status(404).json({ success: false, message: 'Ticket not found' });
+        res.status(404).json({ success: false, message: 'Ticket not found' }); return;
       }
       res.json({ success: true, data: ticket });
     } catch (err) {
@@ -48,7 +48,7 @@ export const helpdeskController = {
       const userId = (req as any).user._id;
       const ticket = await helpdeskService.update(req.params.id, req.body, userId.toString());
       if (!ticket) {
-        return res.status(404).json({ success: false, message: 'Ticket not found' });
+        res.status(404).json({ success: false, message: 'Ticket not found' }); return;
       }
       res.json({ success: true, data: ticket, message: 'Ticket updated' });
     } catch (err) {
@@ -61,7 +61,7 @@ export const helpdeskController = {
       const userId = (req as any).user._id;
       const ticket = await helpdeskService.addComment(req.params.id, req.body, userId.toString());
       if (!ticket) {
-        return res.status(404).json({ success: false, message: 'Ticket not found' });
+        res.status(404).json({ success: false, message: 'Ticket not found' }); return;
       }
       res.status(201).json({ success: true, data: ticket, message: 'Comment added' });
     } catch (err) {
@@ -74,7 +74,7 @@ export const helpdeskController = {
       const userId = (req as any).user._id;
       const ticket = await helpdeskService.softDelete(req.params.id, userId.toString());
       if (!ticket) {
-        return res.status(404).json({ success: false, message: 'Ticket not found' });
+        res.status(404).json({ success: false, message: 'Ticket not found' }); return;
       }
       res.json({ success: true, message: 'Ticket deleted' });
     } catch (err) {

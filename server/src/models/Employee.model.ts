@@ -44,7 +44,7 @@ export interface IEmployee extends Document {
   ptState?: string;
 }
 
-interface EmployeeModel extends Model<IEmployee> {}
+type EmployeeModel = Model<IEmployee>;
 
 const EmployeeSchema = new Schema<IEmployee>(
   {

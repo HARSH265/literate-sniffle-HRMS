@@ -95,8 +95,43 @@ export const essService = {
     return data;
   },
 
+  async getAssets(): Promise<{ success: boolean; data: any[] }> {
+    const { data } = await apiClient.get('/ess/assets');
+    return data;
+  },
+
   async getPayslips(): Promise<{ success: boolean; data: any[] }> {
     const { data } = await apiClient.get('/ess/payslips');
+    return data;
+  },
+
+  async getMySwaps(params?: any): Promise<{ success: boolean; data: any[]; meta: any }> {
+    const { data } = await apiClient.get('/shift-swaps/my', { params });
+    return data;
+  },
+
+  async requestSwap(payload: any): Promise<{ success: boolean; data: any; message: string }> {
+    const { data } = await apiClient.post('/shift-swaps', payload);
+    return data;
+  },
+
+  async cancelSwap(id: string): Promise<{ success: boolean; data: any; message: string }> {
+    const { data } = await apiClient.post(`/shift-swaps/${id}/cancel`);
+    return data;
+  },
+
+  async getSwapEligibility(): Promise<{ success: boolean; data: { maxSwaps: number; usedSwaps: number; remainingSwaps: number; shiftSwapEnabled: boolean } }> {
+    const { data } = await apiClient.get('/shift-swaps/eligibility');
+    return data;
+  },
+
+  async getSwapPreference(): Promise<{ success: boolean; data: any }> {
+    const { data } = await apiClient.get('/shift-swaps/preferences');
+    return data;
+  },
+
+  async setSwapPreference(payload: any): Promise<{ success: boolean; data: any; message: string }> {
+    const { data } = await apiClient.put('/shift-swaps/preferences', payload);
     return data;
   },
 };

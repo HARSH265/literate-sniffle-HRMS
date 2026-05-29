@@ -17,3 +17,6 @@ export { LoanConfigSection } from './LoanConfigSection';
 export { StatutoryConfigSection } from './StatutoryConfigSection';
 export { EssSection } from './EssSection';
 export { AnnouncementSection } from './AnnouncementSection';
+export { ShiftSwapSection } from './ShiftSwapSection';
+export { AssetSection } from './AssetSection';
+export { DocumentSection } from './DocumentSection';

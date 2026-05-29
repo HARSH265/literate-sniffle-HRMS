@@ -70,6 +70,11 @@ const getMyPayslips = asyncHandler(async (req: Request, res: Response) => {
   ResponseHandler.success(res, result, 'Payslips fetched successfully');
 });
 
+const getMyAssets = asyncHandler(async (req: Request, res: Response) => {
+  const result = await EssService.getMyAssets(req.user!.id);
+  ResponseHandler.success(res, result, 'Assets fetched successfully');
+});
+
 export const essController = {
   getProfile, updateProfile,
   getChangeRequests, createChangeRequest,
@@ -80,4 +85,5 @@ export const essController = {
   getMyLeaveBalances, getMyLeaveApplications,
   getMyDocuments,
   getMyPayslips,
+  getMyAssets,
 };

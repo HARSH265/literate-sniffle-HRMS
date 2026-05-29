@@ -31,7 +31,15 @@ export type Permission =
   | 'view-announcements'
   | 'manage-announcements'
   | 'view-tickets'
-  | 'manage-tickets';
+  | 'manage-tickets'
+  | 'view-shift-swaps'
+  | 'manage-shift-swaps'
+  | 'request-shift-swap'
+  | 'view-own-shifts'
+  | 'view-assets'
+  | 'manage-assets'
+  | 'view-documents'
+  | 'manage-documents';
 
 export function authorize(...allowedPermissions: Permission[]) {
   return (_req: Request, _res: Response, next: NextFunction): void => {

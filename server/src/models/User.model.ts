@@ -21,7 +21,7 @@ export interface IUser extends Document {
   isPasswordInHistory(candidatePassword: string): Promise<boolean>;
 }
 
-interface UserModel extends Model<IUser> {}
+type UserModel = Model<IUser>;
 
 const UserSchema = new Schema<IUser>(
   {

@@ -1,5 +1,5 @@
 import { useNavigate, useParams } from 'react-router-dom';
-import { Card, Form, Input, Select, Button, Space, DatePicker, Switch, Spin } from 'antd';
+import { Card, Form, Input, Select, Button, Space, DatePicker, Spin } from 'antd';
 import { ArrowLeftOutlined } from '@ant-design/icons';
 import { PageHeader } from '../../../core/components/PageHeader';
 import { useCreateAnnouncement, useUpdateAnnouncement, useAnnouncement } from '../hooks/useAnnouncements';

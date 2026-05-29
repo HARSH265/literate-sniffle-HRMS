@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { announcementService, Announcement } from '../services/announcementService';
+import { announcementService } from '../services/announcementService';
 import { message } from 'antd';
 
 export function useAnnouncements(params?: {

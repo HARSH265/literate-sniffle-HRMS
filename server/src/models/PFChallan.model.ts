@@ -22,7 +22,7 @@ export interface IPFChallan extends Document {
   updatedBy?: mongoose.Types.ObjectId;
 }
 
-interface PFChallanModel extends Model<IPFChallan> {}
+type PFChallanModel = Model<IPFChallan>;
 
 const PFChallanSchema = new Schema<IPFChallan>(
   {

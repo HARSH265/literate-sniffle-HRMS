@@ -5,12 +5,10 @@ import CompanySettings from '../../models/CompanySettings.model.js';
 import AttendanceEntry from '../../models/AttendanceEntry.model.js';
 import { LeaveService } from '../leave/leave.service.js';
 import { PayrollService } from '../payroll/payroll.service.js';
-import Shift from '../../models/Shift.model.js';
 import { AppError } from '../../core/errors/AppError.js';
 import { AuditService } from '../../core/audit/AuditService.js';
 import { PaginationUtil, PaginationMeta } from '../../core/utils/PaginationUtil.js';
-
-const ALLOWED_FIELDS = ['contactNumber', 'address', 'bankDetails', 'emergencyContact'];
+import { AssetService } from '../assets/asset.service.js';
 
 export class EssService {
   static async getSettings(): Promise<Record<string, unknown>> {
@@ -181,6 +179,7 @@ export class EssService {
 
   static async getAllChangeRequests(queryParams: Record<string, unknown>): Promise<{ data: unknown[]; meta: PaginationMeta }> {
     const { page, limit, sort, order, search } = PaginationUtil.parseFromObject(queryParams);
+    void search;
 
     const filter: Record<string, unknown> = {};
     if (queryParams.status) filter.status = queryParams.status;
@@ -318,6 +317,14 @@ export class EssService {
 
     const employeeId = (employee as any)._id.toString();
     return PayrollService.getByEmployee(employeeId);
+  }
+
+  static async getMyAssets(userId: string): Promise<unknown[]> {
+    const employee = await this.getEmployeeFromUser(userId);
+    if (!employee) return [];
+
+    const employeeId = (employee as any)._id.toString();
+    return AssetService.getEmployeeAssets(employeeId);
   }
 
   private static getAllowedFields(settings: Record<string, unknown>): string[] {

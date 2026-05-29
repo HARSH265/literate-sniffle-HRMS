@@ -25,7 +25,7 @@ export interface IPayrollRun extends Document {
   updatedBy?: mongoose.Types.ObjectId;
 }
 
-interface PayrollRunModel extends Model<IPayrollRun> {}
+type PayrollRunModel = Model<IPayrollRun>;
 
 const revisionSchema = new Schema(
   {

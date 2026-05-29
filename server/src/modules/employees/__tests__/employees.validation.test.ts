@@ -30,6 +30,7 @@ describe('employees validation schemas', () => {
 
     it('rejects missing fullName', () => {
       const { fullName, ...rest } = validPayload;
+      void fullName;
       const result = createEmployeeSchema.safeParse(rest);
       expect(result.success).toBe(false);
     });

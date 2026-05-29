@@ -10,7 +10,7 @@ export interface IOvertimeEntry extends Document {
   updatedBy?: mongoose.Types.ObjectId;
 }
 
-interface OvertimeEntryModel extends Model<IOvertimeEntry> {}
+type OvertimeEntryModel = Model<IOvertimeEntry>;
 
 const OvertimeEntrySchema = new Schema<IOvertimeEntry>(
   {

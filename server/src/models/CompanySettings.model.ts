@@ -182,9 +182,38 @@ export interface ICompanySettings extends Document {
     slaHoursNormal: number;
     slaHoursLow: number;
   };
+  assetConfig: {
+    assetManagementEnabled: boolean;
+    autoGenerateAssetCode: boolean;
+    assetCodePrefix: string;
+    assetCodePadding: number;
+    allowMultipleAllocation: boolean;
+    maintenanceReminderDays: number;
+    categories: string[];
+    conditions: string[];
+  };
+  documentConfig: {
+    documentRepoEnabled: boolean;
+    maxFileSizeMb: number;
+    allowedFileTypes: string[];
+    autoExpireReminderDays: number;
+    enableVersioning: boolean;
+    maxVersions: number;
+    categories: { name: string; accessRoles: string[] }[];
+    tags: string[];
+  };
+  shiftSwapConfig: {
+    shiftSwapEnabled: boolean;
+    requireManagerApproval: boolean;
+    maxSwapsPerMonth: number;
+    swapDeadlineHours: number;
+    allowRecurringSwaps: boolean;
+    notifyOnMatch: boolean;
+    shiftPreferenceEnabled: boolean;
+  };
 }
 
-interface CompanySettingsModel extends Model<ICompanySettings> {}
+type CompanySettingsModel = Model<ICompanySettings>;
 
 const allowanceConfigSchema = new Schema(
   {
@@ -414,6 +443,56 @@ const CompanySettingsSchema = new Schema<ICompanySettings>(
       slaHoursHigh: { type: Number, default: 8 },
       slaHoursNormal: { type: Number, default: 24 },
       slaHoursLow: { type: Number, default: 72 },
+    },
+    assetConfig: {
+      assetManagementEnabled: { type: Boolean, default: true },
+      autoGenerateAssetCode: { type: Boolean, default: true },
+      assetCodePrefix: { type: String, default: 'AST' },
+      assetCodePadding: { type: Number, default: 4 },
+      allowMultipleAllocation: { type: Boolean, default: false },
+      maintenanceReminderDays: { type: Number, default: 90 },
+      categories: {
+        type: [String],
+        default: ['Laptop', 'Monitor', 'Keyboard', 'Mobile', 'Tool', 'Uniform', 'Vehicle', 'Other'],
+      },
+      conditions: {
+        type: [String],
+        default: ['New', 'Good', 'Fair', 'Damaged'],
+      },
+    },
+    documentConfig: {
+      documentRepoEnabled: { type: Boolean, default: true },
+      maxFileSizeMb: { type: Number, default: 20 },
+      allowedFileTypes: {
+        type: [String],
+        default: ['pdf', 'doc', 'docx', 'xlsx', 'jpg', 'png'],
+      },
+      autoExpireReminderDays: { type: Number, default: 30 },
+      enableVersioning: { type: Boolean, default: true },
+      maxVersions: { type: Number, default: 10 },
+      categories: {
+        type: [{ name: String, accessRoles: [String] }],
+        default: [
+          { name: 'Policy', accessRoles: ['super-admin', 'hr-admin'] },
+          { name: 'Contract', accessRoles: ['super-admin', 'hr-admin', 'hr-staff'] },
+          { name: 'Certificate', accessRoles: ['super-admin', 'hr-admin', 'hr-staff'] },
+          { name: 'ID Proof', accessRoles: ['super-admin', 'hr-admin'] },
+          { name: 'Payslip', accessRoles: ['super-admin', 'hr-admin', 'accounts'] },
+        ],
+      },
+      tags: {
+        type: [String],
+        default: ['HR', 'Legal', 'Finance', 'IT', 'Operations'],
+      },
+    },
+    shiftSwapConfig: {
+      shiftSwapEnabled: { type: Boolean, default: true },
+      requireManagerApproval: { type: Boolean, default: true },
+      maxSwapsPerMonth: { type: Number, default: 3 },
+      swapDeadlineHours: { type: Number, default: 24 },
+      allowRecurringSwaps: { type: Boolean, default: false },
+      notifyOnMatch: { type: Boolean, default: true },
+      shiftPreferenceEnabled: { type: Boolean, default: false },
     },
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
   },

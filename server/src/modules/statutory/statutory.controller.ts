@@ -56,7 +56,7 @@ export async function listChallansHandler(req: Request, res: Response, next: Nex
 export async function getChallanHandler(req: Request, res: Response, next: NextFunction) {
   try {
     const data = await getChallanById(req.params.id);
-    if (!data) return res.status(404).json({ success: false, message: 'Challan not found' });
+    if (!data) { res.status(404).json({ success: false, message: 'Challan not found' }); return; }
     res.json({ success: true, data });
   } catch (err) {
     next(err);
@@ -66,7 +66,7 @@ export async function getChallanHandler(req: Request, res: Response, next: NextF
 export async function patchChallanHandler(req: Request, res: Response, next: NextFunction) {
   try {
     const data = await updateChallan(req.params.id, req.body, (req as any).user?.id);
-    if (!data) return res.status(404).json({ success: false, message: 'Challan not found' });
+    if (!data) { res.status(404).json({ success: false, message: 'Challan not found' }); return; }
     res.json({ success: true, data });
   } catch (err) {
     next(err);
@@ -97,7 +97,7 @@ export async function listReportsHandler(req: Request, res: Response, next: Next
 export async function getReportHandler(req: Request, res: Response, next: NextFunction) {
   try {
     const data = await getReportById(req.params.id);
-    if (!data) return res.status(404).json({ success: false, message: 'Report not found' });
+    if (!data) { res.status(404).json({ success: false, message: 'Report not found' }); return; }
     res.json({ success: true, data });
   } catch (err) {
     next(err);
@@ -107,7 +107,7 @@ export async function getReportHandler(req: Request, res: Response, next: NextFu
 export async function patchReportHandler(req: Request, res: Response, next: NextFunction) {
   try {
     const data = await updateReport(req.params.id, req.body, (req as any).user?.id);
-    if (!data) return res.status(404).json({ success: false, message: 'Report not found' });
+    if (!data) { res.status(404).json({ success: false, message: 'Report not found' }); return; }
     res.json({ success: true, data });
   } catch (err) {
     next(err);

@@ -89,5 +89,6 @@ function getModuleFromPath(path: string): string | null {
   if (path.includes('/ess')) return 'ess';
   if (path.includes('/announcements')) return 'announcements';
   if (path.includes('/helpdesk') || path.includes('/tickets')) return 'helpdesk';
+  if (path.includes('/shift-swaps') || path.includes('/shift-preferences')) return 'shift-swap';
   return null;
 }

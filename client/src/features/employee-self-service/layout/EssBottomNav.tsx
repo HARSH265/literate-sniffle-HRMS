@@ -7,6 +7,8 @@ import {
   EllipsisOutlined,
   FileTextOutlined,
   DollarOutlined,
+  SwapOutlined,
+  LaptopOutlined,
 } from '@ant-design/icons';
 import { useState } from 'react';
 import { Drawer, List } from 'antd';
@@ -22,6 +24,9 @@ const tabs = [
 const moreItems = [
   { key: '/ess/documents', icon: <FileTextOutlined />, label: 'Documents' },
   { key: '/ess/payslips', icon: <DollarOutlined />, label: 'Payslips' },
+  { key: '/ess/shift-swaps', icon: <SwapOutlined />, label: 'Shift Swap' },
+  { key: '/ess/shift-swaps/preferences', icon: <SwapOutlined />, label: 'Shift Preference' },
+  { key: '/ess/assets', icon: <LaptopOutlined />, label: 'Assets' },
 ];
 
 export function EssBottomNav() {

@@ -42,7 +42,7 @@ export function EssPayslipsPage() {
       title: '',
       key: 'actions',
       width: 80,
-      render: (_: any, record: any) => (
+      render: (_: any, _record: any) => (
         <Space size="small">
           <Button type="link" icon={<EyeOutlined />} size="small" style={{ padding: 0 }} />
           <Button type="link" icon={<DownloadOutlined />} size="small" style={{ padding: 0 }} />

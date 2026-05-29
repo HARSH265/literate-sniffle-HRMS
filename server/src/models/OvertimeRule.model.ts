@@ -11,7 +11,7 @@ export interface IOvertimeRule extends Document {
   updatedBy?: mongoose.Types.ObjectId;
 }
 
-interface OvertimeRuleModel extends Model<IOvertimeRule> {}
+type OvertimeRuleModel = Model<IOvertimeRule>;
 
 const OvertimeRuleSchema = new Schema<IOvertimeRule>(
   {

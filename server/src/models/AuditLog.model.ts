@@ -31,7 +31,7 @@ export interface IAuditLog extends Document {
   responseTime?: number;
 }
 
-interface AuditLogModel extends Model<IAuditLog> {}
+type AuditLogModel = Model<IAuditLog>;
 
 const AuditLogSchema = new Schema<IAuditLog>(
   {

@@ -41,4 +41,9 @@ export const shiftService = {
   async delete(id: string): Promise<void> {
     await apiClient.delete(`/shifts/${id}`);
   },
+
+  async bulkAssignShift(employeeIds: string[], shiftId: string): Promise<{ success: boolean; data: { modifiedCount: number }; message: string }> {
+    const { data } = await apiClient.patch('/employees/bulk/shift', { employeeIds, shiftId });
+    return data;
+  },
 };

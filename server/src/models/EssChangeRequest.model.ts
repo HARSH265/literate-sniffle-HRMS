@@ -12,7 +12,7 @@ export interface IEssChangeRequest extends Document {
   notes?: string;
 }
 
-interface EssChangeRequestModel extends Model<IEssChangeRequest> {}
+type EssChangeRequestModel = Model<IEssChangeRequest>;
 
 const EssChangeRequestSchema = new Schema<IEssChangeRequest>(
   {

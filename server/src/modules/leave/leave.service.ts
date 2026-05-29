@@ -67,7 +67,7 @@ async function notifyLeave(recipientId: string, title: string, message: string, 
       module,
       link,
     });
-  } catch { }
+  } catch { /* noop */ }
 }
 
 async function getApprovers(employeeId: string): Promise<string[]> {

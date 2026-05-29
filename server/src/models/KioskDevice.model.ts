@@ -13,7 +13,7 @@ export interface IKioskDevice extends Document {
   registeredBy: mongoose.Types.ObjectId;
 }
 
-interface KioskDeviceModel extends Model<IKioskDevice> {}
+type KioskDeviceModel = Model<IKioskDevice>;
 
 const KioskDeviceSchema = new Schema<IKioskDevice>(
   {

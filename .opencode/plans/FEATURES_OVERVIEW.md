@@ -17,8 +17,8 @@
 
 | # | Feature | Status |
 |---|---------|--------|
-| 2.1 | Asset Management | Pending |
-| 2.2 | Document Repository | Pending |
+| 2.1 | Asset Management | ✅ Complete |
+| 2.2 | Document Repository | ✅ Complete |
 | 2.3 | Shift Swap / Preferences | Pending |
 
 ## Phase 3: People Development

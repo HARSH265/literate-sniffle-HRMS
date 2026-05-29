@@ -27,6 +27,9 @@ import {
   CheckSquareOutlined,
   SafetyCertificateOutlined,
   CreditCardOutlined,
+  LaptopOutlined,
+  FolderOutlined,
+  SwapOutlined,
 } from '@ant-design/icons';
 import { usePermission } from '../core/hooks/usePermission';
 import { useUIStore } from '../core/stores/uiStore';
@@ -54,6 +57,7 @@ export function Sidebar({ collapsed }: SidebarProps) {
     else if (path.includes('/attendance') || path.includes('/kiosk')) { setOpenKeys(['attendance']); }
     else if (path.includes('/overtime')) { setOpenKeys(['overtime']); }
     else if (path.includes('/loans')) { setOpenKeys(['loans']); }
+    else if (path.includes('/shift-swaps')) { setOpenKeys(['shiftSwap']); }
     else if (path.includes('/payroll') || path.includes('/salary-slips')) { setOpenKeys(['payroll']); }
     else { setOpenKeys([]); }
   }, [location.pathname]);
@@ -98,6 +102,13 @@ export function Sidebar({ collapsed }: SidebarProps) {
     }
     if (path.includes('/announcements')) return '/announcements';
     if (path.includes('/helpdesk')) return '/helpdesk';
+    if (path.includes('/assets')) return '/assets';
+    if (path.includes('/documents')) return '/documents';
+    if (path.includes('/shift-swaps')) {
+      if (path.includes('/shift-swaps/approvals')) return '/shift-swaps/approvals';
+      if (path.includes('/shift-swaps/preferences')) return '/shift-swaps/preferences';
+      return '/shift-swaps';
+    }
     if (path.includes('/rule-book')) return '/rule-book';
     return path;
   };
@@ -107,8 +118,8 @@ export function Sidebar({ collapsed }: SidebarProps) {
       key: string;
       icon: React.ReactNode;
       label: string;
-      permission?: string;
-      children?: Array<{ key: string; icon: React.ReactNode; label: string }>;
+      permission?: string | string[];
+      children?: Array<{ key: string; icon: React.ReactNode; label: string; permission?: string | string[] }>;
     }> = [
       { key: '/dashboard', icon: <DashboardOutlined />, label: 'Dashboard', permission: undefined },
       { 
@@ -141,6 +152,19 @@ export function Sidebar({ collapsed }: SidebarProps) {
         children: [
           { key: '/attendance', icon: <FieldTimeOutlined />, label: 'Attendance' },
           { key: '/kiosk/devices', icon: <QrcodeOutlined />, label: 'Kiosk' },
+        ]
+      },
+      { key: '/assets', icon: <LaptopOutlined />, label: 'Assets', permission: 'view-assets' },
+      { key: '/documents', icon: <FolderOutlined />, label: 'Documents', permission: 'view-documents' },
+      {
+        key: 'shiftSwap',
+        icon: <SwapOutlined />,
+        label: 'Shift Swaps',
+        permission: ['view-shift-swaps', 'request-shift-swap'],
+        children: [
+          { key: '/shift-swaps', icon: <UnorderedListOutlined />, label: 'All Swaps' },
+          { key: '/shift-swaps/approvals', icon: <CheckSquareOutlined />, label: 'Approvals', permission: 'manage-shift-swaps' },
+          { key: '/shift-swaps/preferences', icon: <SettingOutlined />, label: 'Preferences' },
         ]
       },
       {
@@ -196,15 +220,22 @@ export function Sidebar({ collapsed }: SidebarProps) {
       { key: '/settings', icon: <SettingOutlined />, label: 'Settings', permission: 'manage-settings' },
     ];
 
+    const hasAccess = (perm: string | string[] | undefined) => {
+      if (!perm) return true;
+      const perms = Array.isArray(perm) ? perm : [perm];
+      return perms.some((p) => hasPermission(p));
+    };
+
     return rawItems
-      .filter((item) => !item.permission || hasPermission(item.permission))
+      .filter((item) => hasAccess(item.permission))
       .map((item) => {
         if (item.children) {
+          const filteredChildren = item.children.filter((child) => hasAccess(child.permission));
           return {
             key: item.key,
             icon: item.icon,
             label: item.label,
-            children: item.children.map((child) => ({
+            children: filteredChildren.map((child) => ({
               key: child.key,
               icon: child.icon,
               label: child.label,

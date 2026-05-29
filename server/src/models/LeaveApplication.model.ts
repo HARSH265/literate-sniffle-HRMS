@@ -26,7 +26,7 @@ export interface ILeaveApplication extends Document {
   updatedBy?: mongoose.Types.ObjectId;
 }
 
-interface LeaveApplicationModel extends Model<ILeaveApplication> {}
+type LeaveApplicationModel = Model<ILeaveApplication>;
 
 const LeaveApplicationSchema = new Schema<ILeaveApplication>(
   {

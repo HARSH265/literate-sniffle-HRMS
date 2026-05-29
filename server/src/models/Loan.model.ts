@@ -26,7 +26,7 @@ export interface ILoan extends Document {
   updatedBy?: mongoose.Types.ObjectId;
 }
 
-interface LoanModel extends Model<ILoan> {}
+type LoanModel = Model<ILoan>;
 
 const approvalLevelSchema = new Schema(
   {

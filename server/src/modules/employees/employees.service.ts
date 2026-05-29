@@ -1,4 +1,5 @@
 import Employee from '../../models/Employee.model.js';
+import Shift from '../../models/Shift.model.js';
 import User from '../../models/User.model.js';
 import CompanySettings from '../../models/CompanySettings.model.js';
 import { AppError } from '../../core/errors/AppError.js';
@@ -234,6 +235,29 @@ export class EmployeesService {
       userId: deletedById,
       targetId: id,
     });
+  }
+
+  static async bulkAssignShift(employeeIds: string[], shiftId: string, updatedById: string) {
+    const shift = await Shift.findById(shiftId);
+    if (!shift) {
+      throw new AppError('Shift not found', 404);
+    }
+
+    const result = await Employee.updateMany(
+      { _id: { $in: employeeIds } },
+      { $set: { shift: shiftId as any, updatedBy: updatedById as any } },
+    );
+
+    await AuditService.log({
+      action: 'bulk-update',
+      module: 'employees',
+      userId: updatedById,
+      targetId: shiftId,
+      targetName: `Bulk shift assign: ${shift.name}`,
+      details: { shiftId, employeeCount: result.modifiedCount },
+    });
+
+    return { modifiedCount: result.modifiedCount };
   }
 
   static async updatePhoto(id: string, photoUrl: string, updatedById: string, userRole: string = 'super-admin') {

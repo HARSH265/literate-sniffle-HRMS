@@ -323,4 +323,10 @@ const generateNextCode = asyncHandler(async (_req: Request, res: Response) => {
   ResponseHandler.success(res, { employeeCode: result }, 'Employee code generated');
 });
 
-export const employeesController = { list, getById, create, update, remove, export: exportEmployees, downloadTemplate, import: importEmployees, uploadDocument, removeDocument, downloadDocument, generateNextCode };
+const bulkAssignShift = asyncHandler(async (req: Request, res: Response) => {
+  const { employeeIds, shiftId } = req.body;
+  const result = await EmployeesService.bulkAssignShift(employeeIds, shiftId, req.user!.id);
+  ResponseHandler.success(res, result, `${result.modifiedCount} employee(s) updated`);
+});
+
+export const employeesController = { list, getById, create, update, remove, export: exportEmployees, downloadTemplate, import: importEmployees, uploadDocument, removeDocument, downloadDocument, generateNextCode, bulkAssignShift };

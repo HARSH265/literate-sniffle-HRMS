@@ -10,11 +10,9 @@ export interface AuthUser {
   role: string;
 }
 
-declare global {
-  namespace Express {
-    interface Request {
-      user?: AuthUser;
-    }
+declare module 'express-serve-static-core' {
+  interface Request {
+    user?: AuthUser;
   }
 }
 
@@ -40,7 +38,7 @@ export function authenticate(
     req.user = decoded;
 
     next();
-  } catch (error) {
+  } catch {
     next(new AppError('Invalid token', 401));
   }
 }

@@ -27,6 +27,7 @@ describe('leave validation schemas', () => {
 
     it('rejects missing name', () => {
       const { name, ...rest } = validPayload;
+      void name;
       const result = createLeaveTypeSchema.safeParse(rest);
       expect(result.success).toBe(false);
     });
@@ -97,6 +98,7 @@ describe('leave validation schemas', () => {
 
     it('rejects missing employee', () => {
       const { employee, ...rest } = validPayload;
+      void employee;
       const result = createLeaveApplicationSchema.safeParse(rest);
       expect(result.success).toBe(false);
     });

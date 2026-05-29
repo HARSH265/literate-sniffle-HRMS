@@ -86,6 +86,9 @@ export function getModuleLabel(module: string): string {
     ess: 'Employee Self-Service',
     announcements: 'Announcements',
     helpdesk: 'Help Desk',
+    assets: 'Asset Management',
+    documents: 'Document Repository',
+    'shift-swap': 'Shift Swap Management',
   };
   return labels[module] || module;
 }

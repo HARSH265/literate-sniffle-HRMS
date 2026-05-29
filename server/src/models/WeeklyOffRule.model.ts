@@ -9,7 +9,7 @@ export interface IWeeklyOffRule extends Document {
   updatedBy?: mongoose.Types.ObjectId;
 }
 
-interface WeeklyOffRuleModel extends Model<IWeeklyOffRule> {}
+type WeeklyOffRuleModel = Model<IWeeklyOffRule>;
 
 const WeeklyOffRuleSchema = new Schema<IWeeklyOffRule>(
   {

@@ -149,6 +149,7 @@ async function calculatePayrollForEmployee(
   }).populate('leaveType', 'isPaid deductionMethod name').lean();
 
   let presentDays = 0, absentDays = 0, halfDays = 0, leaveDays = 0, weeklyOffs = 0, holidaysCount = 0;
+  void leaveDays;
   let paidLeaveDays = 0, unpaidLeaveDays = 0;
   let totalOvertimeHours = 0;
 

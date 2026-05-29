@@ -9,7 +9,7 @@ export interface IDepartment extends Document {
   updatedBy?: mongoose.Types.ObjectId;
 }
 
-interface DepartmentModel extends Model<IDepartment> {}
+type DepartmentModel = Model<IDepartment>;
 
 const DepartmentSchema = new Schema<IDepartment>(
   {
