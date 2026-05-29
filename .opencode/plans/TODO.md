@@ -117,9 +117,9 @@
 - [x] ✅ Verify: Upload, Versions, Expiry, Access control, Settings toggle, Tests (17/17 passing)
 
 ### 2.3 Shift Swap / Preferences
-- [ ] Server: Model, Service, Controller, Routes, Validation, Config, Tests
-- [ ] Client: Module, Pages, Routes, Tests
-- [ ] Verify: Swap lifecycle, Limits, Deadline, Settings toggle
+- [x] ✅ Server: Model, Service, Controller, Routes, Validation, Config, Tests
+- [x] ✅ Client: Module, Pages, Routes, Tests
+- [x] ✅ Verify: Swap lifecycle, Limits, Deadline, Settings toggle
 
 ### Phase 2 Gate
 - [ ] All tests passing, no regression, audit verified
@@ -129,14 +129,14 @@
 ## Phase 3: People Development
 
 ### 3.1 Performance Management
-- [ ] Server: 3 models, Service, Controller, Routes, Validation, Config, Tests
-- [ ] Client: Module, 10 pages, Routes, Tests
-- [ ] Verify: Full lifecycle, Rating calculation, 360 feedback, Settings toggle
+- [x] ✅ Server: 3 models, Service, Controller, Routes, Validation, Config, Tests
+- [x] ✅ Client: Module, 10 pages, Routes, Tests
+- [x] ✅ Verify: Full lifecycle, Rating calculation, 360 feedback, Settings toggle
 
 ### 3.2 Training & Development
-- [ ] Server: 4 models, Service, Controller, Routes, Validation, Config, Tests
-- [ ] Client: Module, Pages (programs, enrollments, skills, gap), Routes, Tests
-- [ ] Verify: Enrollment lifecycle, Skill matrix, Cert expiry, Settings toggle
+- [x] ✅ Server: 4 models, Service, Controller, Routes, Validation, Config, Tests
+- [x] ✅ Client: Module, Pages (programs, enrollments, skills, gap), Routes, Tests
+- [x] ✅ Verify: Enrollment lifecycle, Skill matrix, Cert expiry, Settings toggle
 
 ### Phase 3 Gate
 - [ ] All tests passing, no regression in Employee model, audit verified
@@ -224,4 +224,4 @@
 - [ ] All tests passing (server + client)
 - [ ] All existing features verified for regression
 - [ ] README updated
-- [ ] FEATURES_OVERVIEW.md status updated
+- [x] ✅ FEATURES_OVERVIEW.md status updated
