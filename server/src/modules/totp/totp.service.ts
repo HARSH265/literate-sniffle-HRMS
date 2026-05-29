@@ -20,7 +20,7 @@ export class TOTPService {
     }
   }
 
-  static async enrollEmployee(employeeId: string, userId: string): Promise<{ qrUrl: string }> {
+  static async enrollEmployee(employeeId: string, userId: string): Promise<{ qrUrl: string; secret: string }> {
     const employee = await Employee.findById(employeeId);
     if (!employee) throw new AppError('Employee not found', 404);
 

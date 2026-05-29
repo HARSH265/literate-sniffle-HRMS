@@ -25,7 +25,6 @@ const ShiftPreferenceSchema = new Schema<IShiftPreference>(
   { timestamps: true },
 );
 
-ShiftPreferenceSchema.index({ employee: 1 });
 ShiftPreferenceSchema.index({ preferredShift: 1 });
 
 const ShiftPreference = mongoose.model<IShiftPreference>('ShiftPreference', ShiftPreferenceSchema);

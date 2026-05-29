@@ -54,7 +54,7 @@ export const documentController = {
     ResponseHandler.success(res, documents, 'Documents fetched successfully');
   }),
 
-  getCompanyDocuments: asyncHandler(async (req: Request, res: Response) => {
+  getCompanyDocuments: asyncHandler(async (_req: Request, res: Response) => {
     const documents = await DocumentService.getCompanyDocuments();
     ResponseHandler.success(res, documents, 'Documents fetched successfully');
   }),
@@ -65,7 +65,7 @@ export const documentController = {
     ResponseHandler.success(res, documents, 'Documents fetched successfully');
   }),
 
-  getStats: asyncHandler(async (req: Request, res: Response) => {
+  getStats: asyncHandler(async (_req: Request, res: Response) => {
     const stats = await DocumentService.getStats();
     ResponseHandler.success(res, stats, 'Stats fetched successfully');
   }),

@@ -59,4 +59,17 @@ export const ROUTES = {
   settings: '/settings',
   users: '/users',
   auditLogs: '/audit-logs',
+
+  training: {
+    index: '/training',
+    enrollments: '/training/enrollments',
+    skills: '/training/skills',
+  },
+
+  performance: {
+    index: '/performance',
+    cycleNew: '/performance/cycles/new',
+    cycleEdit: (id: string) => `/performance/cycles/${id}/edit`,
+    review: (id: string) => `/performance/reviews/${id}`,
+  },
 } as const;

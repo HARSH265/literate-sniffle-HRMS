@@ -21,6 +21,8 @@ const apiClient: AxiosInstance = axios.create({
   withCredentials: true,
 });
 
+const isAuthRequest = (url?: string) => url?.includes('/auth/login') || url?.includes('/auth/refresh');
+
 apiClient.interceptors.request.use(
   (config) => {
     const token = useAuthStore.getState().token;
@@ -37,7 +39,7 @@ apiClient.interceptors.response.use(
   async (error: AxiosError) => {
     const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean };
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (error.response?.status === 401 && !originalRequest._retry && !isAuthRequest(originalRequest.url)) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });

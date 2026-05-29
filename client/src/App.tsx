@@ -55,6 +55,15 @@ const TicketFormPage = lazy(() => import('./features/helpdesk/pages/TicketFormPa
 const ShiftSwapsPage = lazy(() => import('./features/shift-swaps/pages/ShiftSwapsPage').then(m => ({ default: m.ShiftSwapsPage })));
 const ShiftSwapApprovalsPage = lazy(() => import('./features/shift-swaps/pages/ShiftSwapApprovalsPage').then(m => ({ default: m.ShiftSwapApprovalsPage })));
 const ShiftPreferencesPage = lazy(() => import('./features/shift-swaps/pages/ShiftPreferencesPage').then(m => ({ default: m.ShiftPreferencesPage })));
+const PerformancePage = lazy(() => import('./features/performance/pages/PerformancePage').then(m => ({ default: m.PerformancePage })));
+const PerformanceReviewDetailPage = lazy(() => import('./features/performance/pages/PerformanceReviewDetailPage').then(m => ({ default: m.PerformanceReviewDetailPage })));
+const TrainingProgramsPage = lazy(() => import('./features/training/pages/TrainingProgramsPage').then(m => ({ default: m.TrainingProgramsPage })));
+const TrainingProgramFormPage = lazy(() => import('./features/training/pages/TrainingProgramFormPage').then(m => ({ default: m.TrainingProgramFormPage })));
+const TrainingEnrollmentsPage = lazy(() => import('./features/training/pages/TrainingEnrollmentsPage').then(m => ({ default: m.TrainingEnrollmentsPage })));
+const TrainingProgramDetailPage = lazy(() => import('./features/training/pages/TrainingProgramDetailPage').then(m => ({ default: m.TrainingProgramDetailPage })));
+const SkillMatrixPage = lazy(() => import('./features/training/pages/SkillMatrixPage').then(m => ({ default: m.SkillMatrixPage })));
+const SkillGapPage = lazy(() => import('./features/training/pages/SkillGapPage').then(m => ({ default: m.SkillGapPage })));
+const CertificationsPage = lazy(() => import('./features/training/pages/CertificationsPage').then(m => ({ default: m.CertificationsPage })));
 const AssetsPage = lazy(() => import('./features/assets/pages/AssetsPage').then(m => ({ default: m.AssetsPage })));
 const AssetDetailPage = lazy(() => import('./features/assets/pages/AssetDetailPage').then(m => ({ default: m.AssetDetailPage })));
 const AssetFormPage = lazy(() => import('./features/assets/pages/AssetFormPage').then(m => ({ default: m.AssetFormPage })));
@@ -70,6 +79,7 @@ const EssPayslipsPageLazy = lazy(() => import('./features/employee-self-service/
 const EssShiftSwapPageLazy = lazy(() => import('./features/employee-self-service/pages/EssShiftSwapPage').then(m => ({ default: m.EssShiftSwapPage })));
 const EssShiftPreferencePageLazy = lazy(() => import('./features/employee-self-service/pages/EssShiftPreferencePage').then(m => ({ default: m.EssShiftPreferencePage })));
 const EssAssetsPageLazy = lazy(() => import('./features/employee-self-service/pages/EssAssetsPage').then(m => ({ default: m.EssAssetsPage })));
+const EssTrainingPageLazy = lazy(() => import('./features/employee-self-service/pages/EssTrainingPage').then(m => ({ default: m.EssTrainingPage })));
 
 import { Spin } from 'antd';
 
@@ -143,6 +153,7 @@ function App() {
           <Route path="shift-swaps" element={<Suspense fallback={<PageLoader />}><EssShiftSwapPageLazy /></Suspense>} />
           <Route path="shift-swaps/preferences" element={<Suspense fallback={<PageLoader />}><EssShiftPreferencePageLazy /></Suspense>} />
           <Route path="assets" element={<Suspense fallback={<PageLoader />}><EssAssetsPageLazy /></Suspense>} />
+          <Route path="training" element={<Suspense fallback={<PageLoader />}><EssTrainingPageLazy /></Suspense>} />
           <Route path="*" element={<Navigate to="/ess" replace />} />
         </Route>
         <Route path="/*" element={<AppLayout />}>
@@ -200,6 +211,15 @@ function App() {
             <Route path="shift-swaps" element={<ShiftSwapsPage />} />
             <Route path="shift-swaps/approvals" element={<ShiftSwapApprovalsPage />} />
             <Route path="shift-swaps/preferences" element={<ShiftPreferencesPage />} />
+            <Route path="training" element={<Suspense fallback={<PageLoader />}><TrainingProgramsPage /></Suspense>} />
+            <Route path="training/new" element={<Suspense fallback={<PageLoader />}><TrainingProgramFormPage /></Suspense>} />
+            <Route path="training/enrollments" element={<Suspense fallback={<PageLoader />}><TrainingEnrollmentsPage /></Suspense>} />
+            <Route path="training/skills" element={<Suspense fallback={<PageLoader />}><SkillMatrixPage /></Suspense>} />
+            <Route path="training/skill-gap" element={<Suspense fallback={<PageLoader />}><SkillGapPage /></Suspense>} />
+            <Route path="training/certifications" element={<Suspense fallback={<PageLoader />}><CertificationsPage /></Suspense>} />
+            <Route path="training/:id" element={<Suspense fallback={<PageLoader />}><TrainingProgramDetailPage /></Suspense>} />
+            <Route path="performance" element={<Suspense fallback={<PageLoader />}><PerformancePage /></Suspense>} />
+            <Route path="performance/reviews/:id" element={<Suspense fallback={<PageLoader />}><PerformanceReviewDetailPage /></Suspense>} />
             <Route path="*" element={<Navigate to={authenticatedHomePath} replace />} />
           </Route>
         </Routes>

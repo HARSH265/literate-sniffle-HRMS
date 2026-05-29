@@ -211,6 +211,30 @@ export interface ICompanySettings extends Document {
     notifyOnMatch: boolean;
     shiftPreferenceEnabled: boolean;
   };
+  performanceConfig: {
+    performanceEnabled: boolean;
+    reviewFrequency: 'quarterly' | 'half-yearly' | 'yearly';
+    reviewPeriodStartMonth: number;
+    selfReviewRequired: boolean;
+    managerReviewRequired: boolean;
+    enable360Feedback: boolean;
+    ratingScale: '1-3' | '1-5' | '1-10';
+    goalCreationDeadlineDays: number;
+    reviewSubmissionDeadlineDays: number;
+    allowEmployeeGoalSetting: boolean;
+    autoCloseAfterDays: number;
+    ratingLabels: Record<string, string>;
+  };
+  trainingConfig: {
+    trainingEnabled: boolean;
+    autoEnrollByDesignation: boolean;
+    certificationExpiryReminderDays: number;
+    allowSelfEnrollment: boolean;
+    maxSelfEnrollmentsPerEmployee: number;
+    trainingCategories: string[];
+    trainingModes: string[];
+    skillCategories: string[];
+  };
 }
 
 type CompanySettingsModel = Model<ICompanySettings>;
@@ -493,6 +517,30 @@ const CompanySettingsSchema = new Schema<ICompanySettings>(
       allowRecurringSwaps: { type: Boolean, default: false },
       notifyOnMatch: { type: Boolean, default: true },
       shiftPreferenceEnabled: { type: Boolean, default: false },
+    },
+    performanceConfig: {
+      performanceEnabled: { type: Boolean, default: true },
+      reviewFrequency: { type: String, enum: ['quarterly', 'half-yearly', 'yearly'], default: 'quarterly' },
+      reviewPeriodStartMonth: { type: Number, default: 4 },
+      selfReviewRequired: { type: Boolean, default: true },
+      managerReviewRequired: { type: Boolean, default: true },
+      enable360Feedback: { type: Boolean, default: false },
+      ratingScale: { type: String, enum: ['1-3', '1-5', '1-10'], default: '1-5' },
+      goalCreationDeadlineDays: { type: Number, default: 15 },
+      reviewSubmissionDeadlineDays: { type: Number, default: 30 },
+      allowEmployeeGoalSetting: { type: Boolean, default: true },
+      autoCloseAfterDays: { type: Number, default: 60 },
+      ratingLabels: { type: Schema.Types.Mixed, default: { '1': 'Needs Improvement', '2': 'Meets Expectations', '3': 'Exceeds Expectations', '4': 'Outstanding', '5': 'Exceptional' } },
+    },
+    trainingConfig: {
+      trainingEnabled: { type: Boolean, default: true },
+      autoEnrollByDesignation: { type: Boolean, default: false },
+      certificationExpiryReminderDays: { type: Number, default: 30 },
+      allowSelfEnrollment: { type: Boolean, default: true },
+      maxSelfEnrollmentsPerEmployee: { type: Number, default: 3 },
+      trainingCategories: { type: [String], default: ['Technical', 'Soft Skills', 'Compliance', 'Safety', 'Leadership', 'Other'] },
+      trainingModes: { type: [String], default: ['Classroom', 'Online', 'On-the-Job', 'External'] },
+      skillCategories: { type: [String], default: ['Technical', 'Functional', 'Behavioral'] },
     },
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
   },

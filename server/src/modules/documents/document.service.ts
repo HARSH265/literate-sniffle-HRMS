@@ -1,3 +1,4 @@
+import { SortOrder } from 'mongoose';
 import Document, { IDocument } from '../../models/Document.model.js';
 import CompanySettings from '../../models/CompanySettings.model.js';
 import { AuditService } from '../../core/audit/AuditService.js';
@@ -99,7 +100,7 @@ export class DocumentService {
     return document;
   }
 
-  static async list(options: ListOptions): Promise<{ data: IDocument[]; meta: any }> {
+  static async list(options: ListOptions): Promise<{ data: any[]; meta: any }> {
     const page = Math.max(1, options.page || 1);
     const limit = Math.min(100, options.limit || 20);
     const skip = (page - 1) * limit;
@@ -116,7 +117,7 @@ export class DocumentService {
       ];
     }
 
-    const sort = options.sort === 'oldest' ? { createdAt: 1 } : { createdAt: -1 };
+    const sort: Record<string, SortOrder> = options.sort === 'oldest' ? { createdAt: 1 } : { createdAt: -1 };
     const [docs, total] = await Promise.all([
       Document.find(filter).sort(sort).skip(skip).limit(limit).populate('uploadedBy', 'name email').lean(),
       Document.countDocuments(filter),
@@ -193,7 +194,7 @@ export class DocumentService {
     if (!doc) throw new AppError('Document not found', 404);
 
     doc.isActive = false;
-    doc.updatedBy = userId as any;
+    (doc as any).updatedBy = userId;
     await doc.save();
 
     await AuditService.log({
@@ -209,15 +210,15 @@ export class DocumentService {
     return doc;
   }
 
-  static async getEmployeeDocuments(employeeId: string): Promise<IDocument[]> {
+  static async getEmployeeDocuments(employeeId: string): Promise<any[]> {
     return Document.find({ employee: employeeId, isActive: true }).sort({ createdAt: -1 }).lean();
   }
 
-  static async getCompanyDocuments(): Promise<IDocument[]> {
+  static async getCompanyDocuments(): Promise<any[]> {
     return Document.find({ isCompanyDocument: true, isActive: true }).sort({ createdAt: -1 }).lean();
   }
 
-  static async getExpiringDocuments(days?: number): Promise<IDocument[]> {
+  static async getExpiringDocuments(days?: number): Promise<any[]> {
     const settings = await getSettings();
     const reminderDays = days ?? settings.autoExpireReminderDays;
     const targetDate = new Date();

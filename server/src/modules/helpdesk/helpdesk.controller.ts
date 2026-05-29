@@ -82,7 +82,7 @@ export const helpdeskController = {
     }
   },
 
-  async checkSla(req: Request, res: Response, next: NextFunction) {
+  async checkSla(_req: Request, res: Response, next: NextFunction) {
     try {
       const breached = await helpdeskService.checkSla();
       res.json({ success: true, data: { breached } });
@@ -91,7 +91,7 @@ export const helpdeskController = {
     }
   },
 
-  async stats(req: Request, res: Response, next: NextFunction) {
+  async stats(_req: Request, res: Response, next: NextFunction) {
     try {
       const stats = await helpdeskService.getStats();
       res.json({ success: true, data: stats });

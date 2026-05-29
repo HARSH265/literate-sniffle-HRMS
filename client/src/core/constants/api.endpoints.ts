@@ -156,6 +156,54 @@ export const API_ENDPOINTS = {
     modules: '/audit-logs/modules',
   },
 
+  training: {
+    programs: {
+      list: '/training/programs',
+      create: '/training/programs',
+      get: (id: string) => `/training/programs/${id}`,
+      update: (id: string) => `/training/programs/${id}`,
+      cancel: (id: string) => `/training/programs/${id}`,
+    },
+    enrollments: {
+      my: '/training/enrollments/my',
+      pending: '/training/enrollments/pending',
+      create: '/training/enrollments',
+      batch: '/training/enrollments/batch',
+      complete: (id: string) => `/training/enrollments/${id}/complete`,
+      drop: (id: string) => `/training/enrollments/${id}/drop`,
+      attendance: (id: string) => `/training/enrollments/${id}/attendance`,
+    },
+    skills: {
+      list: '/training/skills',
+      my: '/training/skills/my',
+      employee: (employeeId: string) => `/training/skills/employee/${employeeId}`,
+      gap: (designationId: string) => `/training/skills/gap/${designationId}`,
+      create: '/training/skills',
+      update: (employeeId: string, skillId: string) => `/training/skills/employee/${employeeId}/${skillId}`,
+    },
+    stats: '/training/stats',
+    certificationsExpiring: '/training/certifications/expiring',
+  },
+
+  performance: {
+    cycles: {
+      list: '/performance/cycles',
+      create: '/performance/cycles',
+      get: (id: string) => `/performance/cycles/${id}`,
+      update: (id: string) => `/performance/cycles/${id}`,
+    },
+    reviews: {
+      list: '/performance/reviews',
+      get: (id: string) => `/performance/reviews/${id}`,
+      setGoals: (id: string) => `/performance/reviews/${id}/goals`,
+      submit: (id: string) => `/performance/reviews/${id}/submit`,
+      managerReview: (id: string) => `/performance/reviews/${id}/manager-review`,
+      appeal: (id: string) => `/performance/reviews/${id}/appeal`,
+      resolveAppeal: (id: string) => `/performance/reviews/${id}/resolve-appeal`,
+      feedback: (id: string) => `/performance/reviews/${id}/feedback`,
+    },
+  },
+
   upload: {
     logo: '/upload/logo',
     employeePhoto: '/upload/employee-photo',

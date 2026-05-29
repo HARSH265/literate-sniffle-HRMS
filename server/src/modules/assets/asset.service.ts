@@ -55,7 +55,7 @@ export class AssetService {
       throw new AppError('Asset management is disabled', 400);
     }
 
-    let assetCode: string;
+    let assetCode: string = data.serialNumber || '';
     if (settings?.assetConfig?.autoGenerateAssetCode !== false) {
       assetCode = await generateAssetCode();
     } else if (!data.serialNumber) {

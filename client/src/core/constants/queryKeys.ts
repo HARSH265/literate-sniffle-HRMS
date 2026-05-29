@@ -44,4 +44,17 @@ export const QUERY_KEYS = {
   unreadCount: ['notifications', 'unread-count'] as const,
 
   auditLogs: ['audit-logs'] as const,
+
+  trainingPrograms: ['training', 'programs'] as const,
+  trainingProgram: (id: string) => ['training', 'programs', id] as const,
+  trainingEnrollmentsMy: ['training', 'enrollments', 'my'] as const,
+  trainingEnrollments: ['training', 'enrollments'] as const,
+  trainingSkills: ['training', 'skills'] as const,
+  trainingSkillsMy: ['training', 'skills', 'my'] as const,
+  trainingStats: ['training', 'stats'] as const,
+
+  performanceCycles: ['performance', 'cycles'] as const,
+  performanceCycle: (id: string) => ['performance', 'cycles', id] as const,
+  performanceReviews: ['performance', 'reviews'] as const,
+  performanceReview: (id: string) => ['performance', 'reviews', id] as const,
 } as const;

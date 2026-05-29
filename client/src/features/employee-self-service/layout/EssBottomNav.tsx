@@ -9,6 +9,7 @@ import {
   DollarOutlined,
   SwapOutlined,
   LaptopOutlined,
+  BookOutlined,
 } from '@ant-design/icons';
 import { useState } from 'react';
 import { Drawer, List } from 'antd';
@@ -27,6 +28,7 @@ const moreItems = [
   { key: '/ess/shift-swaps', icon: <SwapOutlined />, label: 'Shift Swap' },
   { key: '/ess/shift-swaps/preferences', icon: <SwapOutlined />, label: 'Shift Preference' },
   { key: '/ess/assets', icon: <LaptopOutlined />, label: 'Assets' },
+  { key: '/ess/training', icon: <BookOutlined />, label: 'Training' },
 ];
 
 export function EssBottomNav() {

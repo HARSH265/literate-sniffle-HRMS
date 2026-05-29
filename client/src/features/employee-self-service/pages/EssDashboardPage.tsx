@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { Row, Col, Card, Statistic, Spin, Alert } from 'antd';
-import { UserOutlined, FileTextOutlined, CheckCircleOutlined, QrcodeOutlined, InfoCircleOutlined, AppstoreOutlined, SwapOutlined, LaptopOutlined } from '@ant-design/icons';
+import { UserOutlined, FileTextOutlined, CheckCircleOutlined, QrcodeOutlined, InfoCircleOutlined, AppstoreOutlined, SwapOutlined, LaptopOutlined, BookOutlined } from '@ant-design/icons';
 import { useEssProfile, useChangeRequests } from '../hooks/useEssProfile';
 import { AnnouncementWidget } from '../../announcements/components/AnnouncementWidget';
 
@@ -141,6 +141,13 @@ export function EssDashboardPage() {
               <SwapOutlined style={{ fontSize: 20, color: '#7c3aed', marginBottom: 4 }} />
               <div style={{ fontSize: 12, fontWeight: 600 }}>Shift Swap</div>
               <div style={{ fontSize: 11, color: '#888' }}>Request / View</div>
+            </Card>
+          </Col>
+          <Col span={12}>
+            <Card size="small" hoverable bodyStyle={{ padding: '14px 8px', textAlign: 'center' }} onClick={() => navigate('/ess/training')}>
+              <BookOutlined style={{ fontSize: 20, color: '#0891b2', marginBottom: 4 }} />
+              <div style={{ fontSize: 12, fontWeight: 600 }}>Training</div>
+              <div style={{ fontSize: 11, color: '#888' }}>View Programs</div>
             </Card>
           </Col>
         </Row>

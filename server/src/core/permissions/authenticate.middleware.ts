@@ -8,6 +8,7 @@ export interface AuthUser {
   email: string;
   name: string;
   role: string;
+  employeeId?: string | null;
 }
 
 declare module 'express-serve-static-core' {

@@ -119,6 +119,7 @@ body {
 .ant-btn-primary {
   background: var(--hrms-primary) !important;
   border-color: var(--hrms-primary) !important;
+  color: #fff !important;
   box-shadow: 0 1px 2px rgba(79,70,229,0.2) !important;
   font-weight: 500 !important;
   border-radius: var(--hrms-radius-md) !important;
@@ -129,6 +130,7 @@ body {
 .ant-btn-primary:hover {
   background: var(--hrms-primary-hover) !important;
   border-color: var(--hrms-primary-hover) !important;
+  color: #fff !important;
   transform: translateY(-1px);
   box-shadow: 0 4px 8px rgba(79,70,229,0.3) !important;
 }

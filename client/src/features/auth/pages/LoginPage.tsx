@@ -8,6 +8,7 @@ import {
 import { useAuthStore } from '../../../core/stores/authStore';
 import { ROLES } from '../../../core/constants/permissions';
 import apiClient from '../../../core/api/apiClient';
+import { AxiosError } from 'axios';
 
 function getPasswordStrength(password: string): { score: number; label: string; color: string } {
   let score = 0;
@@ -40,8 +41,15 @@ export function LoginPage() {
       sessionStorage.removeItem('returnUrl');
       const isBackOfficeRole = user.role && Object.values(ROLES).includes(user.role);
       navigate(returnUrl || (user.employeeId && !isBackOfficeRole ? '/ess' : '/dashboard'));
-    } catch {
-      message.error('Invalid email or password. Please try again.');
+    } catch (err) {
+      const error = err as AxiosError<{ message?: string }>;
+      const status = error.response?.status;
+      const serverMessage = error.response?.data?.message;
+      const fallbackMessage = error.request && !error.response
+        ? 'Cannot reach the server. Check that your phone is on the same network and the API URL is reachable.'
+        : 'Invalid email or password. Please try again.';
+
+      message.error(status === 429 ? 'Too many login attempts. Please try again later.' : serverMessage || fallbackMessage);
     } finally {
       setLoading(false);
     }

@@ -39,7 +39,16 @@ export type Permission =
   | 'view-assets'
   | 'manage-assets'
   | 'view-documents'
-  | 'manage-documents';
+  | 'manage-documents'
+  | 'view-performance'
+  | 'manage-performance'
+  | 'view-own-performance'
+  | 'manage-own-performance'
+  | 'request-feedback'
+  | 'view-training'
+  | 'manage-training'
+  | 'view-own-training'
+  | 'enroll-training';
 
 export function authorize(...allowedPermissions: Permission[]) {
   return (_req: Request, _res: Response, next: NextFunction): void => {

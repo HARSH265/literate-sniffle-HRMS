@@ -100,6 +100,11 @@ export const essService = {
     return data;
   },
 
+  async getMyTraining(): Promise<{ success: boolean; data: any[] }> {
+    const { data } = await apiClient.get('/training/enrollments/my');
+    return data;
+  },
+
   async getPayslips(): Promise<{ success: boolean; data: any[] }> {
     const { data } = await apiClient.get('/ess/payslips');
     return data;

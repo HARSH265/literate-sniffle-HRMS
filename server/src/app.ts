@@ -39,6 +39,8 @@ import helpdeskRoutes from './modules/helpdesk/helpdesk.routes.js';
 import assetRoutes from './modules/assets/asset.routes.js';
 import documentRoutes from './modules/documents/document.routes.js';
 import shiftSwapRoutes from './modules/shift-swap/shiftSwap.routes.js';
+import performanceRoutes from './modules/performance/performance.routes.js';
+import trainingRoutes from './modules/training/training.routes.js';
 
 dotenv.config();
 
@@ -138,6 +140,8 @@ app.use('/api/v1/helpdesk', auditMiddleware, helpdeskRoutes);
 app.use('/api/v1/assets', auditMiddleware, assetRoutes);
 app.use('/api/v1/documents', auditMiddleware, documentRoutes);
 app.use('/api/v1/shift-swaps', auditMiddleware, shiftSwapRoutes);
+app.use('/api/v1/performance', auditMiddleware, performanceRoutes);
+app.use('/api/v1/training', auditMiddleware, trainingRoutes);
 app.use('/api/v1/audit-logs', auditRoutes);
 
 app.use(errorHandler);

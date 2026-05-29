@@ -18,6 +18,7 @@ import {
   FileDoneOutlined,
   BookOutlined,
   BellOutlined,
+  MessageOutlined,
   AppstoreOutlined,
   UnorderedListOutlined,
   PlusOutlined,
@@ -30,6 +31,9 @@ import {
   LaptopOutlined,
   FolderOutlined,
   SwapOutlined,
+  StarOutlined,
+  ReadOutlined,
+  ApartmentOutlined,
 } from '@ant-design/icons';
 import { usePermission } from '../core/hooks/usePermission';
 import { useUIStore } from '../core/stores/uiStore';
@@ -59,6 +63,12 @@ export function Sidebar({ collapsed }: SidebarProps) {
     else if (path.includes('/loans')) { setOpenKeys(['loans']); }
     else if (path.includes('/shift-swaps')) { setOpenKeys(['shiftSwap']); }
     else if (path.includes('/payroll') || path.includes('/salary-slips')) { setOpenKeys(['payroll']); }
+    else if (path.includes('/performance')) { setOpenKeys(['performance']); }
+    else if (path.includes('/training')) { setOpenKeys(['training']); }
+    else if (path.includes('/assets') || path.includes('/documents') || path.includes('/rule-book')) { setOpenKeys(['resources']); }
+    else if (path.includes('/reports') || path.includes('/statutory')) { setOpenKeys(['analytics']); }
+    else if (path.includes('/users') || path.includes('/audit-logs') || path.includes('/settings')) { setOpenKeys(['administration']); }
+    else if (path.includes('/announcements') || path.includes('/helpdesk') || path.includes('/notifications')) { setOpenKeys(['communication']); }
     else { setOpenKeys([]); }
   }, [location.pathname]);
 
@@ -109,6 +119,16 @@ export function Sidebar({ collapsed }: SidebarProps) {
       if (path.includes('/shift-swaps/preferences')) return '/shift-swaps/preferences';
       return '/shift-swaps';
     }
+    if (path.includes('/performance')) {
+      return '/performance';
+    }
+    if (path.includes('/training')) {
+      if (path.includes('/training/enrollments')) return '/training/enrollments';
+      if (path.includes('/training/skills')) return '/training/skills';
+      if (path.includes('/training/skill-gap')) return '/training/skill-gap';
+      if (path.includes('/training/certifications')) return '/training/certifications';
+      return '/training';
+    }
     if (path.includes('/rule-book')) return '/rule-book';
     return path;
   };
@@ -154,8 +174,33 @@ export function Sidebar({ collapsed }: SidebarProps) {
           { key: '/kiosk/devices', icon: <QrcodeOutlined />, label: 'Kiosk' },
         ]
       },
-      { key: '/assets', icon: <LaptopOutlined />, label: 'Assets', permission: 'view-assets' },
-      { key: '/documents', icon: <FolderOutlined />, label: 'Documents', permission: 'view-documents' },
+      {
+        key: 'resources',
+        icon: <FolderOutlined />,
+        label: 'Resources',
+        permission: 'view-assets',
+        children: [
+          { key: '/assets', icon: <LaptopOutlined />, label: 'Assets', permission: 'view-assets' },
+          { key: '/documents', icon: <FileTextOutlined />, label: 'Documents', permission: 'view-documents' },
+          { key: '/rule-book', icon: <BookOutlined />, label: 'User Guide' },
+        ]
+      },
+      {
+        key: 'performance', icon: <StarOutlined />, label: 'Performance', permission: 'view-performance',
+        children: [
+          { key: '/performance', icon: <UnorderedListOutlined />, label: 'Reviews' },
+        ]
+      },
+      {
+        key: 'training', icon: <ReadOutlined />, label: 'Training', permission: 'view-training',
+        children: [
+          { key: '/training', icon: <UnorderedListOutlined />, label: 'Programs' },
+          { key: '/training/enrollments', icon: <CheckSquareOutlined />, label: 'Enrollments' },
+          { key: '/training/skills', icon: <ApartmentOutlined />, label: 'Skill Matrix' },
+          { key: '/training/skill-gap', icon: <BarChartOutlined />, label: 'Skill Gap' },
+          { key: '/training/certifications', icon: <SafetyCertificateOutlined />, label: 'Certifications' },
+        ]
+      },
       {
         key: 'shiftSwap',
         icon: <SwapOutlined />,
@@ -209,15 +254,36 @@ export function Sidebar({ collapsed }: SidebarProps) {
           { key: '/loans/apply', icon: <PlusOutlined />, label: 'Apply for Loan' },
         ]
       },
-      { key: '/statutory', icon: <SafetyCertificateOutlined />, label: 'Statutory', permission: 'view-statutory' },
-      { key: '/reports', icon: <BarChartOutlined />, label: 'Reports', permission: 'view-reports' },
-      { key: '/users', icon: <UserOutlined />, label: 'Users', permission: 'manage-users' },
-      { key: '/audit-logs', icon: <FileDoneOutlined />, label: 'Audit Logs', permission: 'view-audit' },
-      { key: '/announcements', icon: <BellOutlined />, label: 'Announcements', permission: 'view-announcements' },
-      { key: '/helpdesk', icon: <UnorderedListOutlined />, label: 'Help Desk', permission: 'view-tickets' },
-      { key: '/notifications', icon: <BellOutlined />, label: 'Notifications', permission: undefined },
-      { key: '/rule-book', icon: <BookOutlined />, label: 'User Guide' },
-      { key: '/settings', icon: <SettingOutlined />, label: 'Settings', permission: 'manage-settings' },
+      {
+        key: 'analytics',
+        icon: <BarChartOutlined />,
+        label: 'Analytics',
+        permission: 'view-reports',
+        children: [
+          { key: '/reports', icon: <BarChartOutlined />, label: 'Reports', permission: 'view-reports' },
+          { key: '/statutory', icon: <SafetyCertificateOutlined />, label: 'Statutory', permission: 'view-statutory' },
+        ]
+      },
+      {
+        key: 'administration',
+        icon: <ApartmentOutlined />,
+        label: 'Administration',
+        children: [
+          { key: '/users', icon: <UserOutlined />, label: 'Users', permission: 'manage-users' },
+          { key: '/audit-logs', icon: <FileDoneOutlined />, label: 'Audit Logs', permission: 'view-audit' },
+          { key: '/settings', icon: <SettingOutlined />, label: 'Settings', permission: 'manage-settings' },
+        ]
+      },
+      {
+        key: 'communication',
+        icon: <MessageOutlined />,
+        label: 'Communication',
+        children: [
+          { key: '/announcements', icon: <BellOutlined />, label: 'Announcements', permission: 'view-announcements' },
+          { key: '/helpdesk', icon: <UnorderedListOutlined />, label: 'Help Desk', permission: 'view-tickets' },
+          { key: '/notifications', icon: <BellOutlined />, label: 'Notifications' },
+        ]
+      },
     ];
 
     const hasAccess = (perm: string | string[] | undefined) => {

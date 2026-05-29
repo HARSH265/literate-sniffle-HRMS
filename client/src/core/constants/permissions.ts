@@ -11,6 +11,19 @@ export const PERMISSIONS = {
   VIEW_SHIFT_SWAPS: 'view-shift-swaps',
   MANAGE_SHIFT_SWAPS: 'manage-shift-swaps',
   REQUEST_SHIFT_SWAP: 'request-shift-swap',
+
+  // Performance
+  VIEW_PERFORMANCE: 'view-performance',
+  MANAGE_PERFORMANCE: 'manage-performance',
+  VIEW_OWN_PERFORMANCE: 'view-own-performance',
+  MANAGE_OWN_PERFORMANCE: 'manage-own-performance',
+  REQUEST_FEEDBACK: 'request-feedback',
+
+  // Training
+  VIEW_TRAINING: 'view-training',
+  MANAGE_TRAINING: 'manage-training',
+  VIEW_OWN_TRAINING: 'view-own-training',
+  ENROLL_TRAINING: 'enroll-training',
 } as const;
 
 export const ROLES = {
@@ -34,6 +47,8 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     'view-shift-swaps', 'manage-shift-swaps', 'request-shift-swap', 'view-own-shifts',
     'view-assets', 'manage-assets',
     'view-documents', 'manage-documents',
+    'view-performance', 'manage-performance', 'view-own-performance', 'manage-own-performance', 'request-feedback',
+    'view-training', 'manage-training', 'view-own-training', 'enroll-training',
   ],
   'hr-admin': [
     'manage-employees', 'view-employees', 'manage-departments', 'view-departments',
@@ -47,6 +62,8 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     'view-shift-swaps', 'manage-shift-swaps', 'request-shift-swap', 'view-own-shifts',
     'view-assets', 'manage-assets',
     'view-documents', 'manage-documents',
+    'view-performance', 'manage-performance', 'view-own-performance', 'manage-own-performance', 'request-feedback',
+    'view-training', 'manage-training', 'view-own-training', 'enroll-training',
   ],
   'hr-staff': [
     'view-employees', 'view-departments', 'manage-attendance', 'manage-overtime',
@@ -57,6 +74,8 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     'request-shift-swap',
     'view-assets',
     'view-documents',
+    'view-performance', 'view-own-performance', 'manage-own-performance', 'request-feedback',
+    'view-training', 'view-own-training',
   ],
   'accounts': [
     'view-departments', 'process-payroll', 'view-reports', 'view-leave',
@@ -75,5 +94,6 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     'request-shift-swap',
     'view-assets',
     'view-documents',
+    'view-training', 'view-own-training', 'enroll-training',
   ],
 };

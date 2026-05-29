@@ -19,14 +19,16 @@
 |---|---------|--------|
 | 2.1 | Asset Management | ✅ Complete |
 | 2.2 | Document Repository | ✅ Complete |
-| 2.3 | Shift Swap / Preferences | Pending |
+| 2.3 | Shift Swap / Preferences | ✅ Complete |
 
 ## Phase 3: People Development
 
 | # | Feature | Status |
 |---|---------|--------|
-| 3.1 | Performance Management System | Pending |
-| 3.2 | Training & Development | Pending |
+| 3.1 | Performance Management System | ✅ Server (models, API, tests) |
+| 3.2 | Training & Development | ✅ Server (models, API, tests) |
+| 3.3 | Performance Client Module | Pending |
+| 3.4 | Training Client Module | Pending |
 
 ## Phase 4: Financial & Compliance
 

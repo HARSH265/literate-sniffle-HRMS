@@ -77,7 +77,5 @@ TicketSchema.index({ status: 1, createdAt: -1 });
 TicketSchema.index({ priority: 1, createdAt: -1 });
 TicketSchema.index({ requestedBy: 1, createdAt: -1 });
 TicketSchema.index({ assignedTo: 1, createdAt: -1 });
-TicketSchema.index({ ticketId: 1 });
-
 const Ticket = mongoose.model<ITicket>('Ticket', TicketSchema);
 export default Ticket;
