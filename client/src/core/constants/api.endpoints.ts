@@ -44,6 +44,16 @@ export const API_ENDPOINTS = {
     get: (id: string) => `/employees/${id}`,
     update: (id: string) => `/employees/${id}`,
     delete: (id: string) => `/employees/${id}`,
+    nextCode: '/employees/next-code',
+    import: '/employees/import',
+    export: '/employees/export',
+    template: '/employees/template',
+    bulkAssignShift: '/employees/bulk/shift',
+    restore: (id: string) => `/employees/${id}/restore`,
+    uploadDocument: (id: string) => `/employees/${id}/documents`,
+    downloadDocument: (id: string, docId: string) => `/employees/${id}/documents/${docId}`,
+    removeDocument: (id: string, docId: string) => `/employees/${id}/documents/${docId}`,
+    photo: (id: string) => `/employees/${id}/photo`,
   },
 
   holidays: {

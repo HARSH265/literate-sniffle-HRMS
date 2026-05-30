@@ -1,12 +1,12 @@
 import Employee from '../../models/Employee.model.js';
 import Shift from '../../models/Shift.model.js';
 import User from '../../models/User.model.js';
+import Notification from '../../models/Notification.model.js';
 import CompanySettings from '../../models/CompanySettings.model.js';
 import { AppError } from '../../core/errors/AppError.js';
 import { AuditService } from '../../core/audit/AuditService.js';
 import { PaginationUtil, PaginationMeta } from '../../core/utils/PaginationUtil.js';
 import { encryptBankDetails, decryptBankDetails } from '../../core/utils/EncryptionUtil.js';
-import { NotificationService } from '../../core/notification/NotificationService.js';
 
 const SALARY_ACCESS_ROLES = ['super-admin', 'hr-admin', 'hr-staff', 'accounts'];
 
@@ -50,6 +50,8 @@ export class EmployeesService {
 
     if (queryParams.status) {
       filter.status = queryParams.status;
+    } else {
+      filter.status = { $ne: 'archived' };
     }
 
     if (queryParams.category) {
@@ -126,7 +128,8 @@ export class EmployeesService {
     const config = settings?.employeeCodeConfig || { prefix: 'EMP', startNumber: 1, padding: 3, isAutoGenerate: true };
     const { prefix, startNumber, padding } = config;
 
-    const lastEmployee = await Employee.findOne({ employeeCode: { $regex: `^${prefix}` } })
+    const escapedPrefix = prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const lastEmployee = await Employee.findOne({ employeeCode: { $regex: `^${escapedPrefix}` } })
       .sort({ employeeCode: -1 })
       .select('employeeCode')
       .lean();
@@ -156,11 +159,6 @@ export class EmployeesService {
       employeeCode = await this.generateNextEmployeeCode();
     }
 
-    const existing = await Employee.findOne({ employeeCode: employeeCode.toUpperCase() });
-    if (existing) {
-      throw new AppError('Employee code already exists', 400);
-    }
-
     const encryptedData = {
       ...data,
       employeeCode: employeeCode.toUpperCase(),
@@ -168,7 +166,22 @@ export class EmployeesService {
       createdBy: createdById,
     };
 
-    const emp = await Employee.create(encryptedData);
+    let emp;
+    const MAX_RETRIES = 3;
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      try {
+        emp = await Employee.create(attempt === 0 ? encryptedData : { ...encryptedData, employeeCode: await this.generateNextEmployeeCode() });
+        break;
+      } catch (err: any) {
+        if (err.code === 11000 && attempt < MAX_RETRIES - 1) {
+          continue;
+        }
+        throw err;
+      }
+    }
+    if (!emp) {
+      throw new AppError('Failed to create employee after retries', 500);
+    }
 
     await AuditService.log({
       action: 'create',
@@ -179,15 +192,20 @@ export class EmployeesService {
     });
 
     const hrAdmins = await User.find({ role: { $in: ['super-admin', 'hr-admin', 'hr-staff'] } }).lean();
-    for (const admin of hrAdmins) {
-      await NotificationService.send({
+    if (hrAdmins.length > 0) {
+      const notifications = hrAdmins.map((admin) => ({
         title: 'New Employee Added',
         message: `${data.fullName} (${employeeCode}) has been added to the system.`,
-        type: 'info',
-        recipient: admin._id.toString(),
+        type: 'info' as const,
+        recipient: admin._id,
         module: 'employees',
         link: `/employees/${emp._id.toString()}`,
-      });
+      }));
+      try {
+        await Notification.insertMany(notifications, { ordered: false });
+      } catch {
+        // Log but don't fail if batch notification fails
+      }
     }
 
     return this.getById(emp._id.toString(), userRole);
@@ -235,6 +253,30 @@ export class EmployeesService {
       userId: deletedById,
       targetId: id,
     });
+  }
+
+  static async restore(id: string, restoredById: string) {
+    const emp = await Employee.findById(id);
+    if (!emp) {
+      throw new AppError('Employee not found', 404);
+    }
+
+    if (emp.status !== 'archived') {
+      throw new AppError('Only archived employees can be restored', 400);
+    }
+
+    emp.status = 'active';
+    emp.updatedBy = restoredById as any;
+    await emp.save();
+
+    await AuditService.log({
+      action: 'update',
+      module: 'employees',
+      userId: restoredById,
+      targetId: id,
+    });
+
+    return this.getById(id, 'super-admin');
   }
 
   static async bulkAssignShift(employeeIds: string[], shiftId: string, updatedById: string) {

@@ -1,7 +1,9 @@
 import { Request, Response } from 'express';
 import { EmployeesService } from './employees.service.js';
+import mongoose from 'mongoose';
 import { ResponseHandler } from '../../core/response/ResponseHandler.js';
 import { asyncHandler } from '../../core/errors/asyncHandler.js';
+import { AppError } from '../../core/errors/AppError.js';
 import { PaginationMeta } from '../../core/utils/PaginationUtil.js';
 import { ExcelGeneratorService } from '../../core/excel/ExcelGeneratorService.js';
 import { FileUploadService } from '../../core/file/FileUploadService.js';
@@ -67,6 +69,24 @@ const uploadDocument = asyncHandler(async (req: Request, res: Response) => {
   ResponseHandler.success(res, employee.documents, 'Document uploaded successfully');
 });
 
+const uploadPhoto = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  if (!req.file) {
+    throw new AppError('Please upload a photo file', 400);
+  }
+
+  const employee = await Employee.findById(id);
+  if (!employee) {
+    res.status(404).json({ success: false, message: 'Employee not found' });
+    return;
+  }
+
+  const filePath = await FileUploadService.uploadFromBuffer(req.file.buffer, `employees/${id}/photo`);
+
+  const result = await EmployeesService.updatePhoto(id, filePath, req.user!.id);
+  ResponseHandler.success(res, result, 'Employee photo uploaded successfully');
+});
+
 const removeDocument = asyncHandler(async (req: Request, res: Response) => {
   const { id, docId } = req.params;
   
@@ -74,6 +94,16 @@ const removeDocument = asyncHandler(async (req: Request, res: Response) => {
   if (!employee) {
     res.status(404).json({ success: false, message: 'Employee not found' });
     return;
+  }
+
+  const doc = (employee.documents || []).find((d: any) => d._id?.toString() === docId);
+  if (doc?.filePath) {
+    try {
+      const publicId = FileUploadService.getPublicIdFromUrl(doc.filePath);
+      await FileUploadService.delete(publicId);
+    } catch {
+      // Log but don't fail if Cloudinary deletion fails
+    }
   }
 
   employee.documents = (employee.documents || []).filter((doc: any) => doc._id?.toString() !== docId);
@@ -84,10 +114,16 @@ const removeDocument = asyncHandler(async (req: Request, res: Response) => {
 
 const downloadDocument = asyncHandler(async (req: Request, res: Response) => {
   const { id, docId } = req.params;
+  const userRole = req.user!.role;
   
   const employee = await Employee.findById(id);
   if (!employee) {
     res.status(404).json({ success: false, message: 'Employee not found' });
+    return;
+  }
+
+  if (employee.status === 'archived' && !['super-admin', 'hr-admin'].includes(userRole)) {
+    res.status(403).json({ success: false, message: 'Access denied' });
     return;
   }
 
@@ -103,6 +139,11 @@ const downloadDocument = asyncHandler(async (req: Request, res: Response) => {
 const remove = asyncHandler(async (req: Request, res: Response) => {
   await EmployeesService.delete(req.params.id, req.user!.id);
   ResponseHandler.noContent(res);
+});
+
+const restore = asyncHandler(async (req: Request, res: Response) => {
+  const result = await EmployeesService.restore(req.params.id, req.user!.id);
+  ResponseHandler.success(res, result, 'Employee restored successfully');
 });
 
 const exportEmployees = asyncHandler(async (_req: Request, res: Response) => {
@@ -205,7 +246,7 @@ const downloadTemplate = asyncHandler(async (_req: Request, res: Response) => {
 
 const importEmployees = asyncHandler(async (req: Request, res: Response) => {
   if (!req.file) {
-    throw new Error('Please upload an Excel file');
+    throw new AppError('Please upload an Excel file', 400);
   }
 
   const ExcelJS = (await import('exceljs')).default;
@@ -216,28 +257,59 @@ const importEmployees = asyncHandler(async (req: Request, res: Response) => {
 
   const worksheet = workbook.getWorksheet(1);
   if (!worksheet) {
-    throw new Error('Worksheet not found');
+    throw new AppError('Worksheet not found', 400);
   }
   const rows = worksheet.getRows(2, worksheet.rowCount - 1);
 
   if (!rows || rows.length === 0) {
-    throw new Error('No data found in the file');
+    throw new AppError('No data found in the file', 400);
   }
+
+  // Begin atomic import with transaction
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
   const results = { success: 0, failed: 0, errors: [] as string[] };
 
+  // Batch: collect all unique names first, then do single queries
+  const allDeptNames = new Set<string>();
+  const allDesigNames = new Set<string>();
+  const allShiftNames = new Set<string>();
+  const allEmpCodes = new Set<string>();
+  const rowData: any[] = [];
+
   for (const row of rows) {
-    try {
-      const values = row.values as any[];
-      
-      // Get values as array, skip first element (row number in ExcelJS)
-      const data = Array.from(values).slice(1);
-      
+    const values = row.values as any[];
+    const data = Array.from(values).slice(1);
+    const departmentName = data[5] ? String(data[5]).trim() : '';
+    const designationName = data[6] ? String(data[6]).trim() : '';
+    const shiftName = data[7] ? String(data[7]).trim() : '';
+    const employeeCode = data[0] ? String(data[0]).trim() : '';
+    if (departmentName) allDeptNames.add(departmentName);
+    if (designationName) allDesigNames.add(designationName);
+    if (shiftName) allShiftNames.add(shiftName);
+    if (employeeCode) allEmpCodes.add(employeeCode.toUpperCase());
+    rowData.push({ row, data });
+  }
+
+  const [departments, designations, shifts, existingEmployees] = await Promise.all([
+    allDeptNames.size > 0 ? Department.find({ name: { $in: Array.from(allDeptNames).map(n => new RegExp(`^${n}$`, 'i')) } }) : [],
+    allDesigNames.size > 0 ? Designation.find({ name: { $in: Array.from(allDesigNames).map(n => new RegExp(`^${n}$`, 'i')) } }) : [],
+    allShiftNames.size > 0 ? Shift.find({ name: { $in: Array.from(allShiftNames).map(n => new RegExp(`^${n}$`, 'i')) } }) : [],
+    allEmpCodes.size > 0 ? Employee.find({ employeeCode: { $in: Array.from(allEmpCodes) } }).select('employeeCode') : [],
+  ]);
+
+  const deptMap = new Map(departments.map((d: any) => [d.name.toLowerCase(), d]));
+  const desigMap = new Map(designations.map((d: any) => [d.name.toLowerCase(), d]));
+  const shiftMap = new Map(shifts.map((s: any) => [s.name.toLowerCase(), s]));
+  const empCodeSet = new Set(existingEmployees.map((e: any) => e.employeeCode.toUpperCase()));
+
+  try {
+    for (const { row, data } of rowData) {
       const employeeCode = data[0] ? String(data[0]).trim() : '';
       const fullName = data[1] ? String(data[1]).trim() : '';
       const fatherName = data[2] ? String(data[2]).trim() : '';
       
-      // Map category: "manufacturing worker" -> "worker", "office staff" -> "office-staff"
       const rawCategory = data[3] ? String(data[3]).trim().toLowerCase() : '';
       const category = rawCategory.includes('manufacturing') || rawCategory.includes('worker') ? 'worker' : 
                        rawCategory.includes('office') ? 'office-staff' : 'worker';
@@ -248,7 +320,6 @@ const importEmployees = asyncHandler(async (req: Request, res: Response) => {
       const shiftName = data[7] ? String(data[7]).trim() : '';
       const joiningDate = data[8] ? String(data[8]).trim() : '';
       
-      // Map salary type
       const rawSalaryType = data[9] ? String(data[9]).trim().toLowerCase() : '';
       const salaryType = rawSalaryType.includes('daily') ? 'daily' : 'monthly';
       
@@ -260,27 +331,15 @@ const importEmployees = asyncHandler(async (req: Request, res: Response) => {
       const address = data[15] ? String(data[15]).trim() : '';
 
       if (!employeeCode || !fullName || !fatherName) {
-        results.failed++;
-        results.errors.push(`Row ${row.number}: Missing required fields`);
-        continue;
+        throw new AppError(`Row ${row.number}: Missing required fields`, 400);
       }
 
-      let department: any, designation: any, shift: any;
-      if (departmentName) {
-        department = await Department.findOne({ name: { $regex: new RegExp(`^${departmentName}$`, 'i') } });
-      }
-      if (designationName) {
-        designation = await Designation.findOne({ name: { $regex: new RegExp(`^${designationName}$`, 'i') } });
-      }
-      if (shiftName) {
-        shift = await Shift.findOne({ name: { $regex: new RegExp(`^${shiftName}$`, 'i') } });
-      }
+      const department = departmentName ? deptMap.get(departmentName.toLowerCase()) : null;
+      const designation = designationName ? desigMap.get(designationName.toLowerCase()) : null;
+      const shift = shiftName ? shiftMap.get(shiftName.toLowerCase()) : null;
 
-      const existing = await Employee.findOne({ employeeCode: employeeCode.toUpperCase() });
-      if (existing) {
-        results.failed++;
-        results.errors.push(`Row ${row.number}: Employee code ${employeeCode} already exists`);
-        continue;
+      if (empCodeSet.has(employeeCode.toUpperCase())) {
+        throw new AppError(`Row ${row.number}: Employee code ${employeeCode} already exists`, 400);
       }
 
       await Employee.create({
@@ -301,21 +360,25 @@ const importEmployees = asyncHandler(async (req: Request, res: Response) => {
         contactNumber,
         address,
         createdBy: req.user!.id as any,
-      });
+      }, { session });
 
       results.success++;
-    } catch (rowError: any) {
-      results.failed++;
-      results.errors.push(`Row ${row.number}: ${rowError.message}`);
     }
+    await session.commitTransaction();
+    session.endSession();
+    ResponseHandler.success(res, {
+      message: `Import completed: ${results.success} successful, 0 failed`,
+      success: results.success,
+      failed: 0,
+      errors: [],
+    });
+  } catch (err: any) {
+    await session.abortTransaction();
+    session.endSession();
+    // If any error during import, respond with failure details
+    const errorMessage = err instanceof AppError ? err.message : err.message || 'Import failed';
+    throw new AppError(errorMessage, err.status || 500);
   }
-
-  ResponseHandler.success(res, {
-    message: `Import completed: ${results.success} successful, ${results.failed} failed`,
-    success: results.success,
-    failed: results.failed,
-    errors: results.errors.slice(0, 10),
-  });
 });
 
 const generateNextCode = asyncHandler(async (_req: Request, res: Response) => {
@@ -329,4 +392,4 @@ const bulkAssignShift = asyncHandler(async (req: Request, res: Response) => {
   ResponseHandler.success(res, result, `${result.modifiedCount} employee(s) updated`);
 });
 
-export const employeesController = { list, getById, create, update, remove, export: exportEmployees, downloadTemplate, import: importEmployees, uploadDocument, removeDocument, downloadDocument, generateNextCode, bulkAssignShift };
+export const employeesController = { list, getById, create, update, remove, restore, export: exportEmployees, downloadTemplate, import: importEmployees, uploadDocument, removeDocument, downloadDocument, uploadPhoto, generateNextCode, bulkAssignShift };
