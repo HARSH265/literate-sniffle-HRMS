@@ -138,9 +138,10 @@ export const announcementService = {
     }
 
     if (options.search) {
+      const escaped = options.search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       filter.$or = [
-        { title: { $regex: options.search, $options: 'i' } },
-        { content: { $regex: options.search, $options: 'i' } },
+        { title: { $regex: escaped, $options: 'i' } },
+        { content: { $regex: escaped, $options: 'i' } },
       ];
     }
 

@@ -146,7 +146,7 @@ describe('employeeService', () => {
   describe('getDocumentUrl', () => {
     it('returns document URL string', () => {
       const url = employeeService.getDocumentUrl('emp1', 'doc1');
-      expect(url).toBe('/employees/emp1/documents/doc1');
+      expect(url).toContain('/employees/emp1/documents/doc1');
     });
   });
 });

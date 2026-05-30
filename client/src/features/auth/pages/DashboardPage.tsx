@@ -157,58 +157,63 @@ export function DashboardPage() {
   const { data: empData } = useQuery({
     queryKey: ['employees-dash'],
     queryFn: () => import('../../employees/services/employeeService').then((m) => m.employeeService.list({ limit: 1 })),
+    staleTime: 5 * 60 * 1000,
   });
   const { data: deptData } = useQuery({
     queryKey: ['departments-dash'],
     queryFn: () => import('../../departments/services/departmentService').then((m) => m.departmentService.list({ limit: 1 })),
+    staleTime: 5 * 60 * 1000,
   });
   const { data: desigData } = useQuery({
     queryKey: ['designations-dash'],
     queryFn: () => import('../../designations/services/designationService').then((m) => m.designationService.list({ limit: 1 })),
+    staleTime: 5 * 60 * 1000,
   });
   const { data: shiftData } = useQuery({
     queryKey: ['shifts-dash'],
     queryFn: () => import('../../shifts/services/shiftService').then((m) => m.shiftService.list({ limit: 1 })),
+    staleTime: 5 * 60 * 1000,
   });
   const { data: auditData } = useQuery({
     queryKey: ['recent-audit-logs'],
     queryFn: () => import('../../audit/services/auditService').then((m) => m.auditService.list({ limit: 10 })),
-    refetchInterval: 30000,
+    staleTime: 30 * 1000,
   });
 
   const { data: attendanceSummary } = useQuery({
     queryKey: ['dash-attendance-summary', today],
     queryFn: () => apiClient.get('/reports/attendance/summary', { params: { startDate: today, endDate: today } }).then((r) => r.data),
-    refetchInterval: 60000,
+    staleTime: 60 * 1000,
   });
 
   const { data: pendingLeaves } = useQuery({
     queryKey: ['dash-pending-leaves'],
     queryFn: () => apiClient.get('/leave/applications', { params: { status: 'pending', limit: 1 } }).then((r) => r.data),
-    refetchInterval: 30000,
+    staleTime: 30 * 1000,
   });
 
   const { data: pendingLoans } = useQuery({
     queryKey: ['dash-pending-loans'],
     queryFn: () => apiClient.get('/loans', { params: { status: 'applied', limit: 1 } }).then((r) => r.data),
-    refetchInterval: 30000,
+    staleTime: 30 * 1000,
   });
 
   const { data: payrollRuns } = useQuery({
     queryKey: ['dash-payroll-status'],
     queryFn: () => apiClient.get('/payroll/runs', { params: { limit: 1, sort: 'createdAt', order: 'desc' } }).then((r) => r.data),
-    refetchInterval: 60000,
+    staleTime: 60 * 1000,
   });
 
   const { data: otSummary } = useQuery({
     queryKey: ['dash-ot-summary', thisMonth, thisYear],
     queryFn: () => apiClient.get('/reports/overtime/summary', { params: { month: thisMonth, year: thisYear } }).then((r) => r.data),
-    refetchInterval: 60000,
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: holidays } = useQuery({
     queryKey: ['dash-upcoming-holidays', thisYear],
     queryFn: () => apiClient.get('/holidays', { params: { year: thisYear, limit: 50 } }).then((r) => r.data),
+    staleTime: 5 * 60 * 1000,
   });
 
   const totalEmployees = empData?.meta?.total ?? 0;

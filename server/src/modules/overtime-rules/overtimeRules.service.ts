@@ -2,6 +2,7 @@ import OvertimeRule from '../../models/OvertimeRule.model.js';
 import { AppError } from '../../core/errors/AppError.js';
 import { AuditService } from '../../core/audit/AuditService.js';
 import { PaginationUtil, PaginationMeta } from '../../core/utils/PaginationUtil.js';
+import { CacheService } from '../../core/cache/CacheService.js';
 
 export class OvertimeRulesService {
   static async list(queryParams: Record<string, unknown>): Promise<{ data: unknown[]; meta: PaginationMeta }> {
@@ -37,6 +38,8 @@ export class OvertimeRulesService {
   static async create(data: Record<string, unknown>, userId: string) {
     const rule = await OvertimeRule.create({ ...data, createdBy: userId });
 
+    CacheService.invalidateOvertimeRules();
+
     await AuditService.log({
       action: 'create',
       module: 'overtime-rules',
@@ -55,6 +58,8 @@ export class OvertimeRulesService {
     Object.assign(rule, data, { updatedBy: userId });
     await rule.save();
 
+    CacheService.invalidateOvertimeRules();
+
     await AuditService.log({
       action: 'update',
       module: 'overtime-rules',
@@ -71,6 +76,8 @@ export class OvertimeRulesService {
     if (!rule) throw new AppError('Overtime rule not found or already deleted', 404);
 
     await OvertimeRule.findByIdAndDelete(id);
+
+    CacheService.invalidateOvertimeRules();
 
     await AuditService.log({
       action: 'delete',

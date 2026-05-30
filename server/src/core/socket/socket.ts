@@ -1,7 +1,11 @@
 import { Server as HTTPServer } from 'http';
-import { Server } from 'socket.io';
+import { Server, Socket } from 'socket.io';
+import jwt from 'jsonwebtoken';
 import mongoose from 'mongoose';
 import KioskDevice from '../../models/KioskDevice.model.js';
+import { env } from '../../config/env.js';
+import { TokenBlacklist } from '../auth/TokenBlacklist.js';
+import { logger } from '../logger/logger.js';
 
 let io: Server;
 
@@ -13,7 +17,28 @@ export function initSocket(httpServer: HTTPServer): Server {
     },
   });
 
+  io.use((socket: Socket, next) => {
+    const token = socket.handshake.auth?.token || socket.handshake.query?.token;
+    if (!token || typeof token !== 'string') {
+      return next(new Error('Authentication required'));
+    }
+
+    if (TokenBlacklist.isBlacklisted(token)) {
+      return next(new Error('Token has been revoked'));
+    }
+
+    try {
+      const decoded = jwt.verify(token, env.JWT_SECRET, { algorithms: ['HS256'] });
+      (socket as any).user = decoded;
+      next();
+    } catch {
+      next(new Error('Invalid token'));
+    }
+  });
+
   io.on('connection', (socket) => {
+    logger.info(`Socket connected: ${socket.id}`);
+
     socket.on('join-kiosk', (kioskId: string) => {
       socket.join(`kiosk:${kioskId}`);
     });
@@ -27,9 +52,13 @@ export function initSocket(httpServer: HTTPServer): Server {
         const isObjectId = mongoose.Types.ObjectId.isValid(kioskId);
         const filter = isObjectId ? { _id: kioskId } : { deviceCode: kioskId };
         await KioskDevice.updateOne(filter, { lastSeenAt: new Date() });
-      } catch {
-        // silent
+      } catch (err) {
+        logger.error('Kiosk ping error:', err);
       }
+    });
+
+    socket.on('disconnect', () => {
+      logger.info(`Socket disconnected: ${socket.id}`);
     });
   });
 

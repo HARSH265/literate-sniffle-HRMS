@@ -30,6 +30,8 @@ const WeeklyOffRuleSchema = new Schema<IWeeklyOffRule>(
   { timestamps: true },
 );
 
+WeeklyOffRuleSchema.index({ isActive: 1, category: 1 });
+
 const WeeklyOffRule = mongoose.model<IWeeklyOffRule, WeeklyOffRuleModel>('WeeklyOffRule', WeeklyOffRuleSchema);
 
 export default WeeklyOffRule;

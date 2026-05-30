@@ -1,12 +1,13 @@
 import { Request, Response, NextFunction } from 'express';
 import { announcementService } from './announcement.service.js';
+import { ResponseHandler } from '../../core/response/ResponseHandler.js';
 
 export const announcementController = {
   async create(req: Request, res: Response, next: NextFunction) {
     try {
-      const userId = (req as any).user._id;
+      const userId = req.user!.id;
       const announcement = await announcementService.create(req.body, userId.toString());
-      res.status(201).json({ success: true, data: announcement, message: 'Announcement created' });
+      ResponseHandler.created(res, announcement, 'Announcement created');
     } catch (err) {
       next(err);
     }
@@ -22,7 +23,7 @@ export const announcementController = {
         search: req.query.search as string,
         sort: req.query.sort as string,
       });
-      res.json({ success: true, ...result });
+      ResponseHandler.paginated(res, result.data, result.meta);
     } catch (err) {
       next(err);
     }
@@ -34,7 +35,7 @@ export const announcementController = {
       if (!announcement) {
         res.status(404).json({ success: false, message: 'Announcement not found' }); return;
       }
-      res.json({ success: true, data: announcement });
+      ResponseHandler.success(res, announcement);
     } catch (err) {
       next(err);
     }
@@ -42,12 +43,12 @@ export const announcementController = {
 
   async update(req: Request, res: Response, next: NextFunction) {
     try {
-      const userId = (req as any).user._id;
+      const userId = req.user!.id;
       const announcement = await announcementService.update(req.params.id, req.body, userId.toString());
       if (!announcement) {
         res.status(404).json({ success: false, message: 'Announcement not found' }); return;
       }
-      res.json({ success: true, data: announcement, message: 'Announcement updated' });
+      ResponseHandler.success(res, announcement, 'Announcement updated');
     } catch (err) {
       next(err);
     }
@@ -55,12 +56,12 @@ export const announcementController = {
 
   async delete(req: Request, res: Response, next: NextFunction) {
     try {
-      const userId = (req as any).user._id;
+      const userId = req.user!.id;
       const announcement = await announcementService.softDelete(req.params.id, userId.toString());
       if (!announcement) {
         res.status(404).json({ success: false, message: 'Announcement not found' }); return;
       }
-      res.json({ success: true, message: 'Announcement deleted' });
+      ResponseHandler.success(res, null, 'Announcement deleted');
     } catch (err) {
       next(err);
     }
@@ -68,12 +69,12 @@ export const announcementController = {
 
   async markAsRead(req: Request, res: Response, next: NextFunction) {
     try {
-      const userId = (req as any).user._id;
+      const userId = req.user!.id;
       const announcement = await announcementService.markAsRead(req.params.id, userId.toString());
       if (!announcement) {
         res.status(404).json({ success: false, message: 'Announcement not found' }); return;
       }
-      res.json({ success: true, data: announcement, message: 'Marked as read' });
+      ResponseHandler.success(res, announcement, 'Marked as read');
     } catch (err) {
       next(err);
     }
@@ -81,9 +82,9 @@ export const announcementController = {
 
   async getUnreadCount(req: Request, res: Response, next: NextFunction) {
     try {
-      const userId = (req as any).user._id;
+      const userId = req.user!.id;
       const count = await announcementService.getUnreadCount(userId.toString());
-      res.json({ success: true, data: { count } });
+      ResponseHandler.success(res, { count });
     } catch (err) {
       next(err);
     }
@@ -91,9 +92,9 @@ export const announcementController = {
 
   async expireOld(req: Request, res: Response, next: NextFunction) {
     try {
-      const userId = (req as any).user?._id;
+      const userId = req.user?.id;
       const count = await announcementService.expireOld(userId?.toString());
-      res.json({ success: true, data: { expiredCount: count }, message: `${count} announcements expired` });
+      ResponseHandler.success(res, { expiredCount: count }, `${count} announcements expired`);
     } catch (err) {
       next(err);
     }
@@ -102,7 +103,7 @@ export const announcementController = {
   async processScheduled(_req: Request, res: Response, next: NextFunction) {
     try {
       const count = await announcementService.processScheduled();
-      res.json({ success: true, data: { processedCount: count }, message: `${count} scheduled announcements processed` });
+      ResponseHandler.success(res, { processedCount: count }, `${count} scheduled announcements processed`);
     } catch (err) {
       next(err);
     }

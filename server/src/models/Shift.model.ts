@@ -31,6 +31,9 @@ const ShiftSchema = new Schema<IShift>(
   { timestamps: true },
 );
 
+ShiftSchema.index({ isActive: 1 });
+ShiftSchema.index({ applicableTo: 1 });
+
 const Shift = mongoose.model<IShift, ShiftModel>('Shift', ShiftSchema);
 
 export default Shift;

@@ -1,12 +1,8 @@
 import type { Request } from 'express';
 import type { PaginationInput } from '../validation/common.schemas.js';
+import type { PaginationMeta } from '../../types/index.js';
 
-export interface PaginationMeta {
-  page: number;
-  limit: number;
-  total: number;
-  totalPages: number;
-}
+export type { PaginationMeta } from '../../types/index.js';
 
 export class PaginationUtil {
   static parse(req: Request): PaginationInput {

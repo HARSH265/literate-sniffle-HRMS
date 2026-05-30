@@ -6,7 +6,7 @@ import { AppError } from '../../core/errors/AppError.js';
 import { env } from '../../config/env.js';
 import { AuditService } from '../../core/audit/AuditService.js';
 import { TokenBlacklist } from '../../core/auth/TokenBlacklist.js';
-import { sendEmail } from '../../core/email/sendEmail.js';
+import { EmailService } from '../../core/email/EmailService.js';
 import CompanySettings from '../../models/CompanySettings.model.js';
 
 async function getAuthConfig(): Promise<{ tokenExpiry: string; refreshTokenExpiry: string }> {
@@ -250,7 +250,7 @@ export class AuthService {
 
     const resetUrl = `${env.CLIENT_URL}/reset-password?token=${rawToken}`;
 
-    await sendEmail(
+    await EmailService.send(
       user.email,
       'Password Reset Request',
       `<p>You requested a password reset. Click the link below to reset your password:</p>

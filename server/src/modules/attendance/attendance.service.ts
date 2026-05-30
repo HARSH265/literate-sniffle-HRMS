@@ -432,36 +432,31 @@ export class AttendanceService {
   static async bulkUpdateEntries(entries: Array<{ id: string; status?: string; inTime?: string; outTime?: string; remarks?: string }>, userId: string) {
     if (!entries.length) throw new AppError('No entries provided', 400);
 
-    const results: Array<{ id: string; status: string }> = [];
-    for (const entry of entries) {
-      try {
-        const existing = await AttendanceEntry.findById(entry.id);
-        if (!existing) {
-          results.push({ id: entry.id, status: 'failed' });
-          continue;
-        }
+    const bulkOps = entries.map((entry) => {
+      const update: Record<string, unknown> = { updatedBy: userId };
+      if (entry.status) update.status = entry.status;
+      if (entry.inTime !== undefined) update.inTime = entry.inTime;
+      if (entry.outTime !== undefined) update.outTime = entry.outTime;
+      if (entry.remarks !== undefined) update.remarks = entry.remarks;
 
-        if (entry.status) existing.status = entry.status as any;
-        if (entry.inTime !== undefined) existing.inTime = entry.inTime;
-        if (entry.outTime !== undefined) existing.outTime = entry.outTime;
-        if (entry.remarks !== undefined) existing.remarks = entry.remarks;
-        existing.updatedBy = userId as any;
+      return {
+        updateOne: {
+          filter: { _id: entry.id },
+          update: { $set: update },
+        },
+      };
+    });
 
-        await existing.save();
-        results.push({ id: entry.id, status: 'updated' });
-      } catch {
-        results.push({ id: entry.id, status: 'failed' });
-      }
-    }
+    const result = await AttendanceEntry.bulkWrite(bulkOps as any);
 
     await AuditService.log({
       action: 'bulk-update',
       module: 'attendance',
       userId,
-      details: { total: entries.length, updated: results.filter(r => r.status === 'updated').length },
+      details: { total: entries.length, updated: result.modifiedCount },
     });
 
-    return { updated: results.filter(r => r.status === 'updated').length, failed: results.filter(r => r.status === 'failed').length, results };
+    return { updated: result.modifiedCount, failed: entries.length - result.modifiedCount, results: entries.map((e, i) => ({ id: e.id, status: i < result.modifiedCount ? 'updated' : 'failed' })) };
   }
 
   static async delete(id: string, userId: string) {

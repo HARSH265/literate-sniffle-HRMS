@@ -23,7 +23,6 @@ export function ShiftsPage() {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(20);
   const [search, setSearch] = useState('');
-  const [empSearch] = useState('');
   const queryClient = useQueryClient();
 
   const { data, isLoading, isFetching } = useQuery({
@@ -33,8 +32,8 @@ export function ShiftsPage() {
   });
 
   const { data: employees } = useQuery({
-    queryKey: ['employees', 'list', empSearch],
-    queryFn: () => employeeService.list({ limit: 500, search: empSearch, status: 'active' }),
+    queryKey: ['employees', 'list'],
+    queryFn: () => employeeService.list({ limit: 500, status: 'active' }),
     enabled: bulkModalOpen,
   });
 

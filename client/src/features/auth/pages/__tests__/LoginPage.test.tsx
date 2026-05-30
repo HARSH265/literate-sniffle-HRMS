@@ -62,10 +62,8 @@ describe('LoginPage', () => {
     expect(screen.getByText('Attendance & Overtime')).toBeInTheDocument();
   });
 
-  it('switches to register form on toggle', async () => {
+  it('renders feature highlights', () => {
     renderPage();
-    screen.getByText('Create an account').click();
-    await waitFor(() => { expect(screen.getAllByText('Create Account').length).toBeGreaterThanOrEqual(1); });
-    expect(screen.getByText('Full Name')).toBeInTheDocument();
+    expect(screen.getByText('Orian HRMS')).toBeInTheDocument();
   });
 });

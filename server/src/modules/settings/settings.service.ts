@@ -1,5 +1,6 @@
 import CompanySettings from '../../models/CompanySettings.model.js';
 import { AuditService } from '../../core/audit/AuditService.js';
+import { encryptEmailConfig, decryptEmailConfig } from '../../core/utils/EncryptionUtil.js';
 
 function getChangedFields(oldObj: any, newObj: any, prefix = ''): Record<string, { old: any; new: any }> {
   const changes: Record<string, { old: any; new: any }> = {};
@@ -29,8 +30,13 @@ export class SettingsService {
     if (!settings) {
       settings = await CompanySettings.create({}) as any;
     }
+
+    const result = { ...settings, id: String(settings._id), _id: undefined };
+    if (result.emailConfig) {
+      result.emailConfig = decryptEmailConfig(result.emailConfig);
+    }
     
-    return { ...settings, id: String(settings._id), _id: undefined };
+    return result;
   }
 
   static async update(data: Record<string, unknown>, userId: string): Promise<Record<string, unknown>> {
@@ -75,7 +81,7 @@ export class SettingsService {
     if (data.emailConfig) {
       const emailChanges = getChangedFields(oldSettings.emailConfig, data.emailConfig, 'emailConfig');
       Object.assign(changes, emailChanges);
-      (settings as any).emailConfig = { ...(settings as any).emailConfig?.toObject?.() || {}, ...data.emailConfig };
+      (settings as any).emailConfig = encryptEmailConfig({ ...(settings as any).emailConfig?.toObject?.() || {}, ...data.emailConfig });
     }
     if (data.employeeCodeConfig) {
       const codeChanges = getChangedFields(oldSettings.employeeCodeConfig, data.employeeCodeConfig, 'employeeCodeConfig');
@@ -167,7 +173,7 @@ export class SettingsService {
 
   static async testEmail(toEmail: string): Promise<{ success: boolean; message?: string }> {
     const settings = await CompanySettings.findOne().lean() as any;
-    const emailConfig = settings?.emailConfig;
+    const emailConfig = decryptEmailConfig(settings?.emailConfig) as Record<string, any> | undefined;
     
     if (!emailConfig?.host || !emailConfig?.fromEmail) {
       return { success: false, message: 'Email not configured. Please configure SMTP settings first.' };

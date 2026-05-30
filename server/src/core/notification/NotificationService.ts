@@ -3,6 +3,7 @@ import User from '../../models/User.model.js';
 import CompanySettings from '../../models/CompanySettings.model.js';
 import { logger } from '../logger/logger.js';
 import { EmailService } from '../email/EmailService.js';
+import { CacheService, CACHE_KEYS } from '../cache/CacheService.js';
 
 export type NotificationType = 'info' | 'success' | 'warning' | 'error';
 
@@ -35,8 +36,12 @@ export class NotificationService {
 
   private static async sendEmailIfEnabled(data: NotificationData): Promise<void> {
     try {
-      const settings = await CompanySettings.findOne().lean();
-      const notifConfig = (settings as any)?.notificationConfig;
+      let settings = CacheService.get<any>(CACHE_KEYS.SETTINGS);
+      if (!settings) {
+        settings = await CompanySettings.findOne().lean();
+        if (settings) CacheService.set(CACHE_KEYS.SETTINGS, settings);
+      }
+      const notifConfig = settings?.notificationConfig;
 
       if (!notifConfig?.emailEnabled) return;
 

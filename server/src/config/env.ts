@@ -26,5 +26,5 @@ export const env = {
   EMAIL_PASSWORD: process.env.EMAIL_PASSWORD || '',
   EMAIL_FROM: process.env.EMAIL_FROM || '',
 
-  ENCRYPTION_KEY: process.env.ENCRYPTION_KEY || 'hrms-secure-key-32chars!!',
+  ENCRYPTION_KEY: process.env.ENCRYPTION_KEY || (process.env.NODE_ENV === 'production' ? (() => { throw new Error('ENCRYPTION_KEY must be set in production'); })() : 'dev-encryption-key-not-for-production'),
 };

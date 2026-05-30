@@ -26,7 +26,9 @@ export class SalarySlipsService {
   static async generatePdf(runId: string, _userId?: string, employeeId?: string): Promise<Record<string, unknown>> {
     const run = await PayrollRun.findById(runId).lean();
     if (!run) throw new AppError('Payroll run not found', 404);
-    if (run.status !== 'finalized') throw new AppError('Cannot generate slip for draft payroll', 400);
+    if (!['approved', 'finalized'].includes(run.status)) {
+      throw new AppError('Payroll must be approved or finalized before generating slips', 400);
+    }
 
     const settings = await CompanySettings.findOne();
     const companyName = settings?.companyInfo?.name || 'Company';

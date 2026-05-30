@@ -2,6 +2,7 @@ import WeeklyOffRule from '../../models/WeeklyOffRule.model.js';
 import { AppError } from '../../core/errors/AppError.js';
 import { AuditService } from '../../core/audit/AuditService.js';
 import { PaginationUtil, PaginationMeta } from '../../core/utils/PaginationUtil.js';
+import { CacheService } from '../../core/cache/CacheService.js';
 
 export class WeeklyOffRulesService {
   static async list(queryParams: Record<string, unknown>): Promise<{ data: unknown[]; meta: PaginationMeta }> {
@@ -54,6 +55,8 @@ export class WeeklyOffRulesService {
       createdBy: createdById,
     });
 
+    CacheService.invalidateWeeklyOffRules();
+
     await AuditService.log({
       action: 'create',
       module: 'weekly-off-rules',
@@ -79,6 +82,8 @@ export class WeeklyOffRulesService {
     (rule as any).updatedBy = updatedById;
     await (rule as any).save();
 
+    CacheService.invalidateWeeklyOffRules();
+
     await AuditService.log({
       action: 'update',
       module: 'weekly-off-rules',
@@ -97,6 +102,8 @@ export class WeeklyOffRulesService {
     }
 
     await WeeklyOffRule.findByIdAndDelete(id);
+
+    CacheService.invalidateWeeklyOffRules();
 
     await AuditService.log({
       action: 'delete',

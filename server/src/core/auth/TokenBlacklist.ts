@@ -3,7 +3,7 @@ import NodeCache from 'node-cache';
 const blacklist = new NodeCache({ stdTTL: 24 * 60 * 60 });
 
 export class TokenBlacklist {
-  static add(token: string, ttlSeconds: number = 3600): void {
+  static add(token: string, ttlSeconds: number = 24 * 60 * 60): void {
     blacklist.set(token, true, ttlSeconds);
   }
 

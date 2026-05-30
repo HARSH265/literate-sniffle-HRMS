@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { AuditService, AuditAction } from './AuditService.js';
 import { getClientIp } from './AuditUtils.js';
+import { logger } from '../logger/logger.js';
 
 export function auditMiddleware(req: Request, res: Response, next: NextFunction) {
   const startTime = Date.now();
@@ -8,7 +9,7 @@ export function auditMiddleware(req: Request, res: Response, next: NextFunction)
   const originalSend = res.send.bind(res);
   res.send = function (body) {
     const responseTime = Date.now() - startTime;
-    const user = (req as any).user;
+    const user = req.user;
 
     if (user && res.statusCode < 500) {
       const action = getActionFromMethod(req.method, req.path);
@@ -16,7 +17,7 @@ export function auditMiddleware(req: Request, res: Response, next: NextFunction)
 
       if (action && module) {
         AuditService.logRequest({
-          userId: user._id.toString(),
+          userId: user.id.toString(),
           action,
           module,
           ipAddress: getClientIp(req),
@@ -29,7 +30,7 @@ export function auditMiddleware(req: Request, res: Response, next: NextFunction)
             query: req.query,
             statusCode: res.statusCode,
           },
-        }).catch((err) => console.error('Audit middleware error:', err));
+        }).catch((err) => logger.error('Audit middleware error:', err));
       }
     }
 

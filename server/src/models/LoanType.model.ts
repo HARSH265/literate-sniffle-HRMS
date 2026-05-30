@@ -41,5 +41,7 @@ const LoanTypeSchema = new Schema<ILoanType>(
   { timestamps: true },
 );
 
+LoanTypeSchema.index({ isActive: 1 });
+
 const LoanType = mongoose.model<ILoanType, LoanTypeModel>('LoanType', LoanTypeSchema);
 export default LoanType;

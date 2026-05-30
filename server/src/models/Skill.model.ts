@@ -18,6 +18,7 @@ const SkillSchema = new Schema<ISkill>(
 );
 
 SkillSchema.index({ category: 1 });
+SkillSchema.index({ isActive: 1 });
 
 const Skill = mongoose.model<ISkill>('Skill', SkillSchema);
 

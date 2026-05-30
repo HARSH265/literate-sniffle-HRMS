@@ -68,17 +68,17 @@ export function ReportsPage() {
   const { data: attendanceSummary } = useQuery({
     queryKey: ['attendance-summary', dateRange?.[0]?.format('YYYY-MM-DD'), dateRange?.[1]?.format('YYYY-MM-DD'), attendanceDept],
     queryFn: async () => {
-      const params = new URLSearchParams();
+      const params: Record<string, string> = {};
       if (dateRange) {
-        params.append('startDate', dateRange[0].format('YYYY-MM-DD'));
-        params.append('endDate', dateRange[1].format('YYYY-MM-DD'));
+        params.startDate = dateRange[0].format('YYYY-MM-DD');
+        params.endDate = dateRange[1].format('YYYY-MM-DD');
       } else {
-        params.append('month', String(attendanceMonth.month() + 1));
-        params.append('year', String(attendanceMonth.year()));
+        params.month = String(attendanceMonth.month() + 1);
+        params.year = String(attendanceMonth.year());
       }
-      if (attendanceDept) params.append('department', attendanceDept);
-      const res = await fetch(`${apiClient.getUri()}/reports/attendance/summary?${params.toString()}`, { credentials: 'include' });
-      return res.json();
+      if (attendanceDept) params.department = attendanceDept;
+      const res = await apiClient.get('/reports/attendance/summary', { params });
+      return res.data;
     },
     enabled: activeTab === 'summary',
   });
@@ -86,11 +86,10 @@ export function ReportsPage() {
   const { data: payrollSummary } = useQuery({
     queryKey: ['payroll-summary', payrollYear, payrollDept],
     queryFn: async () => {
-      const params = new URLSearchParams();
-      params.append('year', String(payrollYear));
-      if (payrollDept) params.append('department', payrollDept);
-      const res = await fetch(`${apiClient.getUri()}/reports/payroll/summary?${params.toString()}`, { credentials: 'include' });
-      return res.json();
+      const params: Record<string, string> = { year: String(payrollYear) };
+      if (payrollDept) params.department = payrollDept;
+      const res = await apiClient.get('/reports/payroll/summary', { params });
+      return res.data;
     },
     enabled: activeTab === 'summary',
   });
@@ -98,8 +97,8 @@ export function ReportsPage() {
   const { data: deptSummary } = useQuery({
     queryKey: ['department-summary'],
     queryFn: async () => {
-      const res = await fetch(`${apiClient.getUri()}/reports/departments`, { credentials: 'include' });
-      return res.json();
+      const res = await apiClient.get('/reports/departments');
+      return res.data;
     },
     enabled: activeTab === 'summary',
   });
@@ -107,12 +106,13 @@ export function ReportsPage() {
   const { data: overtimeSummary } = useQuery({
     queryKey: ['overtime-summary', overtimeMonth.month() + 1, overtimeMonth.year(), overtimeDept],
     queryFn: async () => {
-      const params = new URLSearchParams();
-      params.append('month', String(overtimeMonth.month() + 1));
-      params.append('year', String(overtimeMonth.year()));
-      if (overtimeDept) params.append('department', overtimeDept);
-      const res = await fetch(`${apiClient.getUri()}/reports/overtime/summary?${params.toString()}`, { credentials: 'include' });
-      return res.json();
+      const params: Record<string, string> = {
+        month: String(overtimeMonth.month() + 1),
+        year: String(overtimeMonth.year()),
+      };
+      if (overtimeDept) params.department = overtimeDept;
+      const res = await apiClient.get('/reports/overtime/summary', { params });
+      return res.data;
     },
     enabled: activeTab === 'summary',
   });
@@ -120,13 +120,14 @@ export function ReportsPage() {
   const { data: chartData } = useQuery({
     queryKey: ['chart-data', chartType, chartGroupBy, chartPeriod[0]?.format('YYYY-MM-DD'), chartPeriod[1]?.format('YYYY-MM-DD')],
     queryFn: async () => {
-      const params = new URLSearchParams();
-      params.append('chartType', chartType);
-      if (chartGroupBy) params.append('groupBy', chartGroupBy);
-      params.append('period[start]', chartPeriod[0].format('YYYY-MM-DD'));
-      params.append('period[end]', chartPeriod[1].format('YYYY-MM-DD'));
-      const res = await fetch(`${apiClient.getUri()}/reports/chart-data?${params.toString()}`, { credentials: 'include' });
-      return res.json();
+      const params: Record<string, string> = {
+        chartType,
+        'period[start]': chartPeriod[0].format('YYYY-MM-DD'),
+        'period[end]': chartPeriod[1].format('YYYY-MM-DD'),
+      };
+      if (chartGroupBy) params.groupBy = chartGroupBy;
+      const res = await apiClient.get('/reports/chart-data', { params });
+      return res.data;
     },
     enabled: activeTab === 'charts',
   });
@@ -185,10 +186,8 @@ export function ReportsPage() {
         }
       }
 
-      const response = await fetch(apiClient.getUri() + url, { credentials: 'include' });
-      if (!response.ok) throw new Error('Export failed');
-
-      const blob = await response.blob();
+      const response = await apiClient.get(url, { responseType: 'blob' });
+      const blob = response.data;
       const link = document.createElement('a');
       link.href = window.URL.createObjectURL(blob);
       link.download = `${filename}_${new Date().toISOString().split('T')[0]}.xlsx`;
@@ -205,18 +204,13 @@ export function ReportsPage() {
   const handleBuildCustomReport = async () => {
     try {
       setCustomLoading(true);
-      const response = await fetch(`${apiClient.getUri()}/reports/custom`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fields: selectedFields,
-          filters: customFilters,
-          groupBy: groupBy || undefined,
-          limit: 500,
-        }),
+      const res = await apiClient.post('/reports/custom', {
+        fields: selectedFields,
+        filters: customFilters,
+        groupBy: groupBy || undefined,
+        limit: 500,
       });
-      const result = await response.json();
+      const result = res.data;
       if (result.success) {
         setCustomResult(result.data);
         message.success(`Report generated: ${result.data.total} records`);
@@ -233,14 +227,13 @@ export function ReportsPage() {
   const handleDrillDown = async (entity: string, id?: string, filters?: Record<string, any>) => {
     try {
       setDrillDownLoading(true);
-      const params = new URLSearchParams();
-      params.append('entity', entity);
-      if (id) params.append('id', id);
+      const params: Record<string, string> = { entity };
+      if (id) params.id = id;
       if (filters) {
-        Object.entries(filters).forEach(([k, v]) => params.append(`filters[${k}]`, String(v)));
+        Object.entries(filters).forEach(([k, v]) => { params[`filters[${k}]`] = String(v); });
       }
-      const res = await fetch(`${apiClient.getUri()}/reports/drill-down?${params.toString()}`, { credentials: 'include' });
-      const result = await res.json();
+      const res = await apiClient.get('/reports/drill-down', { params });
+      const result = res.data;
       if (result.success) {
         setDrillDownData({ entity, ...result.data });
         setDrillDownVisible(true);

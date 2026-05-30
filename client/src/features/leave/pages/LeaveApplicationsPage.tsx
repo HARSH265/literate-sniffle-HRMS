@@ -11,6 +11,8 @@ import { QUERY_KEYS } from '../../../core/constants/queryKeys';
 
 export function LeaveApplicationsPage() {
   const [statusFilter, setStatusFilter] = useState<string>('');
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [selectedApp, setSelectedApp] = useState<LeaveApplication | null>(null);
   const [applyModalOpen, setApplyModalOpen] = useState(false);
@@ -18,8 +20,8 @@ export function LeaveApplicationsPage() {
   const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery({
-    queryKey: [...QUERY_KEYS.leaveApplications, statusFilter],
-    queryFn: () => leaveService.listApplications({ status: statusFilter || undefined, limit: 500 }),
+    queryKey: [...QUERY_KEYS.leaveApplications, statusFilter, page, limit],
+    queryFn: () => leaveService.listApplications({ status: statusFilter || undefined, page, limit }),
   });
 
   const { data: employees } = useQuery({
@@ -112,7 +114,9 @@ export function LeaveApplicationsPage() {
         rowKey="id"
         loading={isLoading}
         total={data?.meta?.total ?? 0}
-        pageSize={20}
+        page={page}
+        pageSize={limit}
+        onPaginationChange={(p, size) => { setPage(p); setLimit(size ?? 10); }}
         filterContent={
           <Select
             placeholder="Filter by status"

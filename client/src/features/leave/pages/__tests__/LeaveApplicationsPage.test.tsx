@@ -54,7 +54,7 @@ const mockLeaveTypes = vi.hoisted(() => ({
 
 function renderPage() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  qc.setQueryData(['leave', 'applications', ''], mockApplications);
+  qc.setQueryData(['leave', 'applications', '', 1, 10], mockApplications);
   qc.setQueryData(['employees'], mockEmployees);
   qc.setQueryData(['leave', 'types'], mockLeaveTypes);
   return render(

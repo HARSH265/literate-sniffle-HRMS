@@ -25,7 +25,7 @@ const OvertimeEntrySchema = new Schema<IOvertimeEntry>(
   { timestamps: true },
 );
 
-OvertimeEntrySchema.index({ employee: 1, date: 1 });
+OvertimeEntrySchema.index({ employee: 1, date: 1 }, { unique: true });
 OvertimeEntrySchema.index({ employee: 1 });
 
 const OvertimeEntry = mongoose.model<IOvertimeEntry, OvertimeEntryModel>('OvertimeEntry', OvertimeEntrySchema);

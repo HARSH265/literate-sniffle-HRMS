@@ -22,6 +22,10 @@ vi.mock('./core/stores/authStore', () => ({
         hasHydrated: () => true,
         onFinishHydration: () => () => undefined,
       },
+      getState: () => ({
+        ...authState,
+        logout: vi.fn(),
+      }),
     },
   ),
 }));

@@ -151,12 +151,18 @@ export class EmployeesService {
     const isAutoGenerate = settings?.employeeCodeConfig?.isAutoGenerate !== false;
 
     let employeeCode = (data.employeeCode as string) || '';
+    const isCustomCode = !!employeeCode;
 
     if (!employeeCode) {
       if (!isAutoGenerate) {
         throw new AppError('Employee code is required when auto-generation is disabled', 400);
       }
       employeeCode = await this.generateNextEmployeeCode();
+    }
+
+    const existing = await Employee.findOne({ employeeCode: employeeCode.toUpperCase() }).lean();
+    if (existing) {
+      throw new AppError(`Employee with code '${employeeCode}' already exists`, 400);
     }
 
     const encryptedData = {
@@ -167,16 +173,20 @@ export class EmployeesService {
     };
 
     let emp;
-    const MAX_RETRIES = 3;
-    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-      try {
-        emp = await Employee.create(attempt === 0 ? encryptedData : { ...encryptedData, employeeCode: await this.generateNextEmployeeCode() });
-        break;
-      } catch (err: any) {
-        if (err.code === 11000 && attempt < MAX_RETRIES - 1) {
-          continue;
+    if (isCustomCode) {
+      emp = await Employee.create(encryptedData);
+    } else {
+      const MAX_RETRIES = 3;
+      for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+        try {
+          emp = await Employee.create(attempt === 0 ? encryptedData : { ...encryptedData, employeeCode: await this.generateNextEmployeeCode() });
+          break;
+        } catch (err: any) {
+          if (err.code === 11000 && attempt < MAX_RETRIES - 1) {
+            continue;
+          }
+          throw err;
         }
-        throw err;
       }
     }
     if (!emp) {

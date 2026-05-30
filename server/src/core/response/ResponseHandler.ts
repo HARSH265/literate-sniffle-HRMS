@@ -1,11 +1,5 @@
 import { Response } from 'express';
-
-interface PaginationMeta {
-  page: number;
-  limit: number;
-  total: number;
-  totalPages: number;
-}
+import type { PaginationMeta } from '../../types/index.js';
 
 export class ResponseHandler {
   static success(res: Response, data: unknown, message = 'Success'): void {

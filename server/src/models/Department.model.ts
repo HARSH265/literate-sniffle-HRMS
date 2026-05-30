@@ -23,6 +23,8 @@ const DepartmentSchema = new Schema<IDepartment>(
   { timestamps: true },
 );
 
+DepartmentSchema.index({ isActive: 1 });
+
 const Department = mongoose.model<IDepartment, DepartmentModel>('Department', DepartmentSchema);
 
 export default Department;

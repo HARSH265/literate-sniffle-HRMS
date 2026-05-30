@@ -76,7 +76,7 @@ describe('EssDashboardPage', () => {
     renderPage();
     expect(screen.getByText('Quick Links')).toBeInTheDocument();
     expect(screen.getByText('View & Edit')).toBeInTheDocument();
-    expect(screen.getByText('View Log')).toBeInTheDocument();
+    expect(screen.getByText('Scan QR')).toBeInTheDocument();
     expect(screen.getByText('Apply / View')).toBeInTheDocument();
     expect(screen.getByText('Download')).toBeInTheDocument();
   });

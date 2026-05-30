@@ -31,6 +31,8 @@ const KioskDeviceSchema = new Schema<IKioskDevice>(
   { timestamps: true },
 );
 
+KioskDeviceSchema.index({ isActive: 1 });
+
 const KioskDevice = mongoose.model<IKioskDevice, KioskDeviceModel>('KioskDevice', KioskDeviceSchema);
 
 export default KioskDevice;

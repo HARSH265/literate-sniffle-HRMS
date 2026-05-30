@@ -1,10 +1,11 @@
-import { useState, useMemo, memo } from 'react';
-import { Button, Modal, Form, Input, Select, DatePicker, message, Tag, Row, Col, Tabs, Card, Badge, Table } from 'antd';
+import { useState, useMemo } from 'react';
+import { Button, Modal, Form, Input, Select, DatePicker, message, Tag, Row, Col, Tabs, Card, Table } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { SaveOutlined, CalendarOutlined, LeftOutlined, RightOutlined } from '@ant-design/icons';
+import { SaveOutlined, CalendarOutlined } from '@ant-design/icons';
 import { PageHeader } from '../../../core/components/PageHeader';
 import { DataTable } from '../../../core/components/DataTable';
-import { attendanceService, AttendanceEntry, MonthlyAttendanceView } from '../services/attendanceService';
+import { attendanceService, AttendanceEntry } from '../services/attendanceService';
+import { MonthlyView } from '../components/MonthlyView';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 
@@ -177,80 +178,6 @@ export function AttendancePage() {
     },
   ], []);
 
-  const MonthlyView = memo(() => {
-    const daysInMonth = selectedMonth.daysInMonth();
-    const dayHeaders = Array.from({ length: daysInMonth }, (_, i) => i + 1);
-
-    const monthlyColumns: ColumnsType<MonthlyAttendanceView> = [
-      {
-        title: 'Employee',
-        key: 'employee',
-        fixed: 'left',
-        width: 180,
-        render: (_: unknown, record: MonthlyAttendanceView) => (
-          <div>
-            <div style={{ fontWeight: 600 }}>{record.employee?.fullName}</div>
-            <div style={{ fontSize: 11, color: 'var(--hrms-text-muted)' }}>{record.employee?.employeeCode}</div>
-          </div>
-        ),
-      },
-      ...dayHeaders.map((day) => ({
-        title: String(day),
-        key: `day-${day}`,
-        width: 45,
-        align: 'center' as const,
-        render: (_: unknown, record: MonthlyAttendanceView) => {
-          const dayData = record.days?.[day];
-          if (!dayData) return <span style={{ color: '#ccc' }}>-</span>;
-          return (
-            <Badge 
-              color={STATUS_COLORS[dayData.status] || 'default'} 
-              text=""
-              style={{ fontSize: 8 }}
-            />
-          );
-        },
-      })),
-    ];
-
-    return (
-      <div className="hrms-table-card">
-        <div className="hrms-table-toolbar">
-          <div className="hrms-table-toolbar-left" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <Button 
-              icon={<LeftOutlined />} 
-              size="small" 
-              onClick={() => setSelectedMonth(selectedMonth.subtract(1, 'month'))}
-            />
-            <span style={{ fontWeight: 600, minWidth: 120, textAlign: 'center' }}>
-              {selectedMonth.format('MMMM YYYY')}
-            </span>
-            <Button 
-              icon={<RightOutlined />} 
-              size="small" 
-              onClick={() => setSelectedMonth(selectedMonth.add(1, 'month'))}
-              disabled={selectedMonth.isAfter(dayjs(), 'month')}
-            />
-          </div>
-          <div className="hrms-table-toolbar-right">
-            <span style={{ fontSize: 13, color: 'var(--hrms-text-muted)' }}>
-              {monthlyData?.length ?? 0} employees
-            </span>
-          </div>
-        </div>
-        <Table
-          columns={monthlyColumns}
-          dataSource={monthlyData}
-          rowKey={(record) => record.employee?.id || ''}
-          loading={monthlyLoading}
-          scroll={{ x: daysInMonth * 45 + 180 }}
-          size="small"
-          pagination={false}
-        />
-      </div>
-    );
-  });
-
   return (
     <div style={{ padding: '0 4px' }}>
       <PageHeader title="Attendance" subtitle="Mark and manage employee attendance" />
@@ -343,7 +270,12 @@ export function AttendancePage() {
                     />
                   </div>
                 </div>
-                <MonthlyView />
+                <MonthlyView
+                  selectedMonth={selectedMonth}
+                  monthlyData={monthlyData}
+                  monthlyLoading={monthlyLoading}
+                  onMonthChange={setSelectedMonth}
+                />
               </div>
             ),
           },

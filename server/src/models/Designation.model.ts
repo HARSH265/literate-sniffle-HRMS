@@ -24,6 +24,7 @@ const DesignationSchema = new Schema<IDesignation>(
 );
 
 DesignationSchema.index({ department: 1 });
+DesignationSchema.index({ isActive: 1 });
 
 const Designation = mongoose.model<IDesignation, DesignationModel>('Designation', DesignationSchema);
 

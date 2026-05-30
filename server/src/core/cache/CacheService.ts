@@ -51,6 +51,10 @@ export class CacheService {
   static invalidateWeeklyOffRules(): void {
     cache.del(CACHE_KEYS.WEEKLY_OFF_RULES);
   }
+
+  static invalidateOvertimeRules(): void {
+    cache.del(CACHE_KEYS.OVERTIME_RULES);
+  }
 }
 
 export { CACHE_KEYS };

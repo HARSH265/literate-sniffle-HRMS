@@ -2,6 +2,7 @@ import Holiday from '../../models/Holiday.model.js';
 import { AppError } from '../../core/errors/AppError.js';
 import { AuditService } from '../../core/audit/AuditService.js';
 import { PaginationUtil, PaginationMeta } from '../../core/utils/PaginationUtil.js';
+import { CacheService } from '../../core/cache/CacheService.js';
 
 export class HolidaysService {
   static async list(queryParams: Record<string, unknown>): Promise<{ data: unknown[]; meta: PaginationMeta }> {
@@ -93,6 +94,8 @@ export class HolidaysService {
       details: { name: data.name, date: data.date, year },
     });
 
+    CacheService.invalidateHolidays();
+
     return { ...holiday.toObject(), id: holiday._id.toString(), _id: undefined };
   }
 
@@ -129,6 +132,8 @@ export class HolidaysService {
       details: data,
     });
 
+    CacheService.invalidateHolidays();
+
     return { ...(holiday as any).toObject(), id: holiday._id.toString(), _id: undefined };
   }
 
@@ -139,6 +144,8 @@ export class HolidaysService {
     }
 
     await Holiday.findByIdAndDelete(id);
+
+    CacheService.invalidateHolidays();
 
     await AuditService.log({
       action: 'delete',

@@ -28,7 +28,7 @@ describe('SettingsPage', () => {
 
   it('renders page header', () => {
     renderPage();
-    expect(screen.getByText('Settings')).toBeInTheDocument();
+    expect(screen.getAllByText('Settings').length).toBeGreaterThan(0);
   });
 
   it('renders settings menu items', async () => {

@@ -67,3 +67,30 @@ export function decryptBankDetails(bankDetails: Record<string, unknown> | undefi
     accountType: bankDetails.accountType,
   };
 }
+
+function isEncrypted(value: string): boolean {
+  const parts = value.split(':');
+  return parts.length === 3 && /^[0-9a-f]+$/.test(parts[0]) && /^[0-9a-f]+$/.test(parts[1]);
+}
+
+export function encryptEmailConfig(emailConfig: Record<string, unknown> | undefined): Record<string, unknown> | undefined {
+  if (!emailConfig) return undefined;
+
+  return {
+    ...emailConfig,
+    password: emailConfig.password && typeof emailConfig.password === 'string' && !isEncrypted(emailConfig.password)
+      ? encrypt(emailConfig.password)
+      : emailConfig.password,
+  };
+}
+
+export function decryptEmailConfig(emailConfig: Record<string, unknown> | undefined): Record<string, unknown> | undefined {
+  if (!emailConfig) return undefined;
+
+  return {
+    ...emailConfig,
+    password: emailConfig.password && typeof emailConfig.password === 'string' && isEncrypted(emailConfig.password)
+      ? decrypt(emailConfig.password)
+      : emailConfig.password,
+  };
+}
