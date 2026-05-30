@@ -21,9 +21,13 @@ export function PayrollDetailsPage() {
   const queryClient = useQueryClient();
   const [editingItem, setEditingItem] = useState<PayrollItem | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isUnfinalizeModalOpen, setIsUnfinalizeModalOpen] = useState(false);
   const [batchEditMode, setBatchEditMode] = useState(false);
   const [batchChanges, setBatchChanges] = useState<Record<string, Record<string, number>>>({});
+  const [itemsPage, setItemsPage] = useState(1);
+  const [itemsPageSize, setItemsPageSize] = useState(10);
   const [editForm] = Form.useForm();
+  const [unfinalizeForm] = Form.useForm();
 
   const { data: runData, isLoading } = useQuery({
     queryKey: ['payroll-run-details', id],
@@ -56,8 +60,14 @@ export function PayrollDetailsPage() {
   });
 
   const unfinalizeMutation = useMutation({
-    mutationFn: () => payrollService.unfinalizeRun(id!),
-    onSuccess: () => { message.success('Payroll unfinalized'); queryClient.invalidateQueries({ queryKey: ['payroll-run-details', id] }); queryClient.invalidateQueries({ queryKey: ['payroll-runs'] }); },
+    mutationFn: (reason: string) => payrollService.unfinalizeRun(id!, reason),
+    onSuccess: () => {
+      message.success('Payroll unfinalized');
+      setIsUnfinalizeModalOpen(false);
+      unfinalizeForm.resetFields();
+      queryClient.invalidateQueries({ queryKey: ['payroll-run-details', id] });
+      queryClient.invalidateQueries({ queryKey: ['payroll-runs'] });
+    },
     onError: (err: any) => message.error(err?.response?.data?.message || 'Failed to unfinalize'),
   });
 
@@ -99,6 +109,12 @@ export function PayrollDetailsPage() {
       .map(([itemId, data]) => ({ itemId, data }));
     if (items.length === 0) { message.warning('No changes to save'); return; }
     batchMutation.mutate(items);
+  };
+
+  const handleUnfinalize = () => {
+    unfinalizeForm.validateFields().then((values) => {
+      unfinalizeMutation.mutate(values.reason);
+    });
   };
 
   const handleDownloadSlip = async (employeeId: string) => {
@@ -175,7 +191,7 @@ export function PayrollDetailsPage() {
           )}
           {run?.status === 'finalized' && (
             <Tooltip title={run?.unfinalizeLocked ? `Unfinalize window of ${run.unfinalizeWindowDays} days has expired (finalized on ${dayjs(run.finalizedAt).format('DD-MMM-YYYY')})` : 'Revert payroll to draft for edits'}>
-              <Button icon={<UndoOutlined />} disabled={run?.unfinalizeLocked} onClick={() => unfinalizeMutation.mutate()} loading={unfinalizeMutation.isPending}>Unfinalize</Button>
+              <Button icon={<UndoOutlined />} disabled={run?.unfinalizeLocked} onClick={() => setIsUnfinalizeModalOpen(true)} loading={unfinalizeMutation.isPending}>Unfinalize</Button>
             </Tooltip>
           )}
         </Space>
@@ -210,7 +226,11 @@ export function PayrollDetailsPage() {
                 dataSource={run?.items || []}
                 rowKey="id"
                 loading={isLoading}
-                hidePagination
+                page={itemsPage}
+                pageSize={itemsPageSize}
+                total={run?.items?.length || 0}
+                onPaginationChange={(page, pageSize) => { setItemsPage(page); setItemsPageSize(pageSize); }}
+                pageSizeOptions={['10', '25', '50', '100']}
                 noCard
                 scroll={{ x: 1400 }}
               />
@@ -242,6 +262,21 @@ export function PayrollDetailsPage() {
             </Form>
           </div>
         )}
+      </Modal>
+
+      <Modal
+        title="Unfinalize Payroll"
+        open={isUnfinalizeModalOpen}
+        onOk={handleUnfinalize}
+        onCancel={() => { setIsUnfinalizeModalOpen(false); unfinalizeForm.resetFields(); }}
+        confirmLoading={unfinalizeMutation.isPending}
+        okText="Unfinalize"
+      >
+        <Form form={unfinalizeForm} layout="vertical" style={{ marginTop: 16 }}>
+          <Form.Item name="reason" label="Reason" rules={[{ required: true, message: 'Enter a reason' }]}>
+            <Input.TextArea rows={3} maxLength={500} />
+          </Form.Item>
+        </Form>
       </Modal>
     </div>
   );

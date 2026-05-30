@@ -113,6 +113,9 @@ EmployeeSchema.index({ department: 1 });
 EmployeeSchema.index({ status: 1 });
 EmployeeSchema.index({ category: 1 });
 EmployeeSchema.index({ shift: 1 });
+EmployeeSchema.index({ designation: 1 });
+EmployeeSchema.index({ fullName: 1 });
+EmployeeSchema.index({ fatherName: 1 });
 
 const Employee = mongoose.model<IEmployee, EmployeeModel>('Employee', EmployeeSchema);
 

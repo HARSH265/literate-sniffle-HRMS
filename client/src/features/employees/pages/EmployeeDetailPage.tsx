@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Row, Col, Avatar, Button, Spin, Card, Descriptions, Tag, message, Upload, Select, Popconfirm, Modal, Tabs } from 'antd';
 import { ArrowLeftOutlined, EditOutlined, UserOutlined, CheckCircleOutlined, CloseCircleOutlined, DeleteOutlined, UploadOutlined, FileTextOutlined, EyeOutlined, DownloadOutlined, CalendarOutlined, DollarOutlined } from '@ant-design/icons';
@@ -10,16 +10,21 @@ import { payrollService } from '../../payroll/services/payrollService';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 
+const docTypeLabels: Record<string, string> = {
+  aadhar: 'Aadhar Card',
+  pan: 'PAN Card',
+  voter: 'Voter ID',
+  driver_license: 'Driver License',
+  passport: 'Passport',
+  other: 'Other',
+};
+
 const STATUS_COLORS: Record<string, string> = {
-  active: '#22c55e',
-  inactive: '#f59e0b', 
-  terminated: '#ef4444',
-  archived: '#6b7280',
+  active: 'green', inactive: 'default', terminated: 'red', archived: 'orange',
 };
 
 const CATEGORY_LABELS: Record<string, string> = {
-  worker: 'Manufacturing Worker',
-  'office-staff': 'Office Staff',
+  worker: 'Worker', 'office-staff': 'Office Staff',
 };
 
 export function EmployeeDetailPage() {
@@ -72,11 +77,24 @@ export function EmployeeDetailPage() {
     enabled: !!id && id !== 'new',
   });
 
-  useEffect(() => {
-    if (id === 'new') {
-      navigate('/employees/new');
-    }
-  }, [id, navigate]);
+  const attendanceColumns = useMemo(() => [
+    { title: 'Date', dataIndex: 'date', key: 'date', render: (d: string) => dayjs(d).format('DD MMM YYYY') },
+    { title: 'Status', dataIndex: 'status', key: 'status', render: (s: string) => <Tag color={s === 'present' ? 'green' : s === 'absent' ? 'red' : 'default'}>{s}</Tag> },
+    { title: 'In Time', dataIndex: 'inTime', key: 'inTime' },
+    { title: 'Out Time', dataIndex: 'outTime', key: 'outTime' },
+    { title: 'Shift', dataIndex: ['shift', 'name'], key: 'shift' },
+    { title: 'Late', dataIndex: 'isLate', key: 'isLate', render: (late: boolean) => late ? <Tag color="orange">Late</Tag> : '-' },
+  ], []);
+
+  const payrollColumns = useMemo(() => [
+    { title: 'Month', dataIndex: 'month', key: 'month', render: (m: string) => dayjs(m + '-01').format('MMM YYYY') },
+    { title: 'Present Days', dataIndex: 'presentDays', key: 'presentDays' },
+    { title: 'Basic', dataIndex: 'basicEarnings', key: 'basicEarnings', render: (v: number) => `₹${v?.toLocaleString()}` },
+    { title: 'Allowances', dataIndex: 'allowancesTotal', key: 'allowancesTotal', render: (v: number) => `₹${v?.toLocaleString()}` },
+    { title: 'Deductions', dataIndex: 'totalDeductions', key: 'totalDeductions', render: (v: number) => `₹${v?.toLocaleString()}` },
+    { title: 'Net Pay', dataIndex: 'netPay', key: 'netPay', render: (v: number) => <span style={{ fontWeight: 600, color: 'var(--hrms-success)' }}>₹{v?.toLocaleString()}</span> },
+    { title: 'Status', dataIndex: 'status', key: 'status', render: (s: string) => <Tag color={s === 'finalized' ? 'green' : 'orange'}>{s}</Tag> },
+  ], []);
 
   if (!queryEnabled || isLoading) {
     return (
@@ -111,15 +129,6 @@ export function EmployeeDetailPage() {
   }
 
   const employee = data.data;
-
-  const docTypeLabels: Record<string, string> = {
-    aadhar: 'Aadhar Card',
-    pan: 'PAN Card',
-    voter: 'Voter ID',
-    driver_license: 'Driver License',
-    passport: 'Passport',
-    other: 'Other',
-  };
 
   const handleUpload = (file: File) => {
     uploadMutation.mutate({ file, docType: selectedDocType });
@@ -322,14 +331,7 @@ export function EmployeeDetailPage() {
                         hidePagination
                         noCard
                         disableRowClick
-                        columns={[
-                          { title: 'Date', dataIndex: 'date', key: 'date', render: (d: string) => dayjs(d).format('DD MMM YYYY') },
-                          { title: 'Status', dataIndex: 'status', key: 'status', render: (s: string) => <Tag color={s === 'present' ? 'green' : s === 'absent' ? 'red' : 'default'}>{s}</Tag> },
-                          { title: 'In Time', dataIndex: 'inTime', key: 'inTime' },
-                          { title: 'Out Time', dataIndex: 'outTime', key: 'outTime' },
-                          { title: 'Shift', dataIndex: ['shift', 'name'], key: 'shift' },
-                          { title: 'Late', dataIndex: 'isLate', key: 'isLate', render: (late: boolean) => late ? <Tag color="orange">Late</Tag> : '-' },
-                        ]}
+                        columns={attendanceColumns}
                       />
                     ),
                   },
@@ -343,15 +345,7 @@ export function EmployeeDetailPage() {
                         hidePagination
                         noCard
                         disableRowClick
-                        columns={[
-                          { title: 'Month', dataIndex: 'month', key: 'month', render: (m: string) => dayjs(m + '-01').format('MMM YYYY') },
-                          { title: 'Present Days', dataIndex: 'presentDays', key: 'presentDays' },
-                          { title: 'Basic', dataIndex: 'basicEarnings', key: 'basicEarnings', render: (v: number) => `₹${v?.toLocaleString()}` },
-                          { title: 'Allowances', dataIndex: 'allowancesTotal', key: 'allowancesTotal', render: (v: number) => `₹${v?.toLocaleString()}` },
-                          { title: 'Deductions', dataIndex: 'totalDeductions', key: 'totalDeductions', render: (v: number) => `₹${v?.toLocaleString()}` },
-                          { title: 'Net Pay', dataIndex: 'netPay', key: 'netPay', render: (v: number) => <span style={{ fontWeight: 600, color: 'var(--hrms-success)' }}>₹{v?.toLocaleString()}</span> },
-                          { title: 'Status', dataIndex: 'status', key: 'status', render: (s: string) => <Tag color={s === 'finalized' ? 'green' : 'orange'}>{s}</Tag> },
-                        ]}
+                        columns={payrollColumns}
                       />
                     ),
                   },

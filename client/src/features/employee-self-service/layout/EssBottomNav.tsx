@@ -10,6 +10,7 @@ import {
   SwapOutlined,
   LaptopOutlined,
   BookOutlined,
+  CreditCardOutlined,
 } from '@ant-design/icons';
 import { useState } from 'react';
 import { Drawer, List } from 'antd';
@@ -25,6 +26,7 @@ const tabs = [
 const moreItems = [
   { key: '/ess/documents', icon: <FileTextOutlined />, label: 'Documents' },
   { key: '/ess/payslips', icon: <DollarOutlined />, label: 'Payslips' },
+  { key: '/ess/loans', icon: <CreditCardOutlined />, label: 'Loans' },
   { key: '/ess/shift-swaps', icon: <SwapOutlined />, label: 'Shift Swap' },
   { key: '/ess/shift-swaps/preferences', icon: <SwapOutlined />, label: 'Shift Preference' },
   { key: '/ess/assets', icon: <LaptopOutlined />, label: 'Assets' },

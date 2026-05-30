@@ -1,4 +1,5 @@
 import PayrollRun from '../../models/PayrollRun.model.js';
+import mongoose from 'mongoose';
 import PayrollItem from '../../models/PayrollItem.model.js';
 import Employee from '../../models/Employee.model.js';
 import { calculateStatutoryForEmployee } from '../statutory/statutory.service.js';
@@ -24,6 +25,12 @@ function formatDate(d: Date): string {
   const m = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
+}
+
+function getPayrollLockDays(config: any): number {
+  const value = config.payrollLockDays ?? config.unfinalizeWindowDays ?? 7;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? Math.max(0, parsed) : 7;
 }
 
 async function getApplicableOvertimeRule(category: string): Promise<any | null> {
@@ -284,8 +291,9 @@ async function calculatePayrollForEmployee(
       { name: 'EDLI', calculatedValue: statutory.edli },
       { name: 'Employer ESI', calculatedValue: statutory.esiEmployer },
     ].filter((c) => c.calculatedValue > 0);
-  } catch {
-    // statutory calculation failed silently - proceed without it
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : 'Unknown statutory error';
+    throw new AppError(`Statutory calculation failed for ${emp.employeeCode || emp.fullName || emp._id}: ${reason}`, 500);
   }
 
   let netPay = grossEarnings - totalDeductionsValue;
@@ -327,10 +335,20 @@ export class PayrollService {
     const { page, limit, sort, order } = PaginationUtil.parseFromObject(queryParams);
     const skip = PaginationUtil.getSkip(page, limit);
     const sortObj: Record<string, 1 | -1> = { [sort]: order === 'asc' ? 1 : -1 };
+    const filter: Record<string, unknown> = {};
+
+    if (queryParams.status) filter.status = queryParams.status;
+    if (queryParams.year && queryParams.month) {
+      filter.month = `${queryParams.year}-${String(queryParams.month).padStart(2, '0')}`;
+    } else if (queryParams.year) {
+      filter.month = { $regex: `^${queryParams.year}-` };
+    } else if (queryParams.month) {
+      filter.month = { $regex: `-${String(queryParams.month).padStart(2, '0')}$` };
+    }
 
     const [runs, total] = await Promise.all([
-      PayrollRun.find().sort(sortObj).skip(skip).limit(limit).lean(),
-      PayrollRun.countDocuments(),
+      PayrollRun.find(filter).sort(sortObj).skip(skip).limit(limit).lean(),
+      PayrollRun.countDocuments(filter),
     ]);
 
     const data = runs.map((r: any) => ({ ...r, id: String(r._id), _id: undefined }));
@@ -340,100 +358,113 @@ export class PayrollService {
   }
 
   static async runPayroll(month: number, year: number, userId: string): Promise<Record<string, unknown>> {
+    if (!userId) {
+      throw new AppError('User authentication required', 401);
+    }
     const monthStr = `${year}-${String(month).padStart(2, '0')}`;
     
-    const existingRun = await PayrollRun.findOne({ month: monthStr });
-    if (existingRun) {
-      throw new AppError(`Payroll for ${monthStr} already exists`, 400);
-    }
-
-    const settings = await CompanySettings.findOne().lean();
-    const config = (settings?.payrollConfig as any) || {};
-    const allowances = (settings?.allowanceConfig as any[]) || [];
-    const deductions = (settings?.deductionConfig as any[]) || [];
-
-    const startDate = new Date(year, month - 1, 1);
-    const endDate = new Date(year, month, 0);
-    const totalDays = getDaysInMonth(year, month);
-    const workingDays = config.defaultWorkingDays || 26;
-    const standardHours = config.standardHoursPerDay || 8;
-
-    const employees = await Employee.find({ status: 'active' }).lean();
-
-    let totalNetPay = 0;
-    const payrollItems = [];
-
-    for (const emp of employees) {
-      const result = await calculatePayrollForEmployee(emp, month, year, config, allowances, deductions, startDate, endDate, totalDays, workingDays, standardHours);
-      totalNetPay += result.netPay;
-      payrollItems.push(result);
-    }
-
-    const run = await PayrollRun.create({
-      month: monthStr,
-      status: 'draft',
-      totalEmployees: employees.length,
-      totalNetPay,
-      processedBy: userId as any,
-    });
-
-    const payrollItemDocs = payrollItems.map(item => ({
-      payrollRun: run._id,
-      employee: item.employee.id,
-      month: monthStr,
-      totalDays: item.totalDays,
-      presentDays: item.presentDays,
-      absentDays: item.absentDays,
-      halfDays: item.halfDays,
-      paidLeaveDays: item.paidLeaveDays,
-      unpaidLeaveDays: item.unpaidLeaveDays,
-      weeklyOffs: item.weeklyOffs,
-      holidays: item.holidays,
-      effectiveWorkingDays: item.effectiveWorkingDays,
-      overtimeHours: item.overtimeHours,
-      overtimeHoursAllowed: item.overtimeHoursAllowed,
-      overtimeRuleApplied: item.overtimeRuleApplied,
-      overtimeAmount: item.overtimeAmount,
-      basicEarnings: item.basicEarnings,
-      allowances: item.allowances,
-      grossEarnings: item.grossEarnings,
-      deductions: item.deductions,
-      totalDeductions: item.totalDeductions,
-      employerContributions: item.employerContributions || [],
-      loanEmiDeduction: item.loanEmiDeduction || 0,
-      netPay: item.netPay,
-      status: 'draft',
-    }));
-
-    const insertedItems = await PayrollItem.insertMany(payrollItemDocs);
-
-    for (let i = 0; i < insertedItems.length; i++) {
-      const item = payrollItems[i];
-      if (item._loanRepaymentId) {
-        await LoanRepayment.findByIdAndUpdate(item._loanRepaymentId, {
-          status: 'deducted',
-          payrollRun: run._id,
-          repaidAt: new Date(),
-        });
+    // Start a MongoDB transaction to guarantee atomicity of the entire payroll run
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    
+    try {
+      const existingRun = await PayrollRun.findOne({ month: monthStr }).session(session);
+      if (existingRun) {
+        throw new AppError(`Payroll for ${monthStr} already exists`, 400);
       }
+      
+      const settings = await CompanySettings.findOne().lean().session(session);
+      const config = (settings?.payrollConfig as any) || {};
+      const allowances = (settings?.allowanceConfig as any[]) || [];
+      const deductions = (settings?.deductionConfig as any[]) || [];
+      
+      const startDate = new Date(year, month - 1, 1);
+      const endDate = new Date(year, month, 0);
+      const totalDays = getDaysInMonth(year, month);
+      const workingDays = config.defaultWorkingDays || 26;
+      const standardHours = config.standardHoursPerDay || 8;
+      
+      const employees = await Employee.find({ status: 'active' }).lean().session(session);
+      
+      let totalNetPay = 0;
+      const payrollItems = [];
+      
+      for (const emp of employees) {
+        const result = await calculatePayrollForEmployee(emp, month, year, config, allowances, deductions, startDate, endDate, totalDays, workingDays, standardHours);
+        totalNetPay += result.netPay;
+        payrollItems.push(result);
+      }
+      
+      const [run] = await PayrollRun.create(
+        [{
+          month: monthStr,
+          status: 'draft',
+          totalEmployees: employees.length,
+          totalNetPay,
+          processedBy: userId as any,
+        }],
+        { session },
+      );
+      
+      const payrollItemDocs = payrollItems.map(item => ({
+        payrollRun: run._id,
+        employee: item.employee.id,
+        month: monthStr,
+        totalDays: item.totalDays,
+        presentDays: item.presentDays,
+        absentDays: item.absentDays,
+        halfDays: item.halfDays,
+        paidLeaveDays: item.paidLeaveDays,
+        unpaidLeaveDays: item.unpaidLeaveDays,
+        weeklyOffs: item.weeklyOffs,
+        holidays: item.holidays,
+        effectiveWorkingDays: item.effectiveWorkingDays,
+        overtimeHours: item.overtimeHours,
+        overtimeHoursAllowed: item.overtimeHoursAllowed,
+        overtimeRuleApplied: item.overtimeRuleApplied,
+        overtimeAmount: item.overtimeAmount,
+        basicEarnings: item.basicEarnings,
+        allowances: item.allowances,
+        grossEarnings: item.grossEarnings,
+        deductions: item.deductions,
+        totalDeductions: item.totalDeductions,
+        employerContributions: item.employerContributions || [],
+        loanEmiDeduction: item.loanEmiDeduction || 0,
+        loanRepayment: item._loanRepaymentId || undefined,
+        netPay: item.netPay,
+        status: 'draft',
+      }));
+      
+      await PayrollItem.insertMany(payrollItemDocs, { session });
+      
+      await AuditService.log({
+        action: 'create',
+        module: 'payroll',
+        userId,
+        targetId: run._id.toString(),
+        details: { month: monthStr, employees: employees.length },
+      });
+      
+      await session.commitTransaction();
+      session.endSession();
+      
+      return { 
+        id: String(run._id), 
+        month: monthStr, 
+        status: 'draft',
+        totalEmployees: employees.length,
+        totalNetPay,
+        items: payrollItems,
+      };
+    } catch (err) {
+      await session.abortTransaction();
+      session.endSession();
+      // Preserve original error handling semantics
+      if (err instanceof AppError) {
+        throw err;
+      }
+      throw new AppError(err instanceof Error ? err.message : 'Payroll run failed', 500);
     }
-
-    await AuditService.log({
-      action: 'create',
-      module: 'payroll',
-      userId,
-      targetId: run._id.toString(),
-      details: { month: monthStr, employees: employees.length },
-    });
-
-    return { 
-      id: String(run._id), 
-      month: monthStr, 
-      status: 'draft',
-      totalEmployees: employees.length,
-      totalNetPay,
-      items: payrollItems,
-    };
   }
 
   static async previewRun(month: number, year: number): Promise<Record<string, unknown>> {
@@ -525,6 +556,7 @@ export class PayrollService {
     const run = await PayrollRun.findById(id);
     if (!run) throw new AppError('Payroll run not found', 404);
     if (run.status === 'finalized') throw new AppError('Already finalized', 400);
+    if (run.status !== 'approved') throw new AppError('Only approved payroll can be finalized', 400);
 
     run.status = 'finalized';
     run.finalizedBy = userId as any;
@@ -537,6 +569,18 @@ export class PayrollService {
       { payrollRun: id },
       { status: 'finalized' }
     );
+
+    const loanLinkedItems = await PayrollItem.find({
+      payrollRun: id,
+      loanRepayment: { $exists: true, $ne: null },
+    }).select('loanRepayment').lean();
+    const loanRepaymentIds = loanLinkedItems.map((item: any) => item.loanRepayment).filter(Boolean);
+    if (loanRepaymentIds.length > 0) {
+      await LoanRepayment.updateMany(
+        { _id: { $in: loanRepaymentIds }, status: 'pending' },
+        { status: 'deducted', payrollRun: run._id, repaidAt: new Date() },
+      );
+    }
 
     await AuditService.log({
       action: 'finalize',
@@ -568,12 +612,15 @@ export class PayrollService {
 
     const settings = await CompanySettings.findOne().lean();
     const config = (settings?.payrollConfig as any) || {};
-    const windowDays = config.unfinalizeWindowDays ?? 7;
+    const windowDays = getPayrollLockDays(config);
+    if (windowDays <= 0) {
+      throw new AppError('Cannot unfinalize: payroll is locked immediately by payroll settings', 400);
+    }
     if (run.finalizedAt) {
       const elapsed = dayjs().diff(dayjs(run.finalizedAt), 'day');
       if (elapsed >= windowDays) {
         throw new AppError(
-          `Cannot unfinalize: the ${windowDays}-day unfinalize window has expired (finalized on ${dayjs(run.finalizedAt).format('DD-MMM-YYYY')})`,
+          `Cannot unfinalize: the ${windowDays}-day payroll lock window has expired (finalized on ${dayjs(run.finalizedAt).format('DD-MMM-YYYY')})`,
           400,
         );
       }
@@ -589,6 +636,11 @@ export class PayrollService {
     await PayrollItem.updateMany(
       { payrollRun: id },
       { status: 'draft' }
+    );
+
+    await LoanRepayment.updateMany(
+      { payrollRun: run._id, status: 'deducted' },
+      { $set: { status: 'pending' }, $unset: { payrollRun: '', repaidAt: '' } },
     );
 
     await AuditService.log({
@@ -608,10 +660,10 @@ export class PayrollService {
 
     const settings = await CompanySettings.findOne().lean();
     const config = (settings?.payrollConfig as any) || {};
-    const unfinalizeWindowDays = config.unfinalizeWindowDays ?? 7;
-    const unfinalizeLocked = !!(run.finalizedAt && dayjs().diff(dayjs(run.finalizedAt), 'day') >= unfinalizeWindowDays);
+    const unfinalizeWindowDays = getPayrollLockDays(config);
+    const unfinalizeLocked = !!(run.finalizedAt && (unfinalizeWindowDays <= 0 || dayjs().diff(dayjs(run.finalizedAt), 'day') >= unfinalizeWindowDays));
 
-    const items = await PayrollItem.find({ payrollRun: id })
+    const items = await PayrollItem.find({ payrollRun: new mongoose.Types.ObjectId(id) })
       .populate('employee', 'fullName employeeCode')
       .lean();
 
@@ -646,13 +698,13 @@ export class PayrollService {
     return { ...run, id: String(run._id), _id: undefined, items: itemsData, unfinalizeWindowDays, unfinalizeLocked };
   }
 
-  static async updatePayrollItem(id: string, data: Record<string, unknown>, userId: string): Promise<Record<string, unknown>> {
-    const item = await PayrollItem.findById(id);
+  static async updatePayrollItem(runId: string, id: string, data: Record<string, unknown>, userId: string): Promise<Record<string, unknown>> {
+    const item = await PayrollItem.findOne({ _id: id, payrollRun: runId });
     if (!item) throw new AppError('Payroll item not found', 404);
 
-    const run = await PayrollRun.findById(item.payrollRun);
+    const run = await PayrollRun.findById(runId);
     if (!run) throw new AppError('Payroll run not found', 404);
-    if (run.status === 'finalized') throw new AppError('Cannot edit finalized payroll', 400);
+    if (run.status !== 'draft') throw new AppError('Can only edit draft payroll', 400);
 
     const changes: Record<string, unknown> = {};
     if (data.basicEarnings !== undefined && item.basicEarnings !== data.basicEarnings) {
@@ -700,12 +752,12 @@ export class PayrollService {
   static async batchUpdateItems(id: string, items: Array<{ itemId: string; data: Record<string, unknown> }>, userId: string): Promise<Record<string, unknown>> {
     const run = await PayrollRun.findById(id);
     if (!run) throw new AppError('Payroll run not found', 404);
-    if (run.status === 'finalized') throw new AppError('Cannot edit finalized payroll', 400);
+    if (run.status !== 'draft') throw new AppError('Can only edit draft payroll', 400);
 
     const results = [];
     for (const entry of items) {
       try {
-        const item = await PayrollItem.findById(entry.itemId);
+        const item = await PayrollItem.findOne({ _id: entry.itemId, payrollRun: id });
         if (!item) {
           results.push({ itemId: entry.itemId, status: 'failed', error: 'Item not found' });
           continue;
@@ -752,6 +804,10 @@ export class PayrollService {
     if (!run) throw new AppError('Payroll run not found', 404);
     if (run.status === 'finalized') throw new AppError('Cannot delete finalized payroll', 400);
 
+    await LoanRepayment.updateMany(
+      { payrollRun: run._id, status: 'deducted' },
+      { $set: { status: 'pending' }, $unset: { payrollRun: '', repaidAt: '' } },
+    );
     await PayrollItem.deleteMany({ payrollRun: id });
     await PayrollRun.findByIdAndDelete(id);
 

@@ -56,26 +56,17 @@ apiClient.interceptors.response.use(
       originalRequest._retry = true;
       isRefreshing = true;
 
-      const refreshToken = useAuthStore.getState().refreshToken;
-
-      if (!refreshToken) {
-        useAuthStore.getState().logout();
-        window.location.href = '/login';
-        return Promise.reject(error);
-      }
-
       try {
         const res = await axios.post(
           `${import.meta.env.VITE_API_BASE_URL}/auth/refresh`,
-          { refreshToken },
+          {},
           { withCredentials: true }
         );
-        const { token, refreshToken: newRefreshToken } = res.data.data;
+        const { token } = res.data.data;
 
         useAuthStore.getState().login(
           useAuthStore.getState().user!,
-          token,
-          newRefreshToken
+          token
         );
 
         processQueue(null, token);

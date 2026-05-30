@@ -11,7 +11,8 @@ export const env = {
 
   MONGODB_URI: process.env.MONGODB_URI || '',
 
-  JWT_SECRET: process.env.JWT_SECRET || 'default-secret-change-me',
+  JWT_SECRET: process.env.JWT_SECRET || (process.env.NODE_ENV === 'production' ? (() => { throw new Error('JWT_SECRET must be set in production'); })() : 'dev-secret-not-for-production'),
+  JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET || (process.env.NODE_ENV === 'production' ? (() => { throw new Error('JWT_REFRESH_SECRET must be set in production'); })() : 'dev-refresh-secret-not-for-production'),
   JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '24h',
   JWT_COOKIE_EXPIRES_IN: process.env.JWT_COOKIE_EXPIRES_IN || '1',
 

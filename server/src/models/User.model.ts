@@ -40,7 +40,7 @@ const UserSchema = new Schema<IUser>(
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
     failedLoginAttempts: { type: Number, default: 0 },
     lockUntil: { type: Date },
-    refreshToken: { type: String },
+    refreshToken: { type: String, index: true },
     passwordHistory: { type: [String], default: [] },
     employeeId: { type: Schema.Types.ObjectId, ref: 'Employee' },
     preferredLanguage: { type: String, default: 'en' },
@@ -50,14 +50,6 @@ const UserSchema = new Schema<IUser>(
 
 UserSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
-  
-  const previousPasswords = this.passwordHistory || [];
-  previousPasswords.unshift(this.password);
-  if (previousPasswords.length > 5) {
-    previousPasswords.pop();
-  }
-  this.passwordHistory = previousPasswords;
-  
   this.password = await bcrypt.hash(this.password, 10);
   next();
 });

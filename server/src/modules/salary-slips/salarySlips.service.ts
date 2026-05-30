@@ -2,6 +2,7 @@ import PayrollRun from '../../models/PayrollRun.model.js';
 import PayrollItem from '../../models/PayrollItem.model.js';
 import CompanySettings from '../../models/CompanySettings.model.js';
 import { AppError } from '../../core/errors/AppError.js';
+import mongoose from 'mongoose';
 
 export class SalarySlipsService {
   static async list(queryParams: Record<string, unknown>): Promise<Record<string, unknown>[]> {
@@ -33,7 +34,7 @@ export class SalarySlipsService {
     const companyPhone = settings?.companyInfo?.phone || '';
     const companyEmail = settings?.companyInfo?.email || '';
 
-    const query: any = { payrollRun: runId };
+    const query: any = { payrollRun: new mongoose.Types.ObjectId(runId) };
     if (employeeId) {
       query.employee = employeeId;
     }

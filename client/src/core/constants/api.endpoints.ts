@@ -20,6 +20,7 @@ export const API_ENDPOINTS = {
     get: (id: string) => `/departments/${id}`,
     update: (id: string) => `/departments/${id}`,
     delete: (id: string) => `/departments/${id}`,
+    nextCode: '/departments/next-code',
   },
 
   designations: {
@@ -98,16 +99,24 @@ export const API_ENDPOINTS = {
   payroll: {
     runs: {
       list: '/payroll/runs',
-      create: '/payroll/runs',
-      get: (id: string) => `/payroll/runs/${id}`,
-      finalize: (id: string) => `/payroll/runs/${id}/finalize`,
-      update: (id: string) => `/payroll/runs/${id}`,
+      create: '/payroll/run',
+      get: (id: string) => `/payroll/run/${id}`,
+      preview: '/payroll/preview',
+      submit: (id: string) => `/payroll/run/${id}/submit`,
+      approve: (id: string) => `/payroll/run/${id}/approve`,
+      reject: (id: string) => `/payroll/run/${id}/reject`,
+      finalize: (id: string) => `/payroll/run/${id}/finalize`,
+      unfinalize: (id: string) => `/payroll/run/${id}/unfinalize`,
+      delete: (id: string) => `/payroll/run/${id}`,
+      update: (id: string) => `/payroll/run/${id}`,
     },
     items: {
       list: '/payroll/items',
       get: (id: string) => `/payroll/items/${id}`,
       update: (id: string) => `/payroll/items/${id}`,
+      batch: (runId: string) => `/payroll/run/${runId}/items/batch`,
     },
+    employee: (employeeId: string) => `/payroll/runs/employee/${employeeId}`
   },
 
   salarySlips: {

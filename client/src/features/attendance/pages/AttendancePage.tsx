@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo, memo } from 'react';
 import { Button, Modal, Form, Input, Select, DatePicker, message, Tag, Row, Col, Tabs, Card, Badge, Table } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { SaveOutlined, CalendarOutlined, LeftOutlined, RightOutlined } from '@ant-design/icons';
@@ -41,13 +41,13 @@ export function AttendancePage() {
   const dateStr = selectedDate.format('YYYY-MM-DD');
   const monthYear = { month: selectedMonth.month() + 1, year: selectedMonth.year() };
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error: listError } = useQuery({
     queryKey: ['attendance', page, limit, dateStr, departmentFilter],
     queryFn: () => attendanceService.list({ page, limit, date: dateStr, department: departmentFilter || undefined }),
     refetchOnWindowFocus: false,
   });
 
-  const { data: monthlyData, isLoading: monthlyLoading } = useQuery({
+  const { data: monthlyData, isLoading: monthlyLoading, error: monthlyError } = useQuery({
     queryKey: ['attendance-monthly', monthYear.month, monthYear.year, departmentFilter],
     queryFn: () => attendanceService.monthlyView({ ...monthYear, department: departmentFilter || undefined }),
     refetchOnWindowFocus: false,
@@ -120,7 +120,7 @@ export function AttendancePage() {
     return `${shift.startTime} - ${shift.endTime}`;
   };
 
-  const columns: ColumnsType<AttendanceEntry> = [
+  const columns = useMemo<ColumnsType<AttendanceEntry>>(() => [
     {
       title: 'Employee',
       key: 'employee',
@@ -175,9 +175,9 @@ export function AttendancePage() {
       key: 'remarks',
       render: (v: string) => v || '-',
     },
-  ];
+  ], []);
 
-  const MonthlyView = () => {
+  const MonthlyView = memo(() => {
     const daysInMonth = selectedMonth.daysInMonth();
     const dayHeaders = Array.from({ length: daysInMonth }, (_, i) => i + 1);
 
@@ -249,11 +249,14 @@ export function AttendancePage() {
         />
       </div>
     );
-  };
+  });
 
   return (
     <div style={{ padding: '0 4px' }}>
       <PageHeader title="Attendance" subtitle="Mark and manage employee attendance" />
+
+      {listError && <Card style={{ marginBottom: 16, borderColor: '#ff4d4f' }}><span style={{ color: '#ff4d4f' }}>Failed to load attendance records. Please try again.</span></Card>}
+      {monthlyError && <Card style={{ marginBottom: 16, borderColor: '#ff4d4f' }}><span style={{ color: '#ff4d4f' }}>Failed to load monthly view. Please try again.</span></Card>}
 
       <Tabs 
         defaultActiveKey="mark" 

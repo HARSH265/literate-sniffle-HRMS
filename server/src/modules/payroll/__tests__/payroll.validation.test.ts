@@ -50,20 +50,20 @@ describe('payroll validation schemas', () => {
 
   describe('updatePayrollItemSchema', () => {
     it('accepts partial update', () => {
-      const result = updatePayrollItemSchema.safeParse({ remarks: 'updated' });
+      const result = updatePayrollItemSchema.safeParse({ netPay: 30000 });
       expect(result.success).toBe(true);
     });
 
-    it('accepts earnings update', () => {
+    it('accepts basic earnings update', () => {
       const result = updatePayrollItemSchema.safeParse({
-        earnings: { basic: 50000 },
+        basicEarnings: 50000,
       });
       expect(result.success).toBe(true);
     });
 
-    it('rejects negative earnings', () => {
+    it('rejects negative money values', () => {
       const result = updatePayrollItemSchema.safeParse({
-        earnings: { basic: -100 },
+        basicEarnings: -100,
       });
       expect(result.success).toBe(false);
     });
@@ -73,7 +73,7 @@ describe('payroll validation schemas', () => {
     it('accepts valid batch', () => {
       const result = batchUpdateItemsSchema.safeParse({
         items: [
-          { itemId: '507f1f77bcf86cd799439011', updates: { remarks: 'ok' } },
+          { itemId: '507f1f77bcf86cd799439011', data: { netPay: 30000 } },
         ],
       });
       expect(result.success).toBe(true);
@@ -86,7 +86,7 @@ describe('payroll validation schemas', () => {
 
     it('rejects invalid ObjectId', () => {
       const result = batchUpdateItemsSchema.safeParse({
-        items: [{ itemId: 'not-an-objectid', updates: {} }],
+        items: [{ itemId: 'not-an-objectid', data: {} }],
       });
       expect(result.success).toBe(false);
     });

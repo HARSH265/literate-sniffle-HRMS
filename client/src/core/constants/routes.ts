@@ -6,7 +6,7 @@ export const ROUTES = {
   employees: {
     list: '/employees',
     new: '/employees/new',
-    edit: (id: string) => `/employees/${id}`,
+    edit: (id: string) => `/employees/${id}/edit`,
     view: (id: string) => `/employees/${id}`,
   },
 
@@ -46,7 +46,6 @@ export const ROUTES = {
     list: '/loans',
     apply: '/loans/apply',
     detail: (id: string) => `/loans/${id}`,
-    types: '/loans/types',
   },
   reports: {
     attendance: '/reports/attendance',

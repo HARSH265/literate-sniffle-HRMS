@@ -139,4 +139,29 @@ export const essService = {
     const { data } = await apiClient.put('/shift-swaps/preferences', payload);
     return data;
   },
+
+  async getMyLoans(): Promise<{ success: boolean; data: any[] }> {
+    const { data } = await apiClient.get('/ess/loans');
+    return data;
+  },
+
+  async getLoanTypes(): Promise<{ success: boolean; data: any[] }> {
+    const { data } = await apiClient.get('/ess/loan-types');
+    return data;
+  },
+
+  async applyLoan(payload: { loanType: string; amount: number; tenure: number; purpose?: string }): Promise<{ success: boolean; data: any; message: string }> {
+    const { data } = await apiClient.post('/ess/loans', payload);
+    return data;
+  },
+
+  async getLoanDetail(id: string): Promise<{ success: boolean; data: any }> {
+    const { data } = await apiClient.get(`/ess/loans/${id}`);
+    return data;
+  },
+
+  async cancelLoan(id: string): Promise<{ success: boolean; data: any; message: string }> {
+    const { data } = await apiClient.post(`/ess/loans/${id}/cancel`);
+    return data;
+  },
 };

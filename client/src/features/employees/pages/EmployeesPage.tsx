@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, memo, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, message, Popconfirm, Avatar, Tooltip, Select, Input, Upload } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
@@ -11,18 +11,26 @@ import { designationService } from '../../designations/services/designationServi
 import { CATEGORY_OPTIONS, STATUS_OPTIONS } from '../../../core/constants/employee';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
-const StatusBadge = ({ status }: { status: string }) => {
+const StatusBadge = memo(({ status }: { status: string }) => {
   const map: Record<string, string> = {
     active: 'status-active', inactive: 'status-inactive', terminated: 'status-terminated'
   };
   return <span className={`status-badge ${map[status] || 'status-inactive'}`}>{status}</span>;
-};
+});
 
-const CatTag = ({ cat }: { cat: string }) => (
+const CatTag = memo(({ cat }: { cat: string }) => (
   <span className="cat-tag" style={{ background: cat === 'worker' ? '#eff6ff' : '#faf5ff', color: cat === 'worker' ? '#2563eb' : '#7c3aed' }}>
     {cat === 'worker' ? 'Worker' : 'Office Staff'}
   </span>
-);
+));
+
+const EmpAvatar = memo(({ photo }: { name: string; photo?: string }) => (
+  <Avatar
+    src={photo}
+    icon={<UserOutlined />}
+    style={{ background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', flexShrink: 0 }}
+  />
+));
 
 export function EmployeesPage() {
   const navigate = useNavigate();
@@ -109,15 +117,7 @@ const { data, isLoading, isFetching } = useQuery({
 
   const handleDelete = (id: string) => deleteMutation.mutate(id);
 
-  const EmpAvatar = ({ photo }: { name: string; photo?: string }) => (
-    <Avatar
-      src={photo}
-      icon={<UserOutlined />}
-      style={{ background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', flexShrink: 0 }}
-    />
-  );
-
-  const columns: ColumnsType<Employee> = [
+  const columns = useMemo<ColumnsType<Employee>>(() => [
     {
       title: 'Employee',
       key: 'employee',
@@ -189,7 +189,7 @@ const { data, isLoading, isFetching } = useQuery({
         </div>
       ),
     },
-  ];
+  ], [navigate, handleDelete]);
 
   return (
     <div style={{ padding: '0 4px' }}>

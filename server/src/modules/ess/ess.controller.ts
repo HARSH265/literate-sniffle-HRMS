@@ -75,6 +75,31 @@ const getMyAssets = asyncHandler(async (req: Request, res: Response) => {
   ResponseHandler.success(res, result, 'Assets fetched successfully');
 });
 
+const getMyLoans = asyncHandler(async (req: Request, res: Response) => {
+  const result = await EssService.getMyLoans(req.user!.id);
+  ResponseHandler.success(res, result, 'Loans fetched successfully');
+});
+
+const getLoanTypesForEss = asyncHandler(async (_req: Request, res: Response) => {
+  const result = await EssService.getLoanTypesForEss();
+  ResponseHandler.success(res, result, 'Loan types fetched successfully');
+});
+
+const applyLoanFromEss = asyncHandler(async (req: Request, res: Response) => {
+  const result = await EssService.applyLoanFromEss(req.user!.id, req.body);
+  ResponseHandler.created(res, result, 'Loan application submitted');
+});
+
+const getLoanDetailForEss = asyncHandler(async (req: Request, res: Response) => {
+  const result = await EssService.getLoanDetailForEss(req.user!.id, req.params.id);
+  ResponseHandler.success(res, result, 'Loan details fetched');
+});
+
+const cancelLoanFromEss = asyncHandler(async (req: Request, res: Response) => {
+  const result = await EssService.cancelLoanFromEss(req.user!.id, req.params.id);
+  ResponseHandler.success(res, result, 'Loan cancelled');
+});
+
 export const essController = {
   getProfile, updateProfile,
   getChangeRequests, createChangeRequest,
@@ -86,4 +111,5 @@ export const essController = {
   getMyDocuments,
   getMyPayslips,
   getMyAssets,
+  getMyLoans, getLoanTypesForEss, applyLoanFromEss, getLoanDetailForEss, cancelLoanFromEss,
 };

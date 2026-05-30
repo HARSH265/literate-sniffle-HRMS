@@ -3,8 +3,11 @@ import User from '../../models/User.model.js';
 import EssChangeRequest from '../../models/EssChangeRequest.model.js';
 import CompanySettings from '../../models/CompanySettings.model.js';
 import AttendanceEntry from '../../models/AttendanceEntry.model.js';
+import Loan from '../../models/Loan.model.js';
+import LoanType from '../../models/LoanType.model.js';
 import { LeaveService } from '../leave/leave.service.js';
 import { PayrollService } from '../payroll/payroll.service.js';
+import { LoansService } from '../loans/loans.service.js';
 import { AppError } from '../../core/errors/AppError.js';
 import { AuditService } from '../../core/audit/AuditService.js';
 import { PaginationUtil, PaginationMeta } from '../../core/utils/PaginationUtil.js';
@@ -325,6 +328,98 @@ export class EssService {
 
     const employeeId = (employee as any)._id.toString();
     return AssetService.getEmployeeAssets(employeeId);
+  }
+
+  static async getMyLoans(userId: string): Promise<any[]> {
+    const employee = await this.getEmployeeFromUser(userId);
+    if (!employee) return [];
+
+    const employeeId = (employee as any)._id.toString();
+    const loans = await Loan.find({ employee: employeeId })
+      .populate('loanType', 'name code interestRate')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    return loans.map((loan: any) => ({
+      id: loan._id.toString(),
+      loanType: loan.loanType ? { name: loan.loanType.name, code: loan.loanType.code, interestRate: loan.loanType.interestRate } : null,
+      amount: loan.amount,
+      interestRate: loan.interestRate,
+      tenure: loan.tenure,
+      emiAmount: loan.emiAmount,
+      totalPayable: loan.totalPayable,
+      totalInterest: loan.totalInterest,
+      purpose: loan.purpose,
+      status: loan.status,
+      applicationDate: loan.createdAt,
+      disbursedDate: loan.disbursedDate,
+      closedDate: loan.closedDate,
+    }));
+  }
+
+  static async getLoanTypesForEss(): Promise<any[]> {
+    const loanTypes = await LoanType.find({ isActive: true }).sort({ name: 1 }).lean();
+    return loanTypes.map((lt: any) => ({
+      id: lt._id.toString(),
+      name: lt.name,
+      code: lt.code,
+      description: lt.description,
+      maxAmount: lt.maxAmount,
+      minAmount: lt.minAmount,
+      interestRate: lt.interestRate,
+      maxTenure: lt.maxTenure,
+      minTenure: lt.minTenure,
+      applicableTo: lt.applicableTo,
+      maxActiveLoans: lt.maxActiveLoans,
+    }));
+  }
+
+  static async applyLoanFromEss(userId: string, data: { loanType: string; amount: number; tenure: number; purpose?: string }): Promise<any> {
+    const employee = await this.getEmployeeFromUser(userId);
+    if (!employee) throw new AppError('No employee linked to this user account', 400);
+
+    const employeeId = (employee as any)._id.toString();
+    return LoansService.applyLoan({ ...data, employee: employeeId }, userId);
+  }
+
+  static async getLoanDetailForEss(userId: string, loanId: string): Promise<any> {
+    const employee = await this.getEmployeeFromUser(userId);
+    if (!employee) throw new AppError('No employee linked to this user account', 400);
+
+    const employeeId = (employee as any)._id.toString();
+    const loan = await Loan.findOne({ _id: loanId, employee: employeeId })
+      .populate('loanType', 'name code interestRate')
+      .lean();
+
+    if (!loan) throw new AppError('Loan not found', 404);
+
+    return {
+      id: (loan as any)._id.toString(),
+      loanType: (loan as any).loanType ? { name: (loan as any).loanType.name, code: (loan as any).loanType.code, interestRate: (loan as any).loanType.interestRate } : null,
+      amount: (loan as any).amount,
+      interestRate: (loan as any).interestRate,
+      tenure: (loan as any).tenure,
+      emiAmount: (loan as any).emiAmount,
+      totalPayable: (loan as any).totalPayable,
+      totalInterest: (loan as any).totalInterest,
+      purpose: (loan as any).purpose,
+      status: (loan as any).status,
+      applicationDate: (loan as any).createdAt,
+      disbursedDate: (loan as any).disbursedDate,
+      closedDate: (loan as any).closedDate,
+      remarks: (loan as any).remarks,
+    };
+  }
+
+  static async cancelLoanFromEss(userId: string, loanId: string): Promise<any> {
+    const employee = await this.getEmployeeFromUser(userId);
+    if (!employee) throw new AppError('No employee linked to this user account', 400);
+
+    const employeeId = (employee as any)._id.toString();
+    const loan = await Loan.findOne({ _id: loanId, employee: employeeId });
+    if (!loan) throw new AppError('Loan not found', 404);
+
+    return LoansService.cancelLoan(loanId, userId);
   }
 
   private static getAllowedFields(settings: Record<string, unknown>): string[] {

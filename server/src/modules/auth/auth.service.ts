@@ -1,25 +1,23 @@
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import User from '../../models/User.model.js';
+import PasswordResetToken from '../../models/PasswordResetToken.model.js';
 import { AppError } from '../../core/errors/AppError.js';
 import { env } from '../../config/env.js';
 import { AuditService } from '../../core/audit/AuditService.js';
+import { TokenBlacklist } from '../../core/auth/TokenBlacklist.js';
+import { sendEmail } from '../../core/email/sendEmail.js';
 import CompanySettings from '../../models/CompanySettings.model.js';
 
-async function getTokenExpiry(): Promise<string> {
+async function getAuthConfig(): Promise<{ tokenExpiry: string; refreshTokenExpiry: string }> {
   try {
     const settings = await CompanySettings.findOne().lean() as any;
-    return settings?.authConfig?.tokenExpiry || '24h';
+    return {
+      tokenExpiry: settings?.authConfig?.tokenExpiry || '24h',
+      refreshTokenExpiry: settings?.authConfig?.refreshTokenExpiry || '7d',
+    };
   } catch {
-    return '24h';
-  }
-}
-
-async function getRefreshTokenExpiry(): Promise<string> {
-  try {
-    const settings = await CompanySettings.findOne().lean() as any;
-    return settings?.authConfig?.refreshTokenExpiry || '7d';
-  } catch {
-    return '7d';
+    return { tokenExpiry: '24h', refreshTokenExpiry: '7d' };
   }
 }
 
@@ -32,8 +30,7 @@ export class AuthService {
     }
 
     if (user.lockUntil && user.lockUntil > new Date()) {
-      const remainingMinutes = Math.ceil((user.lockUntil.getTime() - Date.now()) / 60000);
-      throw new AppError(`Account is locked. Try again in ${remainingMinutes} minutes`, 401);
+      throw new AppError('Account is locked. Please try again later.', 401);
     }
 
     const isMatch = await user.comparePassword(password);
@@ -60,8 +57,7 @@ export class AuthService {
       lockUntil: null,
     });
 
-    const tokenExpiry = await getTokenExpiry();
-    const refreshTokenExpiry = await getRefreshTokenExpiry();
+    const { tokenExpiry, refreshTokenExpiry } = await getAuthConfig();
 
     const token = jwt.sign(
       { id: user._id.toString(), email: user.email, name: user.name, role: user.role },
@@ -71,7 +67,7 @@ export class AuthService {
 
     const refreshToken = jwt.sign(
       { id: user._id.toString() },
-      env.JWT_SECRET,
+      env.JWT_REFRESH_SECRET,
       { expiresIn: refreshTokenExpiry as jwt.SignOptions['expiresIn'], algorithm: 'HS256' },
     );
 
@@ -165,7 +161,7 @@ export class AuthService {
   }
 
   static async refreshToken(refreshToken: string) {
-    const decoded = jwt.verify(refreshToken, env.JWT_SECRET, { algorithms: ['HS256'] }) as { id: string };
+    const decoded = jwt.verify(refreshToken, env.JWT_REFRESH_SECRET, { algorithms: ['HS256'] }) as { id: string };
 
     const user = await User.findById(decoded.id);
 
@@ -177,8 +173,7 @@ export class AuthService {
       throw new AppError('Account is deactivated', 401);
     }
 
-    const tokenExpiry = await getTokenExpiry();
-    const refreshTokenExpiry = await getRefreshTokenExpiry();
+    const { tokenExpiry, refreshTokenExpiry } = await getAuthConfig();
 
     const newToken = jwt.sign(
       { id: user._id.toString(), email: user.email, name: user.name, role: user.role },
@@ -188,7 +183,7 @@ export class AuthService {
 
     const newRefreshToken = jwt.sign(
       { id: user._id.toString() },
-      env.JWT_SECRET,
+      env.JWT_REFRESH_SECRET,
       { expiresIn: refreshTokenExpiry as jwt.SignOptions['expiresIn'], algorithm: 'HS256' },
     );
 
@@ -200,12 +195,30 @@ export class AuthService {
     };
   }
 
-  static async logout(userId: string) {
+  static async logout(userId: string, token?: string) {
     await User.findByIdAndUpdate(userId, { refreshToken: null });
+    if (token) {
+      try {
+        const decoded = jwt.decode(token) as { exp?: number };
+        const ttl = decoded?.exp ? decoded.exp - Math.floor(Date.now() / 1000) : 3600;
+        TokenBlacklist.add(token, Math.max(ttl, 1));
+      } catch {
+        TokenBlacklist.add(token, 3600);
+      }
+    }
   }
 
-  static async logoutAllDevices(userId: string, ipAddress?: string, userAgent?: string) {
+  static async logoutAllDevices(userId: string, token?: string, ipAddress?: string, userAgent?: string) {
     await User.findByIdAndUpdate(userId, { refreshToken: null });
+    if (token) {
+      try {
+        const decoded = jwt.decode(token) as { exp?: number };
+        const ttl = decoded?.exp ? decoded.exp - Math.floor(Date.now() / 1000) : 3600;
+        TokenBlacklist.add(token, Math.max(ttl, 1));
+      } catch {
+        TokenBlacklist.add(token, 3600);
+      }
+    }
 
     await AuditService.log({
       action: 'logout-all-devices',
@@ -217,5 +230,104 @@ export class AuthService {
     });
 
     return { message: 'Logged out from all devices successfully' };
+  }
+
+  static async forgotPassword(email: string) {
+    const user = await User.findOne({ email: email.toLowerCase() });
+
+    if (!user) {
+      return { message: 'If an account exists, a reset email has been sent.' };
+    }
+
+    const rawToken = crypto.randomBytes(32).toString('hex');
+    const hashedToken = crypto.createHash('sha256').update(rawToken).digest('hex');
+
+    await PasswordResetToken.create({
+      user: user._id,
+      token: hashedToken,
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+    });
+
+    const resetUrl = `${env.CLIENT_URL}/reset-password?token=${rawToken}`;
+
+    await sendEmail(
+      user.email,
+      'Password Reset Request',
+      `<p>You requested a password reset. Click the link below to reset your password:</p>
+       <p><a href="${resetUrl}">${resetUrl}</a></p>
+       <p>This link expires in 1 hour.</p>
+       <p>If you didn't request this, ignore this email.</p>`,
+    );
+
+    return { message: 'If an account exists, a reset email has been sent.' };
+  }
+
+  static async resetPassword(token: string, newPassword: string) {
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+    const resetToken = await PasswordResetToken.findOne({
+      token: hashedToken,
+      used: false,
+      expiresAt: { $gt: new Date() },
+    });
+
+    if (!resetToken) {
+      throw new AppError('Invalid or expired reset token', 400);
+    }
+
+    const user = await User.findById(resetToken.user);
+    if (!user) {
+      throw new AppError('User not found', 404);
+    }
+
+    if (await user.isPasswordInHistory(newPassword)) {
+      throw new AppError('Cannot reuse any of your last 5 passwords.', 400);
+    }
+
+    const previousPasswords = user.passwordHistory || [];
+    previousPasswords.unshift(user.password);
+    if (previousPasswords.length > 5) {
+      previousPasswords.pop();
+    }
+
+    user.password = newPassword;
+    user.passwordHistory = previousPasswords;
+    user.refreshToken = undefined;
+    await user.save();
+
+    resetToken.used = true;
+    await resetToken.save();
+
+    await AuditService.log({
+      action: 'update',
+      module: 'auth',
+      userId: user._id.toString(),
+      targetId: user._id.toString(),
+      details: { action: 'password reset' },
+    });
+
+    return { message: 'Password reset successful. Please login with your new password.' };
+  }
+
+  static async unlockAccount(userId: string, adminId: string) {
+    const user = await User.findById(userId);
+    if (!user) {
+      throw new AppError('User not found', 404);
+    }
+
+    await User.findByIdAndUpdate(userId, {
+      failedLoginAttempts: 0,
+      lockUntil: null,
+    });
+
+    await AuditService.log({
+      action: 'update',
+      module: 'auth',
+      userId: adminId,
+      targetId: userId,
+      details: { action: 'account unlocked' },
+    });
+
+    return { message: 'Account unlocked successfully' };
   }
 }

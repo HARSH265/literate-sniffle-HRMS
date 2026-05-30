@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { env } from '../../config/env.js';
 import { AppError } from '../errors/AppError.js';
+import { TokenBlacklist } from '../auth/TokenBlacklist.js';
 
 export interface AuthUser {
   id: string;
@@ -35,7 +36,11 @@ export function authenticate(
       throw new AppError('No token provided', 401);
     }
 
-    const decoded = jwt.verify(token, env.JWT_SECRET) as AuthUser;
+    if (TokenBlacklist.isBlacklisted(token)) {
+      throw new AppError('Token has been revoked', 401);
+    }
+
+    const decoded = jwt.verify(token, env.JWT_SECRET, { algorithms: ['HS256'] }) as AuthUser;
     req.user = decoded;
 
     next();

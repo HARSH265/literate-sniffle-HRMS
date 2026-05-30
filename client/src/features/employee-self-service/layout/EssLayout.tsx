@@ -45,8 +45,10 @@ export function EssLayout() {
   }, []);
 
   const handleLogout = useCallback(() => {
-    logout();
-    navigate('/login', { replace: true });
+    apiClient.post('/auth/logout').finally(() => {
+      logout();
+      navigate('/login', { replace: true });
+    });
   }, [logout, navigate]);
 
   const handleMarkAllRead = async () => {

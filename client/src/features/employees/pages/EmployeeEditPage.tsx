@@ -1,13 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Form, Input, Select, InputNumber, DatePicker, Button, Row, Col, message, Spin, Upload, Switch } from 'antd';
-import { ArrowLeftOutlined, SaveOutlined, UserOutlined, BankOutlined, FileTextOutlined, DollarOutlined, HomeOutlined, IdcardOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
+import { Form, Input, Select, InputNumber, DatePicker, Button, Row, Col, message, Spin, Switch } from 'antd';
+import { ArrowLeftOutlined, SaveOutlined, UserOutlined, BankOutlined, DollarOutlined, HomeOutlined, IdcardOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
 import { PageHeader } from '../../../core/components/PageHeader';
 import { FormSection } from '../../../core/components/FormSection';
 import { employeeService, CreateEmployee } from '../services/employeeService';
 import {
   CATEGORY_OPTIONS, GENDER_OPTIONS, EMPLOYMENT_TYPE_OPTIONS,
-  SALARY_TYPE_OPTIONS, STATUS_OPTIONS, BLOOD_GROUP_OPTIONS, FORM_LAYOUT,
+  SALARY_TYPE_OPTIONS, STATUS_OPTIONS, BLOOD_GROUP_OPTIONS, MARITAL_STATUS_OPTIONS, FORM_LAYOUT,
 } from '../../../core/constants/employee';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import dayjs from 'dayjs';
@@ -62,6 +62,13 @@ export function EmployeeEditPage() {
     updateMutation.mutate({ id: id!, payload });
   };
 
+  useEffect(() => {
+    if (!empLoading && !employeeData?.data) {
+      message.error('Employee not found');
+      navigate('/employees');
+    }
+  }, [empLoading, employeeData, navigate]);
+
   if (empLoading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
@@ -71,8 +78,6 @@ export function EmployeeEditPage() {
   }
 
   if (!employeeData?.data) {
-    message.error('Employee not found');
-    navigate('/employees');
     return null;
   }
 
@@ -145,12 +150,7 @@ export function EmployeeEditPage() {
                   <Col span={12}>
                     <Form.Item name="maritalStatus" label="Marital Status">
                       <Select 
-                        options={[
-                          { label: 'Single', value: 'single' },
-                          { label: 'Married', value: 'married' },
-                          { label: 'Divorced', value: 'divorced' },
-                          { label: 'Widowed', value: 'widowed' },
-                        ]} 
+                        options={MARITAL_STATUS_OPTIONS} 
                         placeholder="Select" 
                         style={{ height: inputHeight }} 
                       />
@@ -184,7 +184,7 @@ export function EmployeeEditPage() {
                 </Row>
               </FormSection>
 
-              <FormSection title="Organization" icon={<FileTextOutlined />}>
+              <FormSection title="Organization" icon={<BankOutlined />}>
                 <Row gutter={rowGutter}>
                   <Col span={colSpan}>
                     <Form.Item name="department" label="Department" rules={[{ required: true, message: 'Required' }]}>
@@ -348,32 +348,6 @@ export function EmployeeEditPage() {
                         <Select.Option value="West Bengal">West Bengal</Select.Option>
                         <Select.Option value="Other">Other</Select.Option>
                       </Select>
-                    </Form.Item>
-                  </Col>
-                </Row>
-              </FormSection>
-
-              <FormSection title="Documents" icon={<FileTextOutlined />}>
-                <Row gutter={rowGutter}>
-                  <Col span={12}>
-                    <Form.Item name={['documents', 'aadhar']} label="Aadhar Card">
-                      <Upload accept="image/*,.pdf" maxCount={1} beforeUpload={() => false}>
-                        <Button icon={<SaveOutlined />} block>Upload Aadhar</Button>
-                      </Upload>
-                    </Form.Item>
-                  </Col>
-                  <Col span={12}>
-                    <Form.Item name={['documents', 'pan']} label="PAN Card">
-                      <Upload accept="image/*,.pdf" maxCount={1} beforeUpload={() => false}>
-                        <Button icon={<SaveOutlined />} block>Upload PAN</Button>
-                      </Upload>
-                    </Form.Item>
-                  </Col>
-                  <Col span={12}>
-                    <Form.Item name={['documents', 'voter']} label="Voter ID">
-                      <Upload accept="image/*,.pdf" maxCount={1} beforeUpload={() => false}>
-                        <Button icon={<SaveOutlined />} block>Upload Voter ID</Button>
-                      </Upload>
                     </Form.Item>
                   </Col>
                 </Row>

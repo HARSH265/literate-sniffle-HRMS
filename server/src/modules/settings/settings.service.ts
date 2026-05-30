@@ -49,9 +49,13 @@ export class SettingsService {
       (settings as any).companyInfo = { ...(settings as any).companyInfo?.toObject?.() || {}, ...data.companyInfo };
     }
     if (data.payrollConfig) {
+      const payrollConfig = { ...(data.payrollConfig as any) };
+      if (payrollConfig.payrollLockDays !== undefined && payrollConfig.unfinalizeWindowDays === undefined) {
+        payrollConfig.unfinalizeWindowDays = payrollConfig.payrollLockDays;
+      }
       const payrollChanges = getChangedFields(oldSettings.payrollConfig, data.payrollConfig, 'payrollConfig');
       Object.assign(changes, payrollChanges);
-      (settings as any).payrollConfig = { ...(settings as any).payrollConfig?.toObject?.() || {}, ...data.payrollConfig };
+      (settings as any).payrollConfig = { ...(settings as any).payrollConfig?.toObject?.() || {}, ...payrollConfig };
     }
     if (data.attendanceConfig) {
       const attendanceChanges = getChangedFields(oldSettings.attendanceConfig, data.attendanceConfig, 'attendanceConfig');

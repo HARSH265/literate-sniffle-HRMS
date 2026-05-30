@@ -54,7 +54,7 @@ const unfinalizeRun = asyncHandler(async (req: Request, res: Response) => {
 });
 
 const updatePayrollItem = asyncHandler(async (req: Request, res: Response) => {
-  const result = await PayrollService.updatePayrollItem(req.params.itemId, req.body, req.user!.id);
+  const result = await PayrollService.updatePayrollItem(req.params.id, req.params.itemId, req.body, req.user!.id);
   ResponseHandler.success(res, result, 'Payroll item updated successfully');
 });
 
@@ -72,6 +72,11 @@ const deleteRun = asyncHandler(async (req: Request, res: Response) => {
 
 const getByEmployee = asyncHandler(async (req: Request, res: Response) => {
   const { employeeId } = req.params;
+  const requestingUserRole = req.user!.role;
+  const requesterEmployeeId = req.user!.employeeId;
+  if (requesterEmployeeId !== employeeId && !['super-admin', 'hr-admin', 'hr-staff', 'accounts'].includes(requestingUserRole)) {
+    throw new AppError('Unauthorized', 403);
+  }
   const result = await PayrollService.getByEmployee(employeeId);
   ResponseHandler.success(res, result, 'Employee payroll history fetched successfully');
 });

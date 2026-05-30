@@ -46,6 +46,10 @@ export interface CreateEmployee {
   employeeCode?: string;
   fullName: string;
   fatherName: string;
+  dateOfBirth?: string;
+  gender?: string;
+  bloodGroup?: string;
+  maritalStatus?: string;
   category: 'worker' | 'office-staff';
   employmentType: 'permanent' | 'contract' | 'temporary' | 'trainee';
   department: string;
@@ -57,11 +61,15 @@ export interface CreateEmployee {
   dailyWage?: number;
   overtimeEligible?: boolean;
   contactNumber?: string;
+  email?: string;
+  emergencyContact?: string;
   address?: string;
+  permanentAddress?: string;
   bankDetails?: {
     bankName?: string;
     accountNumber?: string;
     ifscCode?: string;
+    accountHolderName?: string;
     accountType?: 'savings' | 'current';
   };
   pfUAN?: string;
@@ -145,6 +153,7 @@ export const employeeService = {
   },
 
   getDocumentUrl(employeeId: string, docId: string): string {
-    return `/employees/${employeeId}/documents/${docId}`;
+    const baseURL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
+    return `${baseURL}/employees/${employeeId}/documents/${docId}`;
   },
 };

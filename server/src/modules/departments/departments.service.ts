@@ -65,7 +65,8 @@ export class DepartmentsService {
     const config = settings?.departmentCodeConfig || { prefix: 'DEPT', startNumber: 1, padding: 3, isAutoGenerate: true };
     const { prefix, startNumber, padding } = config;
 
-    const lastDept = await Department.findOne({ code: { $regex: `^${prefix}` } })
+    const escapedPrefix = prefix.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&');
+const lastDept = await Department.findOne({ code: { $regex: `^${escapedPrefix}` } })
       .sort({ code: -1 })
       .select('code')
       .lean();
@@ -105,12 +106,30 @@ export class DepartmentsService {
       throw new AppError('Department name or code already exists', 400);
     }
 
-    const dept = await Department.create({
+let dept;
+const MAX_RETRIES = 3;
+for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+  try {
+    dept = await Department.create(attempt === 0 ? {
       ...data,
       code: code.toUpperCase(),
       isActive: true,
       createdBy: createdById,
+    } : {
+      ...data,
+      code: await this.generateNextDepartmentCode(),
+      isActive: true,
+      createdBy: createdById,
     });
+    break;
+  } catch (err: any) {
+    if (err.code === 11000 && attempt < MAX_RETRIES - 1) {
+      // Duplicate key, retry with new code
+      continue;
+    }
+    throw err;
+  }
+}
 
     CacheService.invalidateDepartments();
 

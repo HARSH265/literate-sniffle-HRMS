@@ -7,9 +7,13 @@ import { useIsMobile } from './core/hooks/useIsMobile';
 import { EssLayout } from './features/employee-self-service/layout/EssLayout';
 
 import { lazy, Suspense, useEffect, useState } from 'react';
+import apiClient from './core/api/apiClient';
+import { ProtectedRoute } from './core/components/ProtectedRoute';
 
 const LoginPage = lazy(() => import('./features/auth/pages/LoginPage').then(m => ({ default: m.LoginPage })));
 const LandingPage = lazy(() => import('./features/auth/pages/LandingPage').then(m => ({ default: m.LandingPage })));
+const ForgotPasswordPage = lazy(() => import('./features/auth/pages/ForgotPasswordPage').then(m => ({ default: m.ForgotPasswordPage })));
+const ResetPasswordPage = lazy(() => import('./features/auth/pages/ResetPasswordPage').then(m => ({ default: m.ResetPasswordPage })));
 
 const DashboardPage = lazy(() => import('./features/auth/pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
 const EmployeesPage = lazy(() => import('./features/employees/pages/EmployeesPage').then(m => ({ default: m.EmployeesPage })));
@@ -31,7 +35,6 @@ const SalarySlipDetailsPage = lazy(() => import('./features/payroll/pages/Salary
 const ReportsPage = lazy(() => import('./features/reports/pages/ReportsPage').then(m => ({ default: m.ReportsPage })));
 const StatutoryDashboard = lazy(() => import('./features/statutory/pages/StatutoryDashboard').then(m => ({ default: m.StatutoryDashboard })));
 const LoansPage = lazy(() => import('./features/loans/pages/LoansPage').then(m => ({ default: m.LoansPage })));
-const LoanTypesPage = lazy(() => import('./features/loans/pages/LoanTypesPage').then(m => ({ default: m.LoanTypesPage })));
 const LoanApplyPage = lazy(() => import('./features/loans/pages/LoanApplyPage').then(m => ({ default: m.LoanApplyPage })));
 const LoanDetailPage = lazy(() => import('./features/loans/pages/LoanDetailPage').then(m => ({ default: m.LoanDetailPage })));
 const LeaveApprovalsPage = lazy(() => import('./features/leave/pages/LeaveApprovalsPage').then(m => ({ default: m.LeaveApprovalsPage })));
@@ -80,6 +83,8 @@ const EssShiftSwapPageLazy = lazy(() => import('./features/employee-self-service
 const EssShiftPreferencePageLazy = lazy(() => import('./features/employee-self-service/pages/EssShiftPreferencePage').then(m => ({ default: m.EssShiftPreferencePage })));
 const EssAssetsPageLazy = lazy(() => import('./features/employee-self-service/pages/EssAssetsPage').then(m => ({ default: m.EssAssetsPage })));
 const EssTrainingPageLazy = lazy(() => import('./features/employee-self-service/pages/EssTrainingPage').then(m => ({ default: m.EssTrainingPage })));
+const EssLoansPageLazy = lazy(() => import('./features/employee-self-service/pages/EssLoansPage').then(m => ({ default: m.EssLoansPage })));
+const EssLoanApplyPageLazy = lazy(() => import('./features/employee-self-service/pages/EssLoanApplyPage').then(m => ({ default: m.EssLoanApplyPage })));
 
 import { Spin } from 'antd';
 
@@ -99,6 +104,7 @@ function App() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const user = useAuthStore((state) => state.user);
   const [hydrated, setHydrated] = useState(false);
+  const [authValidated, setAuthValidated] = useState(false);
   const isMobile = useIsMobile();
   const isBackOfficeRole = user?.role && Object.values(ROLES).includes(user.role as any);
   const authenticatedHomePath = isMobile || (user?.employeeId && !isBackOfficeRole) ? '/ess' : '/dashboard';
@@ -112,7 +118,20 @@ function App() {
     }
   }, []);
 
-  if (!hydrated) {
+  useEffect(() => {
+    if (!hydrated || !isAuthenticated) {
+      setAuthValidated(true);
+      return;
+    }
+    apiClient.get('/auth/me')
+      .then(() => setAuthValidated(true))
+      .catch(() => {
+        useAuthStore.getState().logout();
+        setAuthValidated(true);
+      });
+  }, [hydrated, isAuthenticated]);
+
+  if (!hydrated || !authValidated) {
     return (
       <ErrorBoundary>
         <PageLoader />
@@ -127,6 +146,8 @@ function App() {
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/kiosk" element={<KioskPage />} />
           <Route path="/m/scan" element={<ScanPage />} />
           <Route path="/m/confirm" element={<ScanPage />} />
@@ -154,43 +175,44 @@ function App() {
           <Route path="shift-swaps/preferences" element={<Suspense fallback={<PageLoader />}><EssShiftPreferencePageLazy /></Suspense>} />
           <Route path="assets" element={<Suspense fallback={<PageLoader />}><EssAssetsPageLazy /></Suspense>} />
           <Route path="training" element={<Suspense fallback={<PageLoader />}><EssTrainingPageLazy /></Suspense>} />
+          <Route path="loans" element={<Suspense fallback={<PageLoader />}><EssLoansPageLazy /></Suspense>} />
+          <Route path="loans/apply" element={<Suspense fallback={<PageLoader />}><EssLoanApplyPageLazy /></Suspense>} />
           <Route path="*" element={<Navigate to="/ess" replace />} />
         </Route>
         <Route path="/*" element={<AppLayout />}>
             <Route index element={<Navigate to={authenticatedHomePath} replace />} />
             <Route path="dashboard" element={<DashboardPage />} />
-            <Route path="employees" element={<EmployeesPage />} />
-            <Route path="employees/new" element={<EmployeeNewPage />} />
-            <Route path="employees/:id" element={<EmployeeDetailPage />} />
-            <Route path="employees/:id/edit" element={<EmployeeEditPage />} />
+            <Route path="employees" element={<ProtectedRoute permission="view-employees"><EmployeesPage /></ProtectedRoute>} />
+            <Route path="employees/new" element={<ProtectedRoute permission="manage-employees"><EmployeeNewPage /></ProtectedRoute>} />
+            <Route path="employees/:id" element={<ProtectedRoute permission="view-employees"><EmployeeDetailPage /></ProtectedRoute>} />
+            <Route path="employees/:id/edit" element={<ProtectedRoute permission="manage-employees"><EmployeeEditPage /></ProtectedRoute>} />
             <Route path="departments" element={<DepartmentsPage />} />
             <Route path="designations" element={<DesignationsPage />} />
             <Route path="shifts" element={<ShiftsPage />} />
             <Route path="holidays" element={<HolidaysPage />} />
             <Route path="weekly-off-rules" element={<WeeklyOffRulesPage />} />
-            <Route path="attendance" element={<AttendancePage />} />
-            <Route path="kiosk/devices" element={<KioskDevicesPage />} />
+            <Route path="attendance" element={<ProtectedRoute permission="manage-attendance"><AttendancePage /></ProtectedRoute>} />
+            <Route path="kiosk/devices" element={<ProtectedRoute permission="manage-attendance"><KioskDevicesPage /></ProtectedRoute>} />
             <Route path="overtime" element={<OvertimePage />} />
             <Route path="overtime/rules" element={<OvertimeRulesPage />} />
-            <Route path="payroll" element={<PayrollPage />} />
-            <Route path="payroll/:id" element={<PayrollDetailsPage />} />
+            <Route path="payroll" element={<ProtectedRoute permission="process-payroll"><PayrollPage /></ProtectedRoute>} />
+            <Route path="payroll/:id" element={<ProtectedRoute permission="process-payroll"><PayrollDetailsPage /></ProtectedRoute>} />
             <Route path="salary-slips" element={<SalarySlipsPage />} />
             <Route path="salary-slips/:id" element={<SalarySlipDetailsPage />} />
             <Route path="leave/approvals" element={<LeaveApprovalsPage />} />
             <Route path="leave/balances" element={<LeaveBalancesPage />} />
             <Route path="leave/applications" element={<LeaveApplicationsPage />} />
             <Route path="loans" element={<LoansPage />} />
-            <Route path="loans/loan-types" element={<LoanTypesPage />} />
             <Route path="loans/apply" element={<LoanApplyPage />} />
             <Route path="loans/:id" element={<LoanDetailPage />} />
             <Route path="statutory" element={<StatutoryDashboard />} />
             <Route path="reports" element={<ReportsPage />} />
-            <Route path="settings" element={<SettingsPage />} />
+            <Route path="settings" element={<ProtectedRoute permission="manage-settings"><SettingsPage /></ProtectedRoute>} />
             <Route path="rule-book" element={<RuleBookPage />} />
-            <Route path="users" element={<UsersPage />} />
-            <Route path="users/:id" element={<Navigate to="activity" replace />} />
-            <Route path="users/:id/activity" element={<UserActivityPage />} />
-            <Route path="audit-logs" element={<AuditLogsPage />} />
+            <Route path="users" element={<ProtectedRoute permission="manage-users"><UsersPage /></ProtectedRoute>} />
+            <Route path="users/:id" element={<ProtectedRoute permission="manage-users"><Navigate to="activity" replace /></ProtectedRoute>} />
+            <Route path="users/:id/activity" element={<ProtectedRoute permission="manage-users"><UserActivityPage /></ProtectedRoute>} />
+            <Route path="audit-logs" element={<ProtectedRoute permission="view-audit"><AuditLogsPage /></ProtectedRoute>} />
             <Route path="notifications" element={<NotificationsPage />} />
             <Route path="announcements" element={<AnnouncementsPage />} />
             <Route path="announcements/new" element={<AnnouncementFormPage />} />

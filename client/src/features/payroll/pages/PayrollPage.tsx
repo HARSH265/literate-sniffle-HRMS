@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '../../../core/components/PageHeader';
 import { DataTable } from '../../../core/components/DataTable';
-import { Button, Modal, Form, DatePicker, message, Tag, Popconfirm, Space } from 'antd';
+import { Button, Modal, Form, DatePicker, message, Tag, Popconfirm, Space, Input } from 'antd';
 import { PlayCircleOutlined, CheckCircleOutlined, EyeOutlined, DeleteOutlined, UndoOutlined, SendOutlined, StopOutlined, ExperimentOutlined } from '@ant-design/icons';
 import { payrollService, PayrollRun } from '../services/payrollService';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -20,8 +20,10 @@ export function PayrollPage() {
   const [isRunModalOpen, setIsRunModalOpen] = useState(false);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [previewData, setPreviewData] = useState<any>(null);
+  const [unfinalizeRunId, setUnfinalizeRunId] = useState<string | null>(null);
   const [form] = Form.useForm();
   const [previewForm] = Form.useForm();
+  const [unfinalizeForm] = Form.useForm();
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
@@ -79,8 +81,13 @@ export function PayrollPage() {
   });
 
   const unfinalizeMutation = useMutation({
-    mutationFn: (id: string) => payrollService.unfinalizeRun(id),
-    onSuccess: () => { message.success('Payroll unfinalized'); queryClient.invalidateQueries({ queryKey: ['payroll-runs'] }); },
+    mutationFn: ({ id, reason }: { id: string; reason: string }) => payrollService.unfinalizeRun(id, reason),
+    onSuccess: () => {
+      message.success('Payroll unfinalized');
+      setUnfinalizeRunId(null);
+      unfinalizeForm.resetFields();
+      queryClient.invalidateQueries({ queryKey: ['payroll-runs'] });
+    },
     onError: (err: any) => message.error(err?.response?.data?.message || 'Failed to unfinalize'),
   });
 
@@ -101,6 +108,13 @@ export function PayrollPage() {
     previewForm.validateFields().then((values) => {
       const { monthYear } = values;
       previewMutation.mutate({ month: monthYear.month() + 1, year: monthYear.year() });
+    });
+  };
+
+  const handleUnfinalize = () => {
+    if (!unfinalizeRunId) return;
+    unfinalizeForm.validateFields().then((values) => {
+      unfinalizeMutation.mutate({ id: unfinalizeRunId, reason: values.reason });
     });
   };
 
@@ -141,7 +155,7 @@ export function PayrollPage() {
             <Button size="small" type="primary" icon={<CheckCircleOutlined />} onClick={() => finalizeMutation.mutate(record.id)}>Finalize</Button>
           )}
           {record.status === 'finalized' && (
-            <Button size="small" icon={<UndoOutlined />} onClick={() => unfinalizeMutation.mutate(record.id)}>Unfinalize</Button>
+            <Button size="small" icon={<UndoOutlined />} onClick={() => setUnfinalizeRunId(record.id)}>Unfinalize</Button>
           )}
         </Space>
       ),
@@ -214,6 +228,21 @@ export function PayrollPage() {
             {previewData.items?.length > 10 && <p style={{ textAlign: 'center', marginTop: 8, color: '#888' }}>...and {previewData.items.length - 10} more employees</p>}
           </div>
         )}
+      </Modal>
+
+      <Modal
+        title="Unfinalize Payroll"
+        open={!!unfinalizeRunId}
+        onOk={handleUnfinalize}
+        onCancel={() => { setUnfinalizeRunId(null); unfinalizeForm.resetFields(); }}
+        confirmLoading={unfinalizeMutation.isPending}
+        okText="Unfinalize"
+      >
+        <Form form={unfinalizeForm} layout="vertical" style={{ marginTop: 16 }}>
+          <Form.Item name="reason" label="Reason" rules={[{ required: true, message: 'Enter a reason' }]}>
+            <Input.TextArea rows={3} maxLength={500} />
+          </Form.Item>
+        </Form>
       </Modal>
     </div>
   );

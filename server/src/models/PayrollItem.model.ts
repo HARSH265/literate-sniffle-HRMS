@@ -40,6 +40,7 @@ export interface IPayrollItem extends Document {
     calculatedValue: number;
   }[];
   loanEmiDeduction: number;
+  loanRepayment?: mongoose.Types.ObjectId;
   netPay: number;
   status: 'draft' | 'submitted' | 'approved' | 'finalized';
   createdBy?: mongoose.Types.ObjectId;
@@ -93,6 +94,7 @@ const PayrollItemSchema = new Schema<IPayrollItem>(
       calculatedValue: { type: Number },
     }],
     loanEmiDeduction: { type: Number, default: 0 },
+    loanRepayment: { type: Schema.Types.ObjectId, ref: 'LoanRepayment' },
     netPay: { type: Number, required: true },
     status: {
       type: String,
@@ -108,6 +110,7 @@ const PayrollItemSchema = new Schema<IPayrollItem>(
 PayrollItemSchema.index({ payrollRun: 1, employee: 1 }, { unique: true });
 PayrollItemSchema.index({ month: 1 });
 PayrollItemSchema.index({ employee: 1 });
+PayrollItemSchema.index({ loanRepayment: 1 });
 
 const PayrollItem = mongoose.model<IPayrollItem, PayrollItemModel>('PayrollItem', PayrollItemSchema);
 

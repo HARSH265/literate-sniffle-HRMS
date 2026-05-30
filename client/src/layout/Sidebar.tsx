@@ -60,7 +60,6 @@ export function Sidebar({ collapsed }: SidebarProps) {
     else if (path.includes('/leave')) { setOpenKeys(['leave']); }
     else if (path.includes('/attendance') || path.includes('/kiosk')) { setOpenKeys(['attendance']); }
     else if (path.includes('/overtime')) { setOpenKeys(['overtime']); }
-    else if (path.includes('/loans')) { setOpenKeys(['loans']); }
     else if (path.includes('/shift-swaps')) { setOpenKeys(['shiftSwap']); }
     else if (path.includes('/payroll') || path.includes('/salary-slips')) { setOpenKeys(['payroll']); }
     else if (path.includes('/performance')) { setOpenKeys(['performance']); }
@@ -97,11 +96,7 @@ export function Sidebar({ collapsed }: SidebarProps) {
     return '/overtime';
   }
     if (path.includes('/payroll') || path.includes('/salary-slips')) return '/payroll';
-    if (path.includes('/loans')) {
-      if (path.includes('/loans/loan-types')) return '/loans/loan-types';
-      if (path.includes('/loans/apply')) return '/loans/apply';
-      return '/loans';
-    }
+    if (path.includes('/loans')) return '/loans';
     if (path.includes('/statutory')) return '/statutory';
     if (path.includes('/reports')) return '/reports';
     if (path.includes('/users')) return '/users';
@@ -149,7 +144,7 @@ export function Sidebar({ collapsed }: SidebarProps) {
         permission: 'view-employees',
         children: [
           { key: '/employees', icon: <UnorderedListOutlined />, label: 'Employee List' },
-          { key: '/employees/new', icon: <PlusOutlined />, label: 'Add Employee' },
+          { key: '/employees/new', icon: <PlusOutlined />, label: 'Add Employee', permission: 'manage-employees' },
         ]
       },
       {
@@ -243,16 +238,11 @@ export function Sidebar({ collapsed }: SidebarProps) {
           { key: '/salary-slips', icon: <FileTextOutlined />, label: 'Salary Slips' },
         ]
       },
-      {
-        key: 'loans',
-        icon: <CreditCardOutlined />,
-        label: 'Loans',
+      { 
+        key: '/loans', 
+        icon: <CreditCardOutlined />, 
+        label: 'Loans', 
         permission: 'view-loans',
-        children: [
-          { key: '/loans', icon: <CreditCardOutlined />, label: 'Applications' },
-          { key: '/loans/loan-types', icon: <UnorderedListOutlined />, label: 'Loan Types' },
-          { key: '/loans/apply', icon: <PlusOutlined />, label: 'Apply for Loan' },
-        ]
       },
       {
         key: 'analytics',
