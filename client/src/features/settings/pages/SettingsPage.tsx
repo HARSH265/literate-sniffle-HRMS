@@ -31,27 +31,36 @@ import {
 const { Text, Paragraph } = Typography;
 
 const SETTINGS_MENU = [
-  { key: 'profile', label: 'My Profile', icon: <UserOutlined /> },
-  { key: 'company', label: 'Company', icon: <BankOutlined /> },
-  { key: 'auth', label: 'Auth Settings', icon: <UserOutlined /> },
-  { key: 'email', label: 'Email Settings', icon: <MailOutlined /> },
-  { key: 'payroll', label: 'Payroll', icon: <DollarOutlined /> },
-  { key: 'attendance', label: 'Attendance', icon: <CalendarOutlined /> },
-  { key: 'allowances', label: 'Allowances', icon: <GiftOutlined /> },
-  { key: 'overtime', label: 'Overtime Rules', icon: <ClockCircleOutlined /> },
-  { key: 'weeklyoff', label: 'Weekly Off', icon: <CalendarOutlined /> },
-  { key: 'holidays', label: 'Holidays', icon: <GiftOutlined /> },
-  { key: 'codeConfig', label: 'Code Configuration', icon: <CodeOutlined /> },
-  { key: 'leave', label: 'Leave Config', icon: <CalendarOutlined /> },
-  { key: 'reports', label: 'Reports', icon: <BarChartOutlined /> },
-  { key: 'loans', label: 'Loans', icon: <DollarOutlined /> },
-  { key: 'statutory', label: 'Statutory', icon: <SafetyCertificateOutlined /> },
-  { key: 'ess', label: 'Employee Self-Service', icon: <UserOutlined /> },
-  { key: 'announcements', label: 'Announcements', icon: <BellOutlined /> },
-  { key: 'shiftSwap', label: 'Shift Swap', icon: <SwapOutlined /> },
-  { key: 'assets', label: 'Asset Management', icon: <LaptopOutlined /> },
-  { key: 'documents', label: 'Document Repository', icon: <FolderOutlined /> },
-  { key: 'totp', label: 'TOTP Enrollment', icon: <SafetyCertificateOutlined /> },
+  { key: 'profile', label: 'My Profile', icon: <UserOutlined />, group: 'profile' },
+  { key: 'company', label: 'Company', icon: <BankOutlined />, group: 'organization' },
+  { key: 'auth', label: 'Auth Settings', icon: <UserOutlined />, group: 'organization' },
+  { key: 'email', label: 'Email Settings', icon: <MailOutlined />, group: 'organization' },
+  { key: 'payroll', label: 'Payroll', icon: <DollarOutlined />, group: 'hr' },
+  { key: 'attendance', label: 'Attendance', icon: <CalendarOutlined />, group: 'hr' },
+  { key: 'allowances', label: 'Allowances', icon: <GiftOutlined />, group: 'hr' },
+  { key: 'overtime', label: 'Overtime Rules', icon: <ClockCircleOutlined />, group: 'hr' },
+  { key: 'weeklyoff', label: 'Weekly Off', icon: <CalendarOutlined />, group: 'hr' },
+  { key: 'holidays', label: 'Holidays', icon: <GiftOutlined />, group: 'hr' },
+  { key: 'codeConfig', label: 'Code Configuration', icon: <CodeOutlined />, group: 'system' },
+  { key: 'leave', label: 'Leave Config', icon: <CalendarOutlined />, group: 'system' },
+  { key: 'reports', label: 'Reports', icon: <BarChartOutlined />, group: 'system' },
+  { key: 'loans', label: 'Loans', icon: <DollarOutlined />, group: 'system' },
+  { key: 'statutory', label: 'Statutory', icon: <SafetyCertificateOutlined />, group: 'system' },
+  { key: 'ess', label: 'Employee Self-Service', icon: <UserOutlined />, group: 'features' },
+  { key: 'announcements', label: 'Announcements', icon: <BellOutlined />, group: 'features' },
+  { key: 'shiftSwap', label: 'Shift Swap', icon: <SwapOutlined />, group: 'features' },
+  { key: 'assets', label: 'Asset Management', icon: <LaptopOutlined />, group: 'features' },
+  { key: 'documents', label: 'Document Repository', icon: <FolderOutlined />, group: 'features' },
+  { key: 'totp', label: 'TOTP Enrollment', icon: <SafetyCertificateOutlined />, group: 'security' },
+];
+
+const MENU_GROUPS = [
+  { key: 'profile', label: '' },
+  { key: 'organization', label: 'Organization' },
+  { key: 'hr', label: 'HR & Payroll' },
+  { key: 'system', label: 'System' },
+  { key: 'features', label: 'Features' },
+  { key: 'security', label: 'Security' },
 ];
 
 export function SettingsPage() {
@@ -323,38 +332,51 @@ export function SettingsPage() {
       <Row gutter={24}>
         <Col xs={24} md={5}>
           <Card
-            styles={{ body: { padding: '12px' } }}
-            style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
+            styles={{ body: { padding: '8px 0' } }}
+            style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.06)', position: 'sticky', top: 24, maxHeight: 'calc(100vh - 120px)', overflow: 'auto' }}
           >
-            <div style={{ padding: '4px 8px', marginBottom: 8 }}>
-              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--hrms-text-muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                Settings Menu
+            <div style={{ padding: '4px 12px', marginBottom: 4 }}>
+              <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--hrms-text-muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                Settings
               </span>
             </div>
-            {SETTINGS_MENU.map((item) => {
-              const isActive = activeSection === item.key;
+            {MENU_GROUPS.map((group) => {
+              const items = SETTINGS_MENU.filter((item) => item.group === group.key);
+              if (items.length === 0) return null;
               return (
-                <div
-                  key={item.key}
-                  onClick={() => setActiveSection(item.key)}
-                  style={{
-                    padding: '14px 16px',
-                    cursor: 'pointer',
-                    borderRadius: 8,
-                    marginBottom: 4,
-                    background: isActive ? '#f5f5f5' : 'transparent',
-                    color: 'var(--hrms-text-primary)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 12,
-                    transition: 'all 0.15s ease',
-                    fontWeight: isActive ? 600 : 400,
-                    fontSize: 14,
-                    borderLeft: isActive ? '3px solid #1890ff' : '3px solid transparent',
-                  }}
-                >
-                  <span style={{ fontSize: 16, color: isActive ? '#1890ff' : 'inherit' }}>{item.icon}</span>
-                  <span>{item.label}</span>
+                <div key={group.key} style={{ marginBottom: 4 }}>
+                  {group.label && (
+                    <div style={{ padding: '8px 12px 4px', fontSize: 11, fontWeight: 600, color: '#999', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                      {group.label}
+                    </div>
+                  )}
+                  {items.map((item) => {
+                    const isActive = activeSection === item.key;
+                    return (
+                      <div
+                        key={item.key}
+                        onClick={() => setActiveSection(item.key)}
+                        style={{
+                          padding: '10px 12px',
+                          cursor: 'pointer',
+                          borderRadius: 6,
+                          margin: '0 6px',
+                          background: isActive ? '#f5f5f5' : 'transparent',
+                          color: 'var(--hrms-text-primary)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 10,
+                          transition: 'all 0.15s ease',
+                          fontWeight: isActive ? 600 : 400,
+                          fontSize: 13,
+                          borderLeft: isActive ? '3px solid #1890ff' : '3px solid transparent',
+                        }}
+                      >
+                        <span style={{ fontSize: 14, color: isActive ? '#1890ff' : 'inherit' }}>{item.icon}</span>
+                        <span>{item.label}</span>
+                      </div>
+                    );
+                  })}
                 </div>
               );
             })}

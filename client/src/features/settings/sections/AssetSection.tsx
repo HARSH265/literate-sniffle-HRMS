@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Card, Form, Switch, InputNumber, Input, Button, Tag, Space } from 'antd';
+import { Form, Switch, InputNumber, Input, Button, Tag, Space, Row, Col } from 'antd';
 import { SaveOutlined, PlusOutlined } from '@ant-design/icons';
 
 interface AssetSectionProps {
@@ -59,65 +59,77 @@ function TagManager({ form, fieldPath, placeholder }: { form: any; fieldPath: st
 
 export function AssetSection({ form, onSave }: AssetSectionProps) {
   return (
-    <Card title="Asset Management Configuration" style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-      <Form form={form} layout="vertical" onFinish={onSave}>
-        <Form.Item
-          name={['assetConfig', 'assetManagementEnabled']}
-          label="Enable Asset Management"
-          valuePropName="checked"
-        >
-          <Switch />
-        </Form.Item>
+    <Form form={form} layout="vertical" onFinish={onSave}>
+      <h3 style={{ marginBottom: 16 }}>Asset Management Configuration</h3>
+      <p style={{ marginBottom: 24, color: '#666' }}>
+        Configure asset tracking, code generation, allocation rules, and maintenance reminders.
+      </p>
 
-        <Form.Item
-          name={['assetConfig', 'autoGenerateAssetCode']}
-          label="Auto-Generate Asset Code"
-          valuePropName="checked"
-        >
-          <Switch />
-        </Form.Item>
+      <h4 style={{ margin: '16px 0 8px' }}>General Settings</h4>
+      <Row gutter={16}>
+        <Col span={8}>
+          <Form.Item name={['assetConfig', 'assetManagementEnabled']} label="Enable Asset Management" valuePropName="checked">
+            <Switch />
+          </Form.Item>
+        </Col>
+        <Col span={8}>
+          <Form.Item name={['assetConfig', 'autoGenerateAssetCode']} label="Auto-Generate Asset Code" valuePropName="checked">
+            <Switch />
+          </Form.Item>
+        </Col>
+        <Col span={8}>
+          <Form.Item name={['assetConfig', 'allowMultipleAllocation']} label="Allow Multiple Allocation" valuePropName="checked">
+            <Switch />
+          </Form.Item>
+        </Col>
+      </Row>
 
-        <Form.Item
-          name={['assetConfig', 'assetCodePrefix']}
-          label="Asset Code Prefix"
-        >
-          <Input placeholder="AST" style={{ width: 200 }} />
-        </Form.Item>
+      <div style={{ marginTop: 16, padding: 16, background: '#f0f5ff', borderRadius: 8, border: '1px solid #d9e6ff' }}>
+        <h4 style={{ marginBottom: 12 }}>Asset Code & Maintenance</h4>
+        <p style={{ marginBottom: 16, color: '#666', fontSize: 13 }}>
+          Define the asset code format and set maintenance reminder intervals.
+        </p>
+        <Row gutter={16}>
+          <Col span={8}>
+            <Form.Item name={['assetConfig', 'assetCodePrefix']} label="Asset Code Prefix">
+              <Input placeholder="AST" style={{ width: '100%', height: 40 }} />
+            </Form.Item>
+          </Col>
+          <Col span={8}>
+            <Form.Item name={['assetConfig', 'assetCodePadding']} label="Asset Code Padding">
+              <InputNumber min={1} max={10} style={{ width: '100%', height: 40 }} />
+            </Form.Item>
+          </Col>
+          <Col span={8}>
+            <Form.Item name={['assetConfig', 'maintenanceReminderDays']} label="Maintenance Reminder (days)">
+              <InputNumber min={1} max={365} style={{ width: '100%', height: 40 }} />
+            </Form.Item>
+          </Col>
+        </Row>
+      </div>
 
-        <Form.Item
-          name={['assetConfig', 'assetCodePadding']}
-          label="Asset Code Padding"
-        >
-          <InputNumber min={1} max={10} style={{ width: 200 }} />
-        </Form.Item>
+      <div style={{ marginTop: 16, padding: 16, background: '#fff7e6', borderRadius: 8, border: '1px solid #ffe7ba' }}>
+        <h4 style={{ marginBottom: 12 }}>Categories & Conditions</h4>
+        <p style={{ marginBottom: 16, color: '#666', fontSize: 13 }}>
+          Define asset categories and condition labels used for tracking.
+        </p>
+        <Row gutter={16}>
+          <Col span={12}>
+            <Form.Item label="Asset Categories">
+              <TagManager form={form} fieldPath={['assetConfig', 'categories']} placeholder="Enter category name" />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item label="Asset Conditions">
+              <TagManager form={form} fieldPath={['assetConfig', 'conditions']} placeholder="Enter condition name" />
+            </Form.Item>
+          </Col>
+        </Row>
+      </div>
 
-        <Form.Item
-          name={['assetConfig', 'allowMultipleAllocation']}
-          label="Allow Multiple Allocation"
-          valuePropName="checked"
-        >
-          <Switch />
-        </Form.Item>
-
-        <Form.Item
-          name={['assetConfig', 'maintenanceReminderDays']}
-          label="Maintenance Reminder (days)"
-        >
-          <InputNumber min={1} max={365} style={{ width: 200 }} />
-        </Form.Item>
-
-        <Form.Item label="Asset Categories">
-          <TagManager form={form} fieldPath={['assetConfig', 'categories']} placeholder="Enter category name" />
-        </Form.Item>
-
-        <Form.Item label="Asset Conditions">
-          <TagManager form={form} fieldPath={['assetConfig', 'conditions']} placeholder="Enter condition name" />
-        </Form.Item>
-
-        <Button type="primary" htmlType="submit" icon={<SaveOutlined />} style={{ marginTop: 8 }}>
-          Save Asset Settings
-        </Button>
-      </Form>
-    </Card>
+      <Button type="primary" htmlType="submit" icon={<SaveOutlined />} style={{ marginTop: 16 }}>
+        Save Asset Settings
+      </Button>
+    </Form>
   );
 }

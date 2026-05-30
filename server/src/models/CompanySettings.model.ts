@@ -211,6 +211,29 @@ export interface ICompanySettings extends Document {
     notifyOnMatch: boolean;
     shiftPreferenceEnabled: boolean;
   };
+  travelConfig: {
+    travelEnabled: boolean;
+    requirePreApproval: boolean;
+    maxAdvanceAmount: number;
+    mileageRatePerKm: number;
+    perDiemRate: number;
+    perDiemEligible: boolean;
+    maxClaimsPerMonth: number;
+    reimbursementProcessingDays: number;
+    allowPartialReimbursement: boolean;
+    expenseCategories: string[];
+    approvalLevels: number;
+    autoApprovalUpTo: number;
+  };
+  gratuityConfig: {
+    gratuityEnabled: boolean;
+    gratuityActApplicable: boolean;
+    minServiceYears: number;
+    maxGratuityAmount: number;
+    calculationMethod: string;
+    customMultiplier: number;
+    considerMonthlyWages: boolean;
+  };
   performanceConfig: {
     performanceEnabled: boolean;
     reviewFrequency: 'quarterly' | 'half-yearly' | 'yearly';
