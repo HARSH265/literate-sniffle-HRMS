@@ -72,7 +72,6 @@ Page Component → useQuery(useXxx hooks) → Service (apiClient) → Server API
 
 | Issue | Impact | Location |
 |-------|--------|----------|
-| **7 modules use raw `Table` instead of `DataTable`** | Inconsistent UX — no detail drawer, no filter toolbar, no server pagination | `helpdesk/HelpdeskPage.tsx`, `announcements/AnnouncementsPage.tsx`, `documents/DocumentsPage.tsx`, `assets/AssetsPage.tsx`, `performance/PerformancePage.tsx`, `training/TrainingProgramsPage.tsx`, `shift-swaps/ShiftSwapsPage.tsx` |
 | 32 `as any` casts in production | Type safety holes | Throughout codebase |
 | `socketClient.ts` only used in kiosk | Limited utility | `core/socket/socketClient.ts` |
 
@@ -82,7 +81,7 @@ Page Component → useQuery(useXxx hooks) → Service (apiClient) → Server API
 
 ### Table Consistency
 
-**Modules using `DataTable` (correct — 16 modules):**
+**Modules using `DataTable` (all consistent — 23 modules):**
 1. `employees` — EmployeesPage.tsx
 2. `departments` — DepartmentsPage.tsx
 3. `designations` — DesignationsPage.tsx
@@ -99,15 +98,13 @@ Page Component → useQuery(useXxx hooks) → Service (apiClient) → Server API
 14. `statutory` — StatutoryDashboard.tsx
 15. `holidays` — HolidaysPage.tsx
 16. `weekly-off-rules` — WeeklyOffRulesPage.tsx
-
-**Modules using raw `Ant Table` instead of `DataTable` (7 modules — INCONSISTENT):**
-1. `helpdesk` — HelpdeskPage.tsx (line 233) — has its own custom columns, filters, no detail drawer
-2. `announcements` — AnnouncementsPage.tsx (line 153) — custom card+table layout
-3. `documents` — DocumentsPage.tsx (line 136) — file-specific columns
-4. `assets` — AssetsPage.tsx (line 168) — has BulkAllocateModal, AssetStatusBadge sub-components
-5. `performance` — PerformancePage.tsx (line 163, 208) — two tables for cycles and reviews
-6. `training` — TrainingProgramsPage.tsx (line 60) — simple table with status tags
-7. `shift-swaps` — ShiftSwapsPage.tsx (line 64) — request/approval workflow table
+17. `helpdesk` — HelpdeskPage.tsx ✅ (migrated)
+18. `announcements` — AnnouncementsPage.tsx ✅ (migrated)
+19. `documents` — DocumentsPage.tsx ✅ (migrated)
+20. `assets` — AssetsPage.tsx ✅ (migrated)
+21. `performance` — PerformancePage.tsx (2 DataTables) ✅ (migrated)
+22. `training` — TrainingProgramsPage.tsx ✅ (migrated)
+23. `shift-swaps` — ShiftSwapsPage.tsx ✅ (migrated)
 
 **Modules with no table (N/A — 7 modules):**
 1. `auth` — Forms only (login, forgot-password, reset-password)
@@ -254,16 +251,16 @@ Page Component → useQuery(useXxx hooks) → Service (apiClient) → Server API
 | API Client | 9/10 | Token refresh queue is excellent |
 | State Management | 8/10 | Zustand + TanStack Query well-chosen |
 | Type Safety | 6.5/10 | 32 `as any`, 1 untyped service (duplicates resolved) |
-| Component Reuse | 7/10 | DataTable excellent, but 7 modules use raw Table |
+| Component Reuse | 9/10 | ~~7 modules used raw Table~~ → all 23 table modules now use DataTable |
 | Loading States | 3/10 | Zero skeleton loading in any module |
 | Error Handling | 7/10 | Consistent error catching, but no global error boundary for data |
 | Test Coverage | 5/10 | 8 modules have zero tests |
 | Code Hygiene | 7/10 | ~~20 orphaned files~~ → resolved. Dead utilities cleaned. |
 | Security | 8/10 | ~~Hardcoded password~~ → random. ~~Raw fetch~~ → apiClient. |
-| Consistency | 5/10 | Mixed table patterns, mixed service patterns |
+| Consistency | 7/10 | ~~Mixed table patterns~~ → all DataTable. Remaining: service patterns. |
 | Performance | 7/10 | Lazy loading, query caching, but no React.memo |
 
-**Overall: 7/10** — Phase 1 quick wins improved Code Hygiene (5→7) and Security (6→8). Remaining gaps: loading states, table consistency, type safety.
+**Overall: 7.5/10** — Phase 1 + 2 improved Code Hygiene (5→7), Security (6→8), Component Reuse (7→9), Consistency (5→7). Remaining: loading states, type safety.
 
 ---
 
@@ -275,19 +272,19 @@ Page Component → useQuery(useXxx hooks) → Service (apiClient) → Server API
 3. **Replace 2 raw `fetch()` calls** with `apiClient` — fixes security bypass ✅
 4. **Remove `TempPass123`** — generate random password for imports ✅
 
-### Phase 2: Consistency (High Impact, Medium Effort)
-5. **Migrate 7 modules from raw `Table` to `DataTable`:**
-   - `helpdesk` → HelpdeskPage.tsx
-   - `announcements` → AnnouncementsPage.tsx
-   - `documents` → DocumentsPage.tsx
-   - `assets` → AssetsPage.tsx
-   - `performance` → PerformancePage.tsx
-   - `training` → TrainingProgramsPage.tsx
-   - `shift-swaps` → ShiftSwapsPage.tsx
-6. **Add skeleton loading to all list pages** — use existing `TableSkeleton` component
-7. **Split `ReportsPage.tsx`** (804 lines) into tab components
-8. **Split `SettingsPage.tsx`** (533 lines) into lazy-loaded sections
-9. **Type the `shift-swaps` service** — replace all `any` types
+### Phase 2: Consistency (High Impact, Medium Effort) — PARTIAL
+5. **Migrate 7 modules from raw `Table` to `DataTable`:** ✅
+   - `helpdesk` → HelpdeskPage.tsx ✅
+   - `announcements` → AnnouncementsPage.tsx ✅
+   - `documents` → DocumentsPage.tsx ✅
+   - `assets` → AssetsPage.tsx ✅
+   - `performance` → PerformancePage.tsx ✅
+   - `training` → TrainingProgramsPage.tsx ✅
+   - `shift-swaps` → ShiftSwapsPage.tsx ✅
+6. **Add skeleton loading to all list pages** — use existing `TableSkeleton` component ⏳
+7. **Split `ReportsPage.tsx`** (804 lines) into tab components ⏳
+8. **Split `SettingsPage.tsx`** (533 lines) into lazy-loaded sections ⏳
+9. **Type the `shift-swaps` service** — replace all `any` types ⏳
 
 ### Phase 3: Type Safety (Medium Impact, Medium Effort)
 10. **Replace 32 `as any` casts** with proper type guards
