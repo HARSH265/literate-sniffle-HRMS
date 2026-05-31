@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, Table, Tag, Button, Space, Select, Input, Tooltip, Modal, Form } from 'antd';
+import { Tag, Button, Space, Select, Input, Tooltip, Modal, Form } from 'antd';
 import { PlusOutlined, EyeOutlined, DeleteOutlined, BellOutlined } from '@ant-design/icons';
 import { PageHeader } from '../../../core/components/PageHeader';
+import { DataTable } from '../../../core/components/DataTable';
 import { useAnnouncements, useDeleteAnnouncement, useCreateAnnouncement } from '../hooks/useAnnouncements';
 import dayjs from 'dayjs';
 
@@ -115,56 +116,51 @@ export function AnnouncementsPage() {
         }
       />
 
-      <Card style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-        <Space style={{ marginBottom: 16 }} wrap>
-          <Input.Search
-            placeholder="Search announcements..."
-            onSearch={(val) => { setSearch(val); setPage(1); }}
-            style={{ width: 280 }}
-            allowClear
-          />
-          <Select
-            placeholder="Priority"
-            value={priority}
-            onChange={(val) => { setPriority(val); setPage(1); }}
-            style={{ width: 140 }}
-            allowClear
-            options={[
-              { label: 'Low', value: 'low' },
-              { label: 'Normal', value: 'normal' },
-              { label: 'High', value: 'high' },
-              { label: 'Urgent', value: 'urgent' },
-            ]}
-          />
-          <Select
-            placeholder="Status"
-            value={status}
-            onChange={(val) => { setStatus(val); setPage(1); }}
-            style={{ width: 140 }}
-            allowClear
-            options={[
-              { label: 'Active', value: 'active' },
-              { label: 'Expired', value: 'expired' },
-              { label: 'Inactive', value: 'inactive' },
-            ]}
-          />
-        </Space>
-
-        <Table
-          dataSource={data?.data}
-          columns={columns}
-          rowKey="_id"
-          loading={isLoading}
-          pagination={{
-            current: page,
-            pageSize: limit,
-            total: data?.meta?.total || 0,
-            onChange: (p, ps) => { setPage(p); setLimit(ps); },
-            showSizeChanger: true,
-          }}
-          locale={{ emptyText: 'No announcements yet' }}
-        />
-      </Card>
+      <DataTable
+        columns={columns}
+        dataSource={data?.data}
+        rowKey="_id"
+        loading={isLoading}
+        total={data?.meta?.total}
+        page={page}
+        pageSize={limit}
+        onPaginationChange={(p, ps) => { setPage(p); setLimit(ps); }}
+        toolbarLeft={
+          <>
+            <Input.Search
+              placeholder="Search announcements..."
+              onSearch={(val) => { setSearch(val); setPage(1); }}
+              style={{ width: 280 }}
+              allowClear
+            />
+            <Select
+              placeholder="Priority"
+              value={priority}
+              onChange={(val) => { setPriority(val); setPage(1); }}
+              style={{ width: 140 }}
+              allowClear
+              options={[
+                { label: 'Low', value: 'low' },
+                { label: 'Normal', value: 'normal' },
+                { label: 'High', value: 'high' },
+                { label: 'Urgent', value: 'urgent' },
+              ]}
+            />
+            <Select
+              placeholder="Status"
+              value={status}
+              onChange={(val) => { setStatus(val); setPage(1); }}
+              style={{ width: 140 }}
+              allowClear
+              options={[
+                { label: 'Active', value: 'active' },
+                { label: 'Expired', value: 'expired' },
+                { label: 'Inactive', value: 'inactive' },
+              ]}
+            />
+          </>
+        }
+      />
 
       <Modal
         title={

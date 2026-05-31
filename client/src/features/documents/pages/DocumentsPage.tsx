@@ -1,9 +1,10 @@
 import React from 'react';
-import { Table, Card, Button, Input, Select, Space, Row, Col, Statistic, Typography, Tag } from 'antd';
+import { Card, Button, Input, Select, Row, Col, Statistic, Typography, Tag } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { UploadOutlined, SearchOutlined, FileTextOutlined, TeamOutlined, BankOutlined, WarningOutlined } from '@ant-design/icons';
 import { useDocuments, useDocumentStats } from '../hooks/useDocuments';
 import { PageHeader } from '../../../core/components/PageHeader';
+import { DataTable } from '../../../core/components/DataTable';
 import { usePermission } from '../../../core/hooks/usePermission';
 
 const { Text } = Typography;
@@ -114,39 +115,36 @@ export function DocumentsPage() {
         </Col>
       </Row>
 
-      <Card style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-        <Space style={{ marginBottom: 16 }}>
-          <Input
-            placeholder="Search by title, description, or tags..."
-            prefix={<SearchOutlined />}
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-            style={{ width: 300 }}
-            allowClear
-          />
-          <Select
-            placeholder="Category"
-            value={category}
-            onChange={(val) => { setCategory(val); setPage(1); }}
-            allowClear
-            style={{ width: 150 }}
-          />
-        </Space>
-
-        <Table
-          dataSource={data?.data || []}
-          columns={columns}
-          rowKey="_id"
-          loading={isLoading}
-          pagination={{
-            current: page,
-            pageSize: 20,
-            total: data?.meta?.total || 0,
-            onChange: setPage,
-            showSizeChanger: false,
-          }}
-        />
-      </Card>
+      <DataTable
+        columns={columns}
+        dataSource={data?.data || []}
+        rowKey="_id"
+        loading={isLoading}
+        total={data?.meta?.total}
+        page={page}
+        pageSize={20}
+        onPaginationChange={(p) => setPage(p)}
+        showSizeChanger={false}
+        toolbarLeft={
+          <>
+            <Input
+              placeholder="Search by title, description, or tags..."
+              prefix={<SearchOutlined />}
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+              style={{ width: 300 }}
+              allowClear
+            />
+            <Select
+              placeholder="Category"
+              value={category}
+              onChange={(val) => { setCategory(val); setPage(1); }}
+              allowClear
+              style={{ width: 150 }}
+            />
+          </>
+        }
+      />
     </div>
   );
 }

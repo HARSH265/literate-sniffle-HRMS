@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { Table, Tag, Button, Space, Select, DatePicker, Modal, Form, Input, Switch, Row, Col } from 'antd';
+import { Tag, Button, Select, DatePicker, Modal, Form, Input, Switch, Row, Col } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
 import { useShiftSwaps, useRequestSwap } from '../hooks/useShiftSwaps';
 import { shiftService } from '../../shifts/services/shiftService';
 import { employeeService } from '../../employees/services/employeeService';
+import { DataTable } from '../../../core/components/DataTable';
 import { PageHeader } from '../../../core/components/PageHeader';
 import dayjs from 'dayjs';
 
@@ -53,15 +54,21 @@ export function ShiftSwapsPage() {
       <PageHeader title="Shift Swaps" subtitle="Manage shift swap requests" actions={
         <Button type="primary" icon={<PlusOutlined />} onClick={() => setModalOpen(true)}>Request Swap</Button>
       } />
-      <Space style={{ marginBottom: 16 }}>
-        <Select placeholder="Status" allowClear style={{ width: 140 }} onChange={(v) => setFilters(p => ({ ...p, status: v }))}>
-          <Select.Option value="pending">Pending</Select.Option>
-          <Select.Option value="approved">Approved</Select.Option>
-          <Select.Option value="rejected">Rejected</Select.Option>
-          <Select.Option value="cancelled">Cancelled</Select.Option>
-        </Select>
-      </Space>
-      <Table dataSource={data?.data || []} columns={columns} rowKey="_id" loading={isLoading} pagination={{ pageSize: 20 }} />
+      <DataTable
+        columns={columns}
+        dataSource={data?.data || []}
+        rowKey="_id"
+        loading={isLoading}
+        pageSize={20}
+        toolbarLeft={
+          <Select placeholder="Status" allowClear style={{ width: 140 }} onChange={(v) => setFilters(p => ({ ...p, status: v }))}>
+            <Select.Option value="pending">Pending</Select.Option>
+            <Select.Option value="approved">Approved</Select.Option>
+            <Select.Option value="rejected">Rejected</Select.Option>
+            <Select.Option value="cancelled">Cancelled</Select.Option>
+          </Select>
+        }
+      />
 
       <Modal title="Request Shift Swap" open={modalOpen} width={700} onCancel={() => { setModalOpen(false); form.resetFields(); }} onOk={form.submit} okText="Submit" confirmLoading={requestSwap.isPending} destroyOnClose>
         <Form form={form} layout="vertical" onFinish={(values) => {

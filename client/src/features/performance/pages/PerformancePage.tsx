@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Table, Card, Button, Input, Select, Space, Row, Col, Statistic, Typography, Tag, Tabs } from 'antd';
+import { Card, Button, Input, Select, Space, Row, Col, Statistic, Typography, Tag, Tabs } from 'antd';
 import { PlusOutlined, SearchOutlined, TrophyOutlined, CheckCircleOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import { usePerformanceCycles, usePerformanceReviews } from '../hooks/usePerformance';
 import { ReviewStatusBadge } from '../components/ReviewStatusBadge';
 import { CreateCycleModal } from '../components/CreateCycleModal';
+import { DataTable } from '../../../core/components/DataTable';
 import { PageHeader } from '../../../core/components/PageHeader';
 import { usePermission } from '../../../core/hooks/usePermission';
 
@@ -150,28 +151,26 @@ export function PerformancePage() {
             label: 'Performance Cycles',
             children: (
               <>
-                <Space style={{ marginBottom: 16 }}>
-                  <Input
-                    placeholder="Search cycles..."
-                    prefix={<SearchOutlined />}
-                    value={search}
-                    onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                    style={{ width: 280 }}
-                    allowClear
-                  />
-                </Space>
-                <Table
-                  dataSource={cyclesData?.data || []}
+                <DataTable
                   columns={cycleColumns}
+                  dataSource={cyclesData?.data || []}
                   rowKey="_id"
                   loading={cyclesLoading}
-                  pagination={{
-                    current: page,
-                    pageSize: 20,
-                    total: cyclesData?.meta?.total || 0,
-                    onChange: setPage,
-                    showSizeChanger: false,
-                  }}
+                  total={cyclesData?.meta?.total}
+                  page={page}
+                  pageSize={20}
+                  onPaginationChange={(p) => setPage(p)}
+                  showSizeChanger={false}
+                  toolbarLeft={
+                    <Input
+                      placeholder="Search cycles..."
+                      prefix={<SearchOutlined />}
+                      value={search}
+                      onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                      style={{ width: 280 }}
+                      allowClear
+                    />
+                  }
                 />
               </>
             ),
@@ -181,46 +180,43 @@ export function PerformancePage() {
             label: 'Reviews',
             children: (
               <>
-                <Space style={{ marginBottom: 16 }}>
-                  <Input
-                    placeholder="Search employee..."
-                    prefix={<SearchOutlined />}
-                    value={search}
-                    onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                    style={{ width: 250 }}
-                    allowClear
-                  />
-                  <Select
-                    placeholder="Status"
-                    value={status}
-                    onChange={(val) => { setStatus(val); setPage(1); }}
-                    allowClear
-                    style={{ width: 150 }}
-                    options={[
-                      { label: 'Draft', value: 'draft' },
-                      { label: 'Self Review', value: 'self-review' },
-                      { label: 'Manager Review', value: 'manager-review' },
-                      { label: 'Completed', value: 'completed' },
-                      { label: 'Appealed', value: 'appealed' },
-                    ]}
-                  />
-                </Space>
-                <Table
-                  dataSource={reviewsData?.data || []}
+                <DataTable
                   columns={reviewColumns}
+                  dataSource={reviewsData?.data || []}
                   rowKey="_id"
                   loading={reviewsLoading}
-                  onRow={(record) => ({
-                    onClick: () => navigate(`/performance/reviews/${record._id}`),
-                    style: { cursor: 'pointer' },
-                  })}
-                  pagination={{
-                    current: page,
-                    pageSize: 20,
-                    total: reviewsData?.meta?.total || 0,
-                    onChange: setPage,
-                    showSizeChanger: false,
-                  }}
+                  total={reviewsData?.meta?.total}
+                  page={page}
+                  pageSize={20}
+                  onPaginationChange={(p) => setPage(p)}
+                  showSizeChanger={false}
+                  onRowClick={(record) => navigate(`/performance/reviews/${record._id}`)}
+                  toolbarLeft={
+                    <>
+                      <Input
+                        placeholder="Search employee..."
+                        prefix={<SearchOutlined />}
+                        value={search}
+                        onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                        style={{ width: 250 }}
+                        allowClear
+                      />
+                      <Select
+                        placeholder="Status"
+                        value={status}
+                        onChange={(val) => { setStatus(val); setPage(1); }}
+                        allowClear
+                        style={{ width: 150 }}
+                        options={[
+                          { label: 'Draft', value: 'draft' },
+                          { label: 'Self Review', value: 'self-review' },
+                          { label: 'Manager Review', value: 'manager-review' },
+                          { label: 'Completed', value: 'completed' },
+                          { label: 'Appealed', value: 'appealed' },
+                        ]}
+                      />
+                    </>
+                  }
                 />
               </>
             ),

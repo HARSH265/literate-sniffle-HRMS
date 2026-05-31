@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Table, Card, Button, Input, Select, Space, Row, Col, Statistic, Typography, Tag } from 'antd';
+import { Button,Card, Input, Select, Space, Row, Col, Statistic, Typography, Tag } from 'antd';
 import { PlusOutlined, SearchOutlined, LaptopOutlined, SwapRightOutlined } from '@ant-design/icons';
 import { useAssets, useAssetStats } from '../hooks/useAssets';
 import { AssetStatusBadge } from '../components/AssetStatusBadge';
 import { BulkAllocateModal } from '../components/BulkAllocateModal';
+import { DataTable } from '../../../core/components/DataTable';
 import { PageHeader } from '../../../core/components/PageHeader';
 import { usePermission } from '../../../core/hooks/usePermission';
 
@@ -123,62 +124,59 @@ export function AssetsPage() {
         </Col>
       </Row>
 
-      <Card style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-        <Space style={{ marginBottom: 16 }}>
-          <Input
-            placeholder="Search by name, code, or serial..."
-            prefix={<SearchOutlined />}
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-            style={{ width: 280 }}
-            allowClear
-          />
-          <Select
-            placeholder="Status"
-            value={status}
-            onChange={(val) => { setStatus(val); setPage(1); }}
-            allowClear
-            style={{ width: 150 }}
-            options={[
-              { label: 'Available', value: 'available' },
-              { label: 'Allocated', value: 'allocated' },
-              { label: 'Maintenance', value: 'maintenance' },
-              { label: 'Retired', value: 'retired' },
-            ]}
-          />
-          <Select
-            placeholder="Category"
-            value={category}
-            onChange={(val) => { setCategory(val); setPage(1); }}
-            allowClear
-            style={{ width: 150 }}
-            options={[
-              { label: 'Laptop', value: 'Laptop' },
-              { label: 'Monitor', value: 'Monitor' },
-              { label: 'Keyboard', value: 'Keyboard' },
-              { label: 'Mobile', value: 'Mobile' },
-              { label: 'Tool', value: 'Tool' },
-              { label: 'Uniform', value: 'Uniform' },
-              { label: 'Vehicle', value: 'Vehicle' },
-              { label: 'Other', value: 'Other' },
-            ]}
-          />
-        </Space>
-
-        <Table
-          dataSource={data?.data || []}
-          columns={columns}
-          rowKey="_id"
-          loading={isLoading}
-          pagination={{
-            current: page,
-            pageSize: 20,
-            total: data?.meta?.total || 0,
-            onChange: setPage,
-            showSizeChanger: false,
-          }}
-        />
-      </Card>
+      <DataTable
+        columns={columns}
+        dataSource={data?.data || []}
+        rowKey="_id"
+        loading={isLoading}
+        total={data?.meta?.total}
+        page={page}
+        pageSize={20}
+        onPaginationChange={(p) => setPage(p)}
+        showSizeChanger={false}
+        toolbarLeft={
+          <>
+            <Input
+              placeholder="Search by name, code, or serial..."
+              prefix={<SearchOutlined />}
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+              style={{ width: 280 }}
+              allowClear
+            />
+            <Select
+              placeholder="Status"
+              value={status}
+              onChange={(val) => { setStatus(val); setPage(1); }}
+              allowClear
+              style={{ width: 150 }}
+              options={[
+                { label: 'Available', value: 'available' },
+                { label: 'Allocated', value: 'allocated' },
+                { label: 'Maintenance', value: 'maintenance' },
+                { label: 'Retired', value: 'retired' },
+              ]}
+            />
+            <Select
+              placeholder="Category"
+              value={category}
+              onChange={(val) => { setCategory(val); setPage(1); }}
+              allowClear
+              style={{ width: 150 }}
+              options={[
+                { label: 'Laptop', value: 'Laptop' },
+                { label: 'Monitor', value: 'Monitor' },
+                { label: 'Keyboard', value: 'Keyboard' },
+                { label: 'Mobile', value: 'Mobile' },
+                { label: 'Tool', value: 'Tool' },
+                { label: 'Uniform', value: 'Uniform' },
+                { label: 'Vehicle', value: 'Vehicle' },
+                { label: 'Other', value: 'Other' },
+              ]}
+            />
+          </>
+        }
+      />
 
       <BulkAllocateModal
         open={bulkOpen}

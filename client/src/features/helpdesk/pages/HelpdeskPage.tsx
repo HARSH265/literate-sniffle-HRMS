@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, Table, Tag, Button, Select, Input, Typography, Tooltip, Modal, Form, Popconfirm } from 'antd';
+import { Tag, Button, Select, Input, Typography, Tooltip, Modal, Form, Popconfirm } from 'antd';
 import { PlusOutlined, EyeOutlined, DeleteOutlined, WarningOutlined } from '@ant-design/icons';
 import { PageHeader } from '../../../core/components/PageHeader';
+import { DataTable } from '../../../core/components/DataTable';
 import { useTickets, useDeleteTicket, useCreateTicket } from '../hooks/useHelpdesk';
 import dayjs from 'dayjs';
 
@@ -185,68 +186,60 @@ export function HelpdeskPage() {
         }
       />
 
-      <Card styles={{ body: { padding: 0 } }}>
-        <div style={{ padding: '12px 16px', display: 'flex', gap: 12, borderBottom: '1px solid #f0f0f0' }}>
-          <Select
-            placeholder="Status"
-            value={status}
-            onChange={(v) => { setStatus(v); setPage(1); }}
-            allowClear
-            style={{ width: 140 }}
-            options={[
-              { value: '', label: 'All Status' },
-              { value: 'open', label: 'Open' },
-              { value: 'in-progress', label: 'In Progress' },
-              { value: 'resolved', label: 'Resolved' },
-              { value: 'closed', label: 'Closed' },
-            ]}
-          />
-          <Select
-            placeholder="Priority"
-            value={priority}
-            onChange={(v) => { setPriority(v); setPage(1); }}
-            allowClear
-            style={{ width: 130 }}
-            options={[
-              { value: '', label: 'All Priority' },
-              { value: 'low', label: 'Low' },
-              { value: 'medium', label: 'Medium' },
-              { value: 'high', label: 'High' },
-              { value: 'urgent', label: 'Urgent' },
-            ]}
-          />
-          <Select
-            placeholder="Category"
-            value={category}
-            onChange={(v) => { setCategory(v); setPage(1); }}
-            allowClear
-            style={{ width: 150 }}
-            options={categoryOptions}
-          />
-          <Input.Search
-            placeholder="Search tickets..."
-            onSearch={(v) => { setSearch(v); setPage(1); }}
-            style={{ width: 240 }}
-            allowClear
-          />
-        </div>
-        <Table
-          columns={columns}
-          dataSource={data?.data}
-          rowKey="_id"
-          loading={isLoading}
-          pagination={{
-            current: page,
-            pageSize: limit,
-            total: data?.meta?.total || 0,
-            onChange: (p, s) => { setPage(p); setLimit(s); },
-            showSizeChanger: true,
-            showTotal: (t: number) => `${t} tickets`,
-          }}
-          scroll={{ x: 'max-content' }}
-          size="middle"
-        />
-      </Card>
+      <DataTable
+        columns={columns}
+        dataSource={data?.data}
+        rowKey="_id"
+        loading={isLoading}
+        total={data?.meta?.total}
+        page={page}
+        pageSize={limit}
+        onPaginationChange={(p, s) => { setPage(p); setLimit(s); }}
+        toolbarLeft={
+          <>
+            <Select
+              placeholder="Status"
+              value={status}
+              onChange={(v) => { setStatus(v); setPage(1); }}
+              allowClear
+              style={{ width: 140 }}
+              options={[
+                { value: 'open', label: 'Open' },
+                { value: 'in-progress', label: 'In Progress' },
+                { value: 'resolved', label: 'Resolved' },
+                { value: 'closed', label: 'Closed' },
+              ]}
+            />
+            <Select
+              placeholder="Priority"
+              value={priority}
+              onChange={(v) => { setPriority(v); setPage(1); }}
+              allowClear
+              style={{ width: 130 }}
+              options={[
+                { value: 'low', label: 'Low' },
+                { value: 'medium', label: 'Medium' },
+                { value: 'high', label: 'High' },
+                { value: 'urgent', label: 'Urgent' },
+              ]}
+            />
+            <Select
+              placeholder="Category"
+              value={category}
+              onChange={(v) => { setCategory(v); setPage(1); }}
+              allowClear
+              style={{ width: 150 }}
+              options={categoryOptions}
+            />
+            <Input.Search
+              placeholder="Search tickets..."
+              onSearch={(v) => { setSearch(v); setPage(1); }}
+              style={{ width: 240 }}
+              allowClear
+            />
+          </>
+        }
+      />
 
       <Modal
         title={

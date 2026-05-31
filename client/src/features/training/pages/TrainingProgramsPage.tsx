@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Table, Card, Button, Input, Select, Space, Typography, Tag, Modal } from 'antd';
+import { Button, Input, Select, Space, Typography, Tag, Modal } from 'antd';
 import { PlusOutlined, SearchOutlined } from '@ant-design/icons';
 import { useTrainingPrograms, useCancelTrainingProgram } from '../hooks/useTraining';
 import { ProgramStatusBadge } from '../components/TrainingStatusBadge';
+import { DataTable } from '../../../core/components/DataTable';
 import { PageHeader } from '../../../core/components/PageHeader';
 import { usePermission } from '../../../core/hooks/usePermission';
 
@@ -50,17 +51,25 @@ export function TrainingProgramsPage() {
         actions={canManage && <Space><Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/training/new')}>New Program</Button></Space>}
       />
 
-      <Card style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-        <Space style={{ marginBottom: 16 }}>
-          <Input placeholder="Search programs..." prefix={<SearchOutlined />} value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} style={{ width: 280 }} allowClear />
-          <Select placeholder="Status" value={statusFilter} onChange={(v) => { setStatusFilter(v); setPage(1); }} allowClear style={{ width: 150 }}
-            options={[{ label: 'Planned', value: 'planned' }, { label: 'In Progress', value: 'in-progress' }, { label: 'Completed', value: 'completed' }, { label: 'Cancelled', value: 'cancelled' }]}
-          />
-        </Space>
-        <Table dataSource={data?.data || []} columns={columns} rowKey="_id" loading={isLoading}
-          pagination={{ current: page, pageSize: 20, total: data?.meta?.total || 0, onChange: setPage, showSizeChanger: false }}
-        />
-      </Card>
+      <DataTable
+        columns={columns}
+        dataSource={data?.data || []}
+        rowKey="_id"
+        loading={isLoading}
+        total={data?.meta?.total}
+        page={page}
+        pageSize={20}
+        onPaginationChange={(p) => setPage(p)}
+        showSizeChanger={false}
+        toolbarLeft={
+          <>
+            <Input placeholder="Search programs..." prefix={<SearchOutlined />} value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} style={{ width: 280 }} allowClear />
+            <Select placeholder="Status" value={statusFilter} onChange={(v) => { setStatusFilter(v); setPage(1); }} allowClear style={{ width: 150 }}
+              options={[{ label: 'Planned', value: 'planned' }, { label: 'In Progress', value: 'in-progress' }, { label: 'Completed', value: 'completed' }, { label: 'Cancelled', value: 'cancelled' }]}
+            />
+          </>
+        }
+      />
     </div>
   );
 }
