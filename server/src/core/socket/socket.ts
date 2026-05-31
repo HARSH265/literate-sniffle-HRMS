@@ -17,13 +17,13 @@ export function initSocket(httpServer: HTTPServer): Server {
     },
   });
 
-  io.use((socket: Socket, next) => {
+  io.use(async (socket: Socket, next) => {
     const token = socket.handshake.auth?.token || socket.handshake.query?.token;
     if (!token || typeof token !== 'string') {
       return next(new Error('Authentication required'));
     }
 
-    if (TokenBlacklist.isBlacklisted(token)) {
+    if (await TokenBlacklist.isBlacklisted(token)) {
       return next(new Error('Token has been revoked'));
     }
 

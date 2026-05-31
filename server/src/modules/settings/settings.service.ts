@@ -179,31 +179,20 @@ export class SettingsService {
       return { success: false, message: 'Email not configured. Please configure SMTP settings first.' };
     }
     
-    try {
-      const nodemailer = await import('nodemailer');
-      
-      const transporter = nodemailer.createTransport({
-        host: emailConfig.host,
-        port: emailConfig.port || 587,
-        secure: emailConfig.secure || false,
-        auth: emailConfig.user ? {
+      try {
+        await EmailService.sendWithConfig(toEmail, 'HRMS - Test Email', '<p>This is a test email from <strong>HRMS</strong>.</p><p>If you received this, your email configuration is working correctly.</p>', {
+          host: emailConfig.host,
+          port: emailConfig.port || 587,
+          secure: emailConfig.secure || false,
           user: emailConfig.user,
           pass: emailConfig.password,
-        } : undefined,
-      });
-      
-      await transporter.sendMail({
-        from: emailConfig.fromEmail,
-        to: toEmail,
-        subject: 'HRMS - Test Email',
-        text: 'This is a test email from HRMS. If you received this, your email configuration is working correctly.',
-        html: '<p>This is a test email from <strong>HRMS</strong>.</p><p>If you received this, your email configuration is working correctly.</p>',
-      });
-      
-      return { success: true };
-    } catch (error: any) {
-      return { success: false, message: error.message || 'Failed to send test email' };
-    }
+          from: emailConfig.fromEmail,
+        });
+        
+        return { success: true };
+      } catch (error: any) {
+        return { success: false, message: error.message || 'Failed to send test email' };
+      }
   }
 
   static async uploadLogo(file: any, userId: string): Promise<{ success: boolean; logoUrl?: string; message?: string }> {

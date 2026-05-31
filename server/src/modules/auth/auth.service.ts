@@ -201,9 +201,9 @@ export class AuthService {
       try {
         const decoded = jwt.decode(token) as { exp?: number };
         const ttl = decoded?.exp ? decoded.exp - Math.floor(Date.now() / 1000) : 3600;
-        TokenBlacklist.add(token, Math.max(ttl, 1));
+        await TokenBlacklist.add(token, Math.max(ttl, 1));
       } catch {
-        TokenBlacklist.add(token, 3600);
+        await TokenBlacklist.add(token, 3600);
       }
     }
   }
@@ -214,9 +214,9 @@ export class AuthService {
       try {
         const decoded = jwt.decode(token) as { exp?: number };
         const ttl = decoded?.exp ? decoded.exp - Math.floor(Date.now() / 1000) : 3600;
-        TokenBlacklist.add(token, Math.max(ttl, 1));
+        await TokenBlacklist.add(token, Math.max(ttl, 1));
       } catch {
-        TokenBlacklist.add(token, 3600);
+        await TokenBlacklist.add(token, 3600);
       }
     }
 

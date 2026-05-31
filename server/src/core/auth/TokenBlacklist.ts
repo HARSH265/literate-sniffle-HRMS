@@ -1,17 +1,24 @@
-import NodeCache from 'node-cache';
-
-const blacklist = new NodeCache({ stdTTL: 24 * 60 * 60 });
+import { TokenBlacklistModel } from '../../models/TokenBlacklist.model.js';
 
 export class TokenBlacklist {
-  static add(token: string, ttlSeconds: number = 24 * 60 * 60): void {
-    blacklist.set(token, true, ttlSeconds);
+  /** Add a token to the blacklist with an optional TTL (seconds). */
+  static async add(token: string, ttlSeconds: number = 24 * 60 * 60): Promise<void> {
+    const expiresAt = new Date(Date.now() + ttlSeconds * 1000);
+    try {
+      await TokenBlacklistModel.create({ token, expiresAt });
+    } catch (e) {
+      // Duplicate token – ignore
+    }
   }
 
-  static isBlacklisted(token: string): boolean {
-    return blacklist.has(token);
+  /** Check if a token is currently blacklisted. */
+  static async isBlacklisted(token: string): Promise<boolean> {
+    const doc = await TokenBlacklistModel.findOne({ token }).lean();
+    return !!doc;
   }
 
-  static remove(token: string): void {
-    blacklist.del(token);
+  /** Remove a token from the blacklist. */
+  static async remove(token: string): Promise<void> {
+    await TokenBlacklistModel.deleteOne({ token });
   }
 }

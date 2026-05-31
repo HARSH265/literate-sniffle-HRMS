@@ -18,11 +18,11 @@ declare module 'express-serve-static-core' {
   }
 }
 
-export function authenticate(
+export async function authenticate(
   req: Request,
   _res: Response,
   next: NextFunction,
-): void {
+): Promise<void> {
   try {
     let token: string | undefined;
 
@@ -36,7 +36,7 @@ export function authenticate(
       throw new AppError('No token provided', 401);
     }
 
-    if (TokenBlacklist.isBlacklisted(token)) {
+    if (await TokenBlacklist.isBlacklisted(token)) {
       throw new AppError('Token has been revoked', 401);
     }
 
