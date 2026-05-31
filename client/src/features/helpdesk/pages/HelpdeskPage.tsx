@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Tag, Button, Select, Input, Typography, Tooltip, Modal, Form, Popconfirm } from 'antd';
 import { PlusOutlined, EyeOutlined, DeleteOutlined, WarningOutlined } from '@ant-design/icons';
@@ -59,7 +59,7 @@ export function HelpdeskPage() {
     });
   };
 
-  const columns = [
+  const columns = useMemo(() => [
     {
       title: 'Ticket ID',
       dataIndex: 'ticketId',
@@ -172,7 +172,7 @@ export function HelpdeskPage() {
         </div>
       ),
     },
-  ];
+  ], []);
 
   return (
     <div style={{ padding: '0 4px' }}>

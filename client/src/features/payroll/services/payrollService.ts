@@ -1,4 +1,13 @@
 import apiClient from '../../../core/api/apiClient';
+import type { Meta } from '../../../types/shared';
+
+export interface PayrollRevision {
+  action: string;
+  userId: string;
+  userName: string;
+  changes?: Record<string, unknown>;
+  timestamp: string;
+}
 
 export interface PayrollRun {
   id: string;
@@ -8,13 +17,7 @@ export interface PayrollRun {
   totalNetPay: number;
   createdAt: string;
   remarks?: string;
-  revisions?: Array<{
-    action: string;
-    userId: string;
-    userName: string;
-    changes?: any;
-    timestamp: string;
-  }>;
+  revisions?: PayrollRevision[];
 }
 
 export interface PayrollItem {
@@ -42,7 +45,7 @@ export interface PayrollItem {
 }
 
 export const payrollService = {
-  async listRuns(params?: Record<string, unknown>): Promise<{ success: boolean; data: PayrollRun[]; meta: any }> {
+  async listRuns(params?: Record<string, unknown>): Promise<{ success: boolean; data: PayrollRun[]; meta: Meta }> {
     const { data } = await apiClient.get('/payroll/runs', { params });
     return data;
   },

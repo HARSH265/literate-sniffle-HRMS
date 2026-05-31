@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Button, Modal, Form, Input, message, Popconfirm, Tooltip, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, SettingOutlined } from '@ant-design/icons';
@@ -7,6 +7,12 @@ import { DataTable } from '../../../core/components/DataTable';
 import { departmentService, Department, CreateDepartment, UpdateDepartment } from '../services/departmentService';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
+
+const StatusBadge = ({ isActive }: { isActive: boolean }) => (
+  <span className={`status-badge ${isActive ? 'status-active' : 'status-inactive'}`}>
+    {isActive ? 'Active' : 'Inactive'}
+  </span>
+);
 
 export function DepartmentsPage() {
   const [form] = Form.useForm();
@@ -97,13 +103,7 @@ export function DepartmentsPage() {
     setIsModalOpen(true);
   };
 
-  const StatusBadge = ({ isActive }: { isActive: boolean }) => (
-    <span className={`status-badge ${isActive ? 'status-active' : 'status-inactive'}`}>
-      {isActive ? 'Active' : 'Inactive'}
-    </span>
-  );
-
-  const columns: ColumnsType<Department> = [
+  const columns: ColumnsType<Department> = useMemo(() => [
     {
       title: 'Department Code',
       dataIndex: 'code',
@@ -143,7 +143,7 @@ export function DepartmentsPage() {
         </div>
       ),
     },
-  ];
+  ], []);
 
   return (
     <div style={{ padding: '0 4px' }}>

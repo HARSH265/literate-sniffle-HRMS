@@ -1,15 +1,16 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { message } from 'antd';
 import { shiftSwapService } from '../services/shiftSwapService';
+import type { SwapListParams, RequestSwapPayload, SetPreferencePayload } from '../types/shiftSwapTypes';
 
-export function useShiftSwaps(params?: any) {
+export function useShiftSwaps(params?: SwapListParams) {
   return useQuery({
     queryKey: ['shift-swaps', params],
     queryFn: () => shiftSwapService.list(params),
   });
 }
 
-export function useMySwaps(params?: any) {
+export function useMySwaps(params?: SwapListParams) {
   return useQuery({
     queryKey: ['my-swaps', params],
     queryFn: () => shiftSwapService.getMySwaps(params),
@@ -41,7 +42,7 @@ export function useSwapById(id: string) {
 export function useRequestSwap() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (payload: any) => shiftSwapService.requestSwap(payload),
+    mutationFn: (payload: RequestSwapPayload) => shiftSwapService.requestSwap(payload),
     onSuccess: () => {
       message.success('Swap request submitted');
       queryClient.invalidateQueries({ queryKey: ['shift-swaps'] });
@@ -102,7 +103,7 @@ export function useShiftPreference() {
 export function useSetShiftPreference() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (payload: any) => shiftSwapService.setPreference(payload),
+    mutationFn: (payload: SetPreferencePayload) => shiftSwapService.setPreference(payload),
     onSuccess: () => {
       message.success('Preference saved');
       queryClient.invalidateQueries({ queryKey: ['shift-preference'] });

@@ -20,7 +20,7 @@ export function LoanDetailPage() {
   const [disburseModalOpen, setDisburseModalOpen] = useState(false);
   const [remarks, setRemarks] = useState('');
 
-  const { data } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ['loan', id],
     queryFn: () => loanService.getLoan(id!),
     enabled: !!id,
@@ -119,6 +119,7 @@ export function LoanDetailPage() {
           dataSource={loan.repayments}
           columns={repaymentsColumns}
           rowKey="month"
+          loading={isLoading}
           hidePagination
           toolbarLeft={<strong style={{ fontSize: 16 }}>Repayment Schedule</strong>}
         />

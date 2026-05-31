@@ -63,7 +63,7 @@ export function EssAttendancePage() {
     },
   ];
 
-  const profile = profileData?.data as any;
+  const profile = profileData?.data;
   const empCode = profile?.employeeCode || '';
 
   return (

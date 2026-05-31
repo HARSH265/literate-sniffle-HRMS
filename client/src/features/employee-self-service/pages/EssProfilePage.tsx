@@ -61,9 +61,9 @@ export function EssProfilePage() {
           <Descriptions.Item label="Employee Code">{profile.employeeCode}</Descriptions.Item>
           <Descriptions.Item label="Full Name">{profile.fullName}</Descriptions.Item>
           <Descriptions.Item label="Father's Name">{profile.fatherName}</Descriptions.Item>
-          <Descriptions.Item label="Department">{(profile.department as any)?.name || '-'}</Descriptions.Item>
-          <Descriptions.Item label="Designation">{(profile.designation as any)?.name || '-'}</Descriptions.Item>
-          <Descriptions.Item label="Shift">{(profile.shift as any)?.name || '-'}</Descriptions.Item>
+          <Descriptions.Item label="Department">{profile.department?.name || '-'}</Descriptions.Item>
+          <Descriptions.Item label="Designation">{profile.designation?.name || '-'}</Descriptions.Item>
+          <Descriptions.Item label="Shift">{profile.shift?.name || '-'}</Descriptions.Item>
           <Descriptions.Item label="Joining Date">{profile.joiningDate ? dayjs(profile.joiningDate).format('DD MMM YYYY') : '-'}</Descriptions.Item>
         </Descriptions>
 

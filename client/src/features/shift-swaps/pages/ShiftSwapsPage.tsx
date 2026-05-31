@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Tag, Button, Select, DatePicker, Modal, Form, Input, Switch, Row, Col } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
@@ -8,6 +8,8 @@ import { employeeService } from '../../employees/services/employeeService';
 import { DataTable } from '../../../core/components/DataTable';
 import { PageHeader } from '../../../core/components/PageHeader';
 import dayjs from 'dayjs';
+import type { ShiftSwapPopulated, RequestSwapPayload } from '../types/shiftSwapTypes';
+import type { ColumnsType } from 'antd/es/table';
 
 export function ShiftSwapsPage() {
   const [filters, setFilters] = useState<Record<string, any>>({});
@@ -29,25 +31,25 @@ export function ShiftSwapsPage() {
   });
   const employeeOptions = (employeesData?.data || []).map((e: any) => ({ label: `${e.fullName} (${e.employeeCode})`, value: e.id || e._id }));
 
-  const columns = [
-    { title: 'Requestor', dataIndex: ['requestor', 'fullName'], key: 'requestor', render: (_text: string, record: any) => record.requestor?.fullName || 'N/A' },
-    { title: 'Target', dataIndex: ['targetEmployee', 'fullName'], key: 'targetEmployee', render: (text: string) => text || '—' },
-    { title: 'From Shift', dataIndex: ['fromShift', 'name'], key: 'fromShift', render: (_text: string, record: any) => record.fromShift?.name || 'N/A' },
-    { title: 'To Shift', dataIndex: ['toShift', 'name'], key: 'toShift', render: (_text: string, record: any) => record.toShift?.name || 'N/A' },
-    { title: 'From Date', dataIndex: 'fromDate', key: 'fromDate', render: (d: string) => dayjs(d).format('DD/MM/YYYY') },
-    { title: 'To Date', dataIndex: 'toDate', key: 'toDate', render: (d: string) => dayjs(d).format('DD/MM/YYYY') },
+  const columns: ColumnsType<ShiftSwapPopulated> = useMemo(() => [
+    { title: 'Requestor', dataIndex: ['requestor', 'fullName'], key: 'requestor', render: (_text, record) => record.requestor?.fullName || 'N/A' },
+    { title: 'Target', dataIndex: ['targetEmployee', 'fullName'], key: 'targetEmployee', render: (text) => text || '—' },
+    { title: 'From Shift', dataIndex: ['fromShift', 'name'], key: 'fromShift', render: (_text, record) => record.fromShift?.name || 'N/A' },
+    { title: 'To Shift', dataIndex: ['toShift', 'name'], key: 'toShift', render: (_text, record) => record.toShift?.name || 'N/A' },
+    { title: 'From Date', dataIndex: 'fromDate', key: 'fromDate', render: (d) => dayjs(d).format('DD/MM/YYYY') },
+    { title: 'To Date', dataIndex: 'toDate', key: 'toDate', render: (d) => dayjs(d).format('DD/MM/YYYY') },
     {
       title: 'Status', dataIndex: 'status', key: 'status',
-      render: (status: string) => {
+      render: (status) => {
         const colors: Record<string, string> = { pending: 'orange', approved: 'green', rejected: 'red', cancelled: 'default' };
         return <Tag color={colors[status] || 'default'}>{status?.toUpperCase()}</Tag>;
       },
     },
     {
       title: 'Type', dataIndex: 'swapType', key: 'swapType',
-      render: (type: string) => type ? <Tag>{type}</Tag> : '—',
+      render: (type) => type ? <Tag>{type}</Tag> : '—',
     },
-  ];
+  ], []);
 
   return (
     <div>
@@ -72,7 +74,7 @@ export function ShiftSwapsPage() {
 
       <Modal title="Request Shift Swap" open={modalOpen} width={700} onCancel={() => { setModalOpen(false); form.resetFields(); }} onOk={form.submit} okText="Submit" confirmLoading={requestSwap.isPending} destroyOnClose>
         <Form form={form} layout="vertical" onFinish={(values) => {
-          const payload: any = {
+          const payload: RequestSwapPayload = {
             ...values,
             fromDate: values.fromDate.toISOString(),
             toDate: values.toDate.toISOString(),

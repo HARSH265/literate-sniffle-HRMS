@@ -65,13 +65,13 @@ export function EmployeeDetailPage() {
     onError: () => message.error('Delete failed'),
   });
 
-  const { data: attendanceData } = useQuery({
+  const { data: attendanceData, isLoading: attendanceLoading } = useQuery({
     queryKey: ['employee-attendance', id],
     queryFn: () => attendanceService.getByEmployee(id!, undefined, undefined),
     enabled: !!id && id !== 'new',
   });
 
-  const { data: payrollData } = useQuery({
+  const { data: payrollData, isLoading: payrollLoading } = useQuery({
     queryKey: ['employee-payroll', id],
     queryFn: () => payrollService.getByEmployee(id!),
     enabled: !!id && id !== 'new',
@@ -328,6 +328,7 @@ export function EmployeeDetailPage() {
                       <DataTable
                         dataSource={attendanceData || []}
                         rowKey="id"
+                        loading={attendanceLoading}
                         hidePagination
                         noCard
                         disableRowClick
@@ -342,6 +343,7 @@ export function EmployeeDetailPage() {
                       <DataTable
                         dataSource={payrollData || []}
                         rowKey="id"
+                        loading={payrollLoading}
                         hidePagination
                         noCard
                         disableRowClick

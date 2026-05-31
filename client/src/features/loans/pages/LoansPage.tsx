@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Card, Tag, Select, Space, Button, message, Row, Col, Statistic, Popconfirm } from 'antd';
 import { EyeOutlined, PlusOutlined, DollarOutlined } from '@ant-design/icons';
 import { PageHeader } from '../../../core/components/PageHeader';
@@ -29,14 +29,14 @@ export function LoansPage() {
   });
 
   const loans = data?.data?.loans || [];
-  const stats = {
+  const stats = useMemo(() => ({
     total: loans.length,
     active: loans.filter((l: any) => l.status === 'active').length,
     applied: loans.filter((l: any) => l.status === 'applied').length,
     approved: loans.filter((l: any) => l.status === 'approved').length,
-  };
+  }), [loans]);
 
-  const columns = [
+  const columns = useMemo(() => [
     { title: 'Employee', dataIndex: 'employee', key: 'employee', render: (e: any) => e ? `${e.fullName} (${e.employeeCode})` : '-' },
     { title: 'Loan Type', dataIndex: 'loanType', key: 'loanType', render: (lt: any) => lt?.name || '-' },
     { title: 'Amount', dataIndex: 'amount', key: 'amount', render: (v: number) => `₹${v.toLocaleString()}` },
@@ -55,7 +55,7 @@ export function LoansPage() {
         )}
       </Space>
     )},
-  ];
+  ], []);
 
   return (
     <div>

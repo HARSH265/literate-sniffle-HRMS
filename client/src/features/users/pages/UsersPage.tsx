@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, Input, message, Modal, Form, Select, Tooltip, Popconfirm, Upload, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
@@ -33,6 +33,12 @@ const roleBg: Record<string, string> = {
   'accounts': '#ecfdf5',
   'manager': '#faf5ff',
 };
+
+const RoleTag = ({ role }: { role: string }) => (
+  <span style={{ display: 'inline-flex', alignItems: 'center', padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: roleBg[role] || '#f1f5f9', color: roleColor[role] || '#64748b', textTransform: 'capitalize' }}>
+    {role.replace('-', ' ')}
+  </span>
+);
 
 export function UsersPage() {
   const navigate = useNavigate();
@@ -103,7 +109,7 @@ export function UsersPage() {
         const data = new Uint8Array(e.target?.result as ArrayBuffer);
         const workbook = XLSX.read(data, { type: 'array' });
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
-        const json = XLSX.utils.sheet_to_json(sheet) as any[];
+        const json = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet);
 
         const generateTempPassword = () => {
           const array = new Uint8Array(12);
@@ -112,10 +118,10 @@ export function UsersPage() {
         };
 
         const users = json.map(row => ({
-          name: row.Name || row.name,
-          email: row.Email || row.email,
-          password: row.Password || row.password || generateTempPassword(),
-          role: row.Role || row.role || 'hr-staff',
+          name: String(row.Name || row.name || ''),
+          email: String(row.Email || row.email || ''),
+          password: String(row.Password || row.password || generateTempPassword()),
+          role: (String(row.Role || row.role || 'hr-staff') as 'super-admin' | 'hr-admin' | 'hr-staff' | 'accounts' | 'manager'),
         })).filter(u => u.name && u.email);
 
         if (users.length === 0) {
@@ -138,13 +144,7 @@ export function UsersPage() {
     }
   };
 
-  const RoleTag = ({ role }: { role: string }) => (
-    <span style={{ display: 'inline-flex', alignItems: 'center', padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: roleBg[role] || '#f1f5f9', color: roleColor[role] || '#64748b', textTransform: 'capitalize' }}>
-      {role.replace('-', ' ')}
-    </span>
-  );
-
-  const columns: ColumnsType<User> = [
+  const columns: ColumnsType<User> = useMemo(() => [
     {
       title: 'User',
       key: 'user',
@@ -210,7 +210,7 @@ export function UsersPage() {
         </div>
       ),
     },
-  ];
+  ], []);
 
   return (
     <div style={{ padding: '0 4px' }}>

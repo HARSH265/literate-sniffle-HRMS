@@ -6,6 +6,7 @@ import { useDocuments, useDocumentStats } from '../hooks/useDocuments';
 import { PageHeader } from '../../../core/components/PageHeader';
 import { DataTable } from '../../../core/components/DataTable';
 import { usePermission } from '../../../core/hooks/usePermission';
+import { useDebounce } from '../../../core/hooks/useDebounce';
 
 const { Text } = Typography;
 
@@ -22,8 +23,9 @@ export function DocumentsPage() {
   const [page, setPage] = React.useState(1);
   const [category, setCategory] = React.useState<string | undefined>();
   const [search, setSearch] = React.useState('');
+  const debouncedSearch = useDebounce(search);
 
-  const { data, isLoading } = useDocuments({ page, limit: 20, category, search });
+  const { data, isLoading } = useDocuments({ page, limit: 20, category, search: debouncedSearch });
   const { data: stats } = useDocumentStats();
 
   const columns = [

@@ -8,6 +8,7 @@ import { BulkAllocateModal } from '../components/BulkAllocateModal';
 import { DataTable } from '../../../core/components/DataTable';
 import { PageHeader } from '../../../core/components/PageHeader';
 import { usePermission } from '../../../core/hooks/usePermission';
+import { useDebounce } from '../../../core/hooks/useDebounce';
 
 const { Text } = Typography;
 
@@ -19,8 +20,9 @@ export function AssetsPage() {
   const [status, setStatus] = useState<string | undefined>();
   const [category, setCategory] = useState<string | undefined>();
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search);
 
-  const { data, isLoading, refetch } = useAssets({ page, limit: 20, status, category, search });
+  const { data, isLoading, refetch } = useAssets({ page, limit: 20, status, category, search: debouncedSearch });
   const { data: stats } = useAssetStats();
   const [bulkOpen, setBulkOpen] = useState(false);
 

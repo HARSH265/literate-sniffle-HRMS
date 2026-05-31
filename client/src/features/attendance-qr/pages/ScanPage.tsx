@@ -58,9 +58,9 @@ export function ScanPage() {
     ctx.drawImage(video, 0, 0, width, height);
     const imageData = ctx.getImageData(0, 0, width, height);
 
-    if ('BarcodeDetector' in window) {
+    if ('BarcodeDetector' in window && window.BarcodeDetector) {
       try {
-        const detector = new (window as any).BarcodeDetector({ formats: ['qr_code'] });
+        const detector = new window.BarcodeDetector({ formats: ['qr_code'] });
         const barcodes = await detector.detect(canvas);
         if (barcodes.length > 0) return barcodes[0].rawValue;
       } catch {
@@ -150,7 +150,7 @@ export function ScanPage() {
         ? await attendanceQRService.checkIn(payload)
         : await attendanceQRService.checkOut(payload);
 
-      setResult({ message: res.data.message, isLate: (res.data as any).isLate });
+      setResult({ message: res.data.message, isLate: 'isLate' in res.data ? res.data.isLate : false });
       setStep('confirm');
     } catch (err: any) {
       message.error(err?.response?.data?.message || 'Failed to process');

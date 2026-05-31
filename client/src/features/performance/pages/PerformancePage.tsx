@@ -8,6 +8,7 @@ import { CreateCycleModal } from '../components/CreateCycleModal';
 import { DataTable } from '../../../core/components/DataTable';
 import { PageHeader } from '../../../core/components/PageHeader';
 import { usePermission } from '../../../core/hooks/usePermission';
+import { useDebounce } from '../../../core/hooks/useDebounce';
 
 const { Text } = Typography;
 
@@ -18,13 +19,14 @@ export function PerformancePage() {
   const [tab, setTab] = useState('cycles');
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search);
   const [status, setStatus] = useState<string | undefined>();
   const [cycleModalOpen, setCycleModalOpen] = useState(false);
 
   const cycleId: string | undefined = undefined;
 
-  const { data: cyclesData, isLoading: cyclesLoading } = usePerformanceCycles({ page, limit: 20, search });
-  const { data: reviewsData, isLoading: reviewsLoading } = usePerformanceReviews({ page, limit: 20, status, cycleId, search });
+  const { data: cyclesData, isLoading: cyclesLoading } = usePerformanceCycles({ page, limit: 20, search: debouncedSearch });
+  const { data: reviewsData, isLoading: reviewsLoading } = usePerformanceReviews({ page, limit: 20, status, cycleId, search: debouncedSearch });
 
   const cycleColumns = [
     {

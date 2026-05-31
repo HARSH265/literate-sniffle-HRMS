@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Button, Input, Select, message, Modal, Form, Tooltip, Popconfirm } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined } from '@ant-design/icons';
@@ -51,7 +51,7 @@ const { data, isLoading, isFetching } = useQuery({
     <span className={`status-badge ${isActive ? 'status-active' : 'status-inactive'}`}>{isActive ? 'Active' : 'Inactive'}</span>
   );
 
-  const columns: ColumnsType<Designation> = [
+  const columns: ColumnsType<Designation> = useMemo(() => [
     { title: 'Name', dataIndex: 'name', key: 'name', render: (n: string) => <span style={{ fontWeight: 500 }}>{n}</span> },
     {
       title: 'Department',
@@ -81,7 +81,7 @@ const { data, isLoading, isFetching } = useQuery({
         </div>
       ),
     },
-  ];
+  ], []);
 
   return (
     <div style={{ padding: '0 4px' }}>

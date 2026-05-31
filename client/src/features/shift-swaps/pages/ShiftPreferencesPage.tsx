@@ -28,7 +28,7 @@ export function ShiftPreferencesPage() {
   useEffect(() => {
     if (data?.data) {
       form.setFieldsValue({
-        preferredShift: data.data.preferredShift?._id || data.data.preferredShift?.id,
+        preferredShift: data.data.preferredShift?._id,
         effectiveFrom: data.data.effectiveFrom ? dayjs(data.data.effectiveFrom) : undefined,
         effectiveTo: data.data.effectiveTo ? dayjs(data.data.effectiveTo) : undefined,
         priority: data.data.priority || 1,

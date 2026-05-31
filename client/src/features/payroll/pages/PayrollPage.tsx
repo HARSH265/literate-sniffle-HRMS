@@ -177,10 +177,10 @@ export function PayrollPage() {
 
       <DataTable
         columns={columns}
-        dataSource={(runsData as any)?.data || []}
+        dataSource={runsData?.data || []}
         rowKey="id"
         loading={isLoading}
-        total={(runsData as any)?.meta?.total ?? 0}
+        total={runsData?.meta?.total ?? 0}
         page={page}
         pageSize={limit}
         onPaginationChange={(p, size) => { setPage(p); setLimit(size ?? 10); }}
@@ -212,6 +212,7 @@ export function PayrollPage() {
             <p style={{ fontSize: 12, color: '#888' }}>This is a what-if preview. No data has been saved.</p>
             <DataTable
               dataSource={previewData.items?.slice(0, 10) || []}
+              loading={previewMutation.isPending}
               columns={[
                 { title: 'Employee', key: 'name', render: (_: any, r: any) => r.employee?.name },
                 { title: 'Basic', dataIndex: 'basicEarnings', key: 'basic', render: (v: number) => `₹${v.toLocaleString()}` },

@@ -20,9 +20,9 @@ export function EssDashboardPage() {
 
   if (profileLoading) return <Spin size="large" style={{ display: 'block', margin: '40px auto' }} />;
 
-  const profile = profileData?.data as any;
-  const profileMessage = profile?.message;
-  const pendingRequests = requestsData?.data?.filter((r: any) => r.status === 'pending')?.length || 0;
+  const profile = profileData?.data;
+  const profileMessage = profile === null ? 'Employee profile not linked' : undefined;
+  const pendingRequests = requestsData?.data?.filter((r) => r.status === 'pending')?.length || 0;
 
   if (profileMessage) {
     return (
@@ -70,7 +70,7 @@ export function EssDashboardPage() {
           <Card style={cardStyle} bodyStyle={{ padding: '14px 12px' }}>
             <Statistic
               title={<span style={{ fontSize: 12, color: '#888' }}>Department</span>}
-              value={(profile?.department as any)?.name || '-'}
+              value={profile?.department?.name || '-'}
               valueStyle={{ fontSize: 16, fontWeight: 600 }}
             />
           </Card>
@@ -79,7 +79,7 @@ export function EssDashboardPage() {
           <Card style={cardStyle} bodyStyle={{ padding: '14px 12px' }}>
             <Statistic
               title={<span style={{ fontSize: 12, color: '#888' }}>Designation</span>}
-              value={(profile?.designation as any)?.name || '-'}
+              value={profile?.designation?.name || '-'}
               valueStyle={{ fontSize: 16, fontWeight: 600 }}
             />
           </Card>
@@ -88,7 +88,7 @@ export function EssDashboardPage() {
           <Card style={cardStyle} bodyStyle={{ padding: '14px 12px' }}>
             <Statistic
               title={<span style={{ fontSize: 12, color: '#888' }}>Shift</span>}
-              value={(profile?.shift as any)?.name || '-'}
+              value={profile?.shift?.name || '-'}
               valueStyle={{ fontSize: 16, fontWeight: 600 }}
             />
           </Card>
@@ -109,7 +109,7 @@ export function EssDashboardPage() {
             </Card>
           </Col>
           <Col span={12}>
-            <Card size="small" hoverable bodyStyle={{ padding: '14px 8px', textAlign: 'center' }} onClick={() => navigate(`/m/scan?employeeId=${profile?._id || ''}`)}>
+            <Card size="small" hoverable bodyStyle={{ padding: '14px 8px', textAlign: 'center' }} onClick={() => navigate(`/m/scan?employeeId=${profile?.id || ''}`)}>
               <QrcodeOutlined style={{ fontSize: 20, color: '#0891b2', marginBottom: 4 }} />
               <div style={{ fontSize: 12, fontWeight: 600 }}>Check In / Out</div>
               <div style={{ fontSize: 11, color: '#888' }}>Scan QR</div>

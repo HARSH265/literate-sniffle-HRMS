@@ -4,13 +4,43 @@ import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import { FilterOutlined, CloseOutlined } from '@ant-design/icons';
 import { APP_CONSTANTS } from '../constants/app.constants';
 
+function TableSkeleton({ columns, rows = 5 }: { columns: number; rows?: number }) {
+  return (
+    <div style={{ padding: '0 16px' }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <thead>
+          <tr>
+            {Array.from({ length: columns }).map((_, i) => (
+              <th key={i} style={{ padding: '12px 8px', borderBottom: '1px solid #f0f0f0', textAlign: 'left' }}>
+                <Skeleton.Input active size="small" style={{ width: 80 + Math.random() * 40, height: 16 }} />
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {Array.from({ length: rows }).map((_, rowIdx) => (
+            <tr key={rowIdx}>
+              {Array.from({ length: columns }).map((_, colIdx) => (
+                <td key={colIdx} style={{ padding: '12px 8px', borderBottom: '1px solid #f0f0f0' }}>
+                  <Skeleton.Input active size="small" style={{ width: 60 + Math.random() * 80, height: 16 }} />
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function formatValue(value: unknown): React.ReactNode {
   if (value === null || value === undefined) return <span style={{ color: '#999' }}>—</span>;
   if (typeof value === 'boolean') return <Tag color={value ? 'green' : 'default'}>{value ? 'Yes' : 'No'}</Tag>;
   if (typeof value === 'object') {
     if (Array.isArray(value)) return value.join(', ') || <span style={{ color: '#999' }}>—</span>;
-    if ('name' in (value as any)) return (value as any).name;
-    if ('label' in (value as any)) return (value as any).label;
+    const obj = value as Record<string, unknown>;
+    if ('name' in obj && typeof obj.name === 'string') return obj.name;
+    if ('label' in obj && typeof obj.label === 'string') return obj.label;
     return <pre style={{ margin: 0, fontSize: 12, maxHeight: 120, overflow: 'auto', background: '#f5f5f5', padding: 8, borderRadius: 6 }}>{JSON.stringify(value, null, 2)}</pre>;
   }
   return String(value);
@@ -131,9 +161,7 @@ export function DataTable<T extends object>({
   };
 
   const tableContent = loading && (!dataSource || dataSource.length === 0) ? (
-    <div style={{ padding: 16 }}>
-      <Skeleton active paragraph={{ rows: 8 }} />
-    </div>
+    <TableSkeleton columns={columns.length || 5} rows={5} />
   ) : (
     <Table<T>
       columns={columns}

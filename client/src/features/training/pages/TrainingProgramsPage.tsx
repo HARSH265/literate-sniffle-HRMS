@@ -7,6 +7,7 @@ import { ProgramStatusBadge } from '../components/TrainingStatusBadge';
 import { DataTable } from '../../../core/components/DataTable';
 import { PageHeader } from '../../../core/components/PageHeader';
 import { usePermission } from '../../../core/hooks/usePermission';
+import { useDebounce } from '../../../core/hooks/useDebounce';
 
 const { Text } = Typography;
 
@@ -16,10 +17,11 @@ export function TrainingProgramsPage() {
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search);
   const [statusFilter, setStatusFilter] = useState<string | undefined>();
   const cancelMutation = useCancelTrainingProgram();
 
-  const { data, isLoading } = useTrainingPrograms({ page, limit: 20, search, status: statusFilter });
+  const { data, isLoading } = useTrainingPrograms({ page, limit: 20, search: debouncedSearch, status: statusFilter });
 
   const columns = [
     { title: 'Title', dataIndex: 'title', key: 'title', render: (t: string, r: any) => <Button type="link" style={{ padding: 0 }} onClick={() => navigate(`/training/${r._id}`)}><Text strong>{t}</Text></Button> },

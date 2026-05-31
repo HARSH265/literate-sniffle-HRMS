@@ -6,6 +6,7 @@ import {
   ArrowLeftOutlined, SendOutlined, UserSwitchOutlined, FlagOutlined,
 } from '@ant-design/icons';
 import { usePerformanceReview, useSetGoals, useSubmitReview, useManagerReview, useAppealReview, useResolveAppeal } from '../hooks/usePerformance';
+import type { PerformanceReview } from '../services/performanceService';
 import { ReviewStatusBadge } from '../components/ReviewStatusBadge';
 import { usePermission } from '../../../core/hooks/usePermission';
 
@@ -37,12 +38,12 @@ export function PerformanceReviewDetailPage() {
   const [resolution, setResolution] = useState('');
   const [resolveRating, setResolveRating] = useState<number | undefined>();
 
-  const review = data?.data as any;
+  const review = data?.data as PerformanceReview | undefined;
   const canManage = hasPermission('manage-performance');
   const canManageOwn = hasPermission('manage-own-performance');
 
   const openGoalsModal = () => {
-    setGoals(review?.goals?.map((g: any) => ({ title: g.title, description: g.description, weight: g.weight })) || [{ title: '', description: '', weight: 100 }]);
+    setGoals(review?.goals?.map((g) => ({ title: g.title, description: g.description, weight: g.weight })) || [{ title: '', description: '', weight: 100 }]);
     setGoalsModalOpen(true);
   };
 
@@ -110,8 +111,8 @@ export function PerformanceReviewDetailPage() {
         }
       >
         <Descriptions column={{ xs: 1, sm: 2 }} bordered size="small">
-          <Descriptions.Item label="Cycle">{review.reviewCycle?.label || review.cycle?.title || '-'}</Descriptions.Item>
-          <Descriptions.Item label="Manager">{review.manager?.fullName || 'Not assigned'}</Descriptions.Item>
+          <Descriptions.Item label="Cycle">{review.reviewCycle?.label || review.cycle?.label || '-'}</Descriptions.Item>
+          <Descriptions.Item label="Manager">{review.manager?.name || 'Not assigned'}</Descriptions.Item>
           <Descriptions.Item label="Self Rating">{review.selfReview?.rating != null ? `${review.selfReview.rating}/5` : '-'}</Descriptions.Item>
           <Descriptions.Item label="Manager Rating">{review.managerReview?.rating != null ? `${review.managerReview.rating}/5` : '-'}</Descriptions.Item>
           <Descriptions.Item label="Final Rating">

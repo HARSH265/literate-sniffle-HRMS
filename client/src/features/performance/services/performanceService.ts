@@ -49,17 +49,26 @@ export interface PerformanceCycle {
 export interface PerformanceReview {
   _id: string;
   employee: { _id: string; fullName: string; employeeCode: string; department?: string; designation?: string };
+  cycle?: { _id: string; label: string; year: number; quarter: number; status: string; startDate?: string; goalDeadline?: string; selfReviewDeadline?: string; managerReviewDeadline?: string };
   reviewCycle: { _id: string; label: string; year: number; quarter: number; status: string; startDate?: string; goalDeadline?: string; selfReviewDeadline?: string; managerReviewDeadline?: string };
   reviewPeriod: { year: number; quarter: number; label: string };
   goals: PerformanceGoal[];
   selfReview?: SelfReview;
+  selfComments?: string;
   managerReview?: ManagerReview;
+  manager?: { _id: string; name: string; email: string };
+  managerComments?: string;
   overallRating?: number;
   finalRating?: number;
   status: 'draft' | 'goals-set' | 'self-review' | 'manager-review' | 'completed' | 'appealed';
   isAppealed: boolean;
   appealReason?: string;
   appealResolution?: string;
+  appealedAt?: string;
+  resolvedAt?: string;
+  submittedAt?: string;
+  managerReviewedAt?: string;
+  completedAt?: string;
   createdBy: { _id: string; name: string; email: string };
   feedback?: any[];
   createdAt: string;

@@ -106,7 +106,7 @@ function App() {
   const [hydrated, setHydrated] = useState(false);
   const [authValidated, setAuthValidated] = useState(false);
   const isMobile = useIsMobile();
-  const isBackOfficeRole = user?.role && Object.values(ROLES).includes(user.role as any);
+  const isBackOfficeRole = user?.role && (Object.values(ROLES) as readonly string[]).includes(user.role);
   const authenticatedHomePath = isMobile || (user?.employeeId && !isBackOfficeRole) ? '/ess' : '/dashboard';
 
   useEffect(() => {
