@@ -1,4 +1,5 @@
 import apiClient from '../../../core/api/apiClient';
+import { PaginatedResponse } from '@/types/shared';
 
 export interface Shift {
   id: string;
@@ -8,13 +9,6 @@ export interface Shift {
   workingHours: number;
   applicableTo: 'all' | 'worker' | 'office-staff';
   isActive: boolean;
-}
-
-export interface PaginatedResponse<T> {
-  success: boolean;
-  message: string;
-  data: T[];
-  meta: { page: number; limit: number; total: number; totalPages: number };
 }
 
 export const shiftService = {

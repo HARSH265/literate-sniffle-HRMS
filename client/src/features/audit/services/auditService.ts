@@ -1,4 +1,5 @@
 import apiClient from '../../../core/api/apiClient';
+import { PaginatedResponse } from '@/types/shared';
 
 interface AuditLogQuery {
   page?: number;
@@ -29,16 +30,6 @@ interface AuditLog {
   statusCode?: number;
   responseTime?: number;
   createdAt: string;
-}
-
-interface PaginatedResponse<T> {
-  data: T[];
-  meta: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-  };
 }
 
 interface OptionItem {

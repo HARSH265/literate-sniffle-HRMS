@@ -1,4 +1,5 @@
 import apiClient from '../../../core/api/apiClient';
+import { PaginatedResponse } from '@/types/shared';
 
 export interface AttendanceEntry {
   id: string;
@@ -46,13 +47,6 @@ export interface BulkAttendanceEntry {
     outTime?: string;
     remarks?: string;
   }>;
-}
-
-export interface PaginatedResponse<T> {
-  success: boolean;
-  message: string;
-  data: T[];
-  meta: { page: number; limit: number; total: number; totalPages: number };
 }
 
 export const attendanceService = {

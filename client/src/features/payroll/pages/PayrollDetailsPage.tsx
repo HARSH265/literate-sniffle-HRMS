@@ -7,6 +7,7 @@ import { CheckCircleOutlined, EditOutlined, UndoOutlined, ArrowLeftOutlined, Sen
 import { payrollService, PayrollItem } from '../services/payrollService';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
+import apiClient from '../../../core/api/apiClient';
 
 const STATUS_COLORS: Record<string, string> = {
   draft: 'orange',
@@ -120,9 +121,11 @@ export function PayrollDetailsPage() {
   const handleDownloadSlip = async (employeeId: string) => {
     try {
       if (!runData?.data) return;
-      const response = await fetch(`/api/v1/salary-slips/${id}/pdf?employeeId=${employeeId}`, { credentials: 'include' });
-      if (!response.ok) throw new Error('Failed');
-      const blob = await response.blob();
+      const response = await apiClient.get(`/api/v1/salary-slips/${id}/pdf`, {
+        params: { employeeId },
+        responseType: 'blob',
+      });
+      const blob = response.data instanceof Blob ? response.data : new Blob([response.data]);
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;

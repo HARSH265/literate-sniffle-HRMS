@@ -1,4 +1,5 @@
 import apiClient from '../../../core/api/apiClient';
+import { PaginatedResponse } from '@/types/shared';
 
 export interface Employee {
   id: string;
@@ -79,13 +80,6 @@ export interface CreateEmployee {
   esiExempted?: boolean;
   ptExempted?: boolean;
   ptState?: string;
-}
-
-export interface PaginatedResponse<T> {
-  success: boolean;
-  message: string;
-  data: T[];
-  meta: { page: number; limit: number; total: number; totalPages: number };
 }
 
 export const employeeService = {

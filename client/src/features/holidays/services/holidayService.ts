@@ -1,4 +1,5 @@
 import apiClient from '../../../core/api/apiClient';
+import { PaginatedResponse } from '@/types/shared';
 
 export interface Holiday {
   id: string;
@@ -17,13 +18,6 @@ export interface CreateHoliday {
   applicableTo?: 'all' | 'worker' | 'office-staff';
   year?: number;
   isPaid?: boolean;
-}
-
-export interface PaginatedResponse<T> {
-  success: boolean;
-  message: string;
-  data: T[];
-  meta: { page: number; limit: number; total: number; totalPages: number };
 }
 
 export const holidayService = {

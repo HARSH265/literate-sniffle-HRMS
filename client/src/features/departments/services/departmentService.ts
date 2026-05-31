@@ -1,5 +1,6 @@
 import apiClient from '../../../core/api/apiClient';
 import { API_ENDPOINTS } from '../../../core/constants/api.endpoints';
+import { PaginatedResponse } from '@/types/shared';
 
 export interface Department {
   id: string;
@@ -22,18 +23,6 @@ export interface UpdateDepartment {
   code?: string;
   description?: string;
   isActive?: boolean;
-}
-
-export interface PaginatedResponse<T> {
-  success: boolean;
-  message: string;
-  data: T[];
-  meta: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-  };
 }
 
 export const departmentService = {

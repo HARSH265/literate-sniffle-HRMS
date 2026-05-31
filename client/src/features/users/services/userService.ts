@@ -1,4 +1,5 @@
 import apiClient from '../../../core/api/apiClient';
+import { PaginatedResponse } from '@/types/shared';
 
 export interface User {
   id: string;
@@ -15,13 +16,6 @@ export interface CreateUser {
   email: string;
   password?: string;
   role: 'super-admin' | 'hr-admin' | 'hr-staff' | 'accounts' | 'manager';
-}
-
-export interface PaginatedResponse<T> {
-  success: boolean;
-  message: string;
-  data: T[];
-  meta: { page: number; limit: number; total: number; totalPages: number };
 }
 
 export const userService = {

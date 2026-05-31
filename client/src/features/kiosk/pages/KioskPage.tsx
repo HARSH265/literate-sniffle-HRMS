@@ -1,9 +1,9 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import QRCode from 'qrcode-generator';
 import { connectKiosk, disconnectKiosk } from '../../../core/socket/socketClient';
+import apiClient from '../../../core/api/apiClient';
 import { message } from 'antd';
 
-const API_URL = import.meta.env.VITE_API_URL || '';
 const POLL_INTERVAL = 30_000;
 
 function drawQR(canvas: HTMLCanvasElement, qrData: string) {
@@ -35,10 +35,8 @@ function drawQR(canvas: HTMLCanvasElement, qrData: string) {
 
 async function fetchQR(kioskId: string): Promise<string | null> {
   try {
-    const res = await fetch(`${API_URL}/api/v1/kiosk/${kioskId}/qr/public`);
-    if (!res.ok) return null;
-    const body = await res.json();
-    return body?.data?.qrToken ?? null;
+    const res = await apiClient.get(`/api/v1/kiosk/${kioskId}/qr/public`);
+    return res.data?.data?.qrToken ?? null;
   } catch {
     return null;
   }

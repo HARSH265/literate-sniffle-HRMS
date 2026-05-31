@@ -105,10 +105,16 @@ export function UsersPage() {
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
         const json = XLSX.utils.sheet_to_json(sheet) as any[];
 
+        const generateTempPassword = () => {
+          const array = new Uint8Array(12);
+          crypto.getRandomValues(array);
+          return Array.from(array, b => b.toString(36)).join('').slice(0, 12) + 'A1!';
+        };
+
         const users = json.map(row => ({
           name: row.Name || row.name,
           email: row.Email || row.email,
-          password: row.Password || row.password || 'TempPass123',
+          password: row.Password || row.password || generateTempPassword(),
           role: row.Role || row.role || 'hr-staff',
         })).filter(u => u.name && u.email);
 

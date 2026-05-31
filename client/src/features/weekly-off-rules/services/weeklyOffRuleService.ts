@@ -1,4 +1,5 @@
 import apiClient from '../../../core/api/apiClient';
+import { PaginatedResponse } from '@/types/shared';
 
 export interface WeeklyOffRule {
   id: string;
@@ -13,13 +14,6 @@ export interface CreateWeeklyOffRule {
   category?: 'all' | 'worker' | 'office-staff';
   offDays: number[];
   isActive?: boolean;
-}
-
-export interface PaginatedResponse<T> {
-  success: boolean;
-  message: string;
-  data: T[];
-  meta: { page: number; limit: number; total: number; totalPages: number };
 }
 
 export const weeklyOffRuleService = {
