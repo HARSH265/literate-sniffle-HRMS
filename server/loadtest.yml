@@ -1,0 +1,65 @@
+# loadtest.yml – Artillery scenario
+# NOTE: Start the server first: npm run dev:loadtest
+config:
+  target: "http://localhost:5000"
+  phases:
+    - duration: 30
+      arrivalRate: 2
+      rampTo: 5
+    - duration: 60
+      arrivalRate: 5
+  defaults:
+    headers:
+      Content-Type: "application/json"
+
+scenarios:
+  - name: "Authenticated heavy flow"
+    flow:
+      # 1 Health check (no auth needed)
+      - get:
+          url: "/api/v1/health"
+          expect:
+            - statusCode: 200
+
+      # 2 Log in - capture JWT
+      - post:
+          url: "/api/v1/auth/login"
+          json:
+            email: "harshit@hrms.com"
+            password: "Harshit@1234"
+          capture:
+            - json: "$.data.token"
+              as: "accessToken"
+
+      # 3 Small think time after login
+      - think: 1
+
+      # 4 List employees (auth required)
+      - get:
+          url: "/api/v1/employees"
+          qs:
+            page: 1
+            limit: 20
+          headers:
+            Authorization: "Bearer {{ accessToken }}"
+
+      # 5 List departments (auth required)
+      - get:
+          url: "/api/v1/departments"
+          qs:
+            page: 1
+            limit: 20
+          headers:
+            Authorization: "Bearer {{ accessToken }}"
+
+      # 6 Audit logs (auth required)
+      - get:
+          url: "/api/v1/audit-logs"
+          qs:
+            page: 1
+            limit: 20
+          headers:
+            Authorization: "Bearer {{ accessToken }}"
+
+      # 7 Think time between iterations
+      - think: 2

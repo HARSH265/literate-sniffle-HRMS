@@ -33,6 +33,7 @@ const ShiftSchema = new Schema<IShift>(
 
 ShiftSchema.index({ isActive: 1 });
 ShiftSchema.index({ applicableTo: 1 });
+ShiftSchema.index({ isActive: 1, applicableTo: 1 });
 
 const Shift = mongoose.model<IShift, ShiftModel>('Shift', ShiftSchema);
 

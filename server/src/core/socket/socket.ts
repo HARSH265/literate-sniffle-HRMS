@@ -6,8 +6,13 @@ import KioskDevice from '../../models/KioskDevice.model.js';
 import { env } from '../../config/env.js';
 import { TokenBlacklist } from '../auth/TokenBlacklist.js';
 import { logger } from '../logger/logger.js';
+// Optional Redis adapter for Socket.io clustering
+import { createAdapter } from '@socket.io/redis-adapter';
+import { createClient } from 'redis';
 
 let io: Server;
+let pubClient: ReturnType<typeof createClient> | null = null;
+let subClient: ReturnType<typeof createClient> | null = null;
 
 export function initSocket(httpServer: HTTPServer): Server {
   io = new Server(httpServer, {
@@ -16,6 +21,22 @@ export function initSocket(httpServer: HTTPServer): Server {
       credentials: true,
     },
   });
+  // If a Redis server URL is configured, set up the Redis adapter.
+  // This enables Socket.io to broadcast events across multiple Node.js processes.
+  if (env.REDIS_URL) {
+    pubClient = createClient({ url: env.REDIS_URL });
+    subClient = pubClient.duplicate();
+
+    // Connect both clients. Errors are logged but do not prevent the server from starting.
+    Promise.all([pubClient.connect(), subClient.connect()])
+      .then(() => {
+        io?.adapter(createAdapter(pubClient, subClient));
+        logger.info('Socket.io Redis adapter initialized');
+      })
+      .catch((err) => {
+        logger.error('Failed to initialize Redis adapter for Socket.io:', err);
+      });
+  }
 
   io.use(async (socket: Socket, next) => {
     const token = socket.handshake.auth?.token || socket.handshake.query?.token;
@@ -60,9 +81,38 @@ export function initSocket(httpServer: HTTPServer): Server {
     socket.on('disconnect', () => {
       logger.info(`Socket disconnected: ${socket.id}`);
     });
+
+    // End of connection handler
   });
 
   return io;
+}
+
+/**
+ * Gracefully shuts down the Socket.io server and any connected Redis clients.
+ */
+export async function closeSocket(): Promise<void> {
+  try {
+    if (io) {
+      await new Promise<void>((resolve, reject) => {
+        io.close((err?: any) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
+      logger.info('Socket.io server closed');
+    }
+    if (pubClient) {
+      await pubClient.quit();
+      logger.info('Socket.io Redis pub client closed');
+    }
+    if (subClient) {
+      await subClient.quit();
+      logger.info('Socket.io Redis sub client closed');
+    }
+  } catch (err) {
+    logger.error('Error during Socket.io shutdown:', err);
+  }
 }
 
 export function getIO(): Server {

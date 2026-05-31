@@ -7,6 +7,8 @@ import cookieParser from 'cookie-parser';
 import expressMongoSanitize from 'express-mongo-sanitize';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
+import { randomUUID } from 'crypto';
+import { requestLogger } from './core/middleware/requestLogger.js';
 import { errorHandler } from './core/errors/errorHandler.js';
 import { env } from './config/env.js';
 import { auditMiddleware } from './core/audit/AuditMiddleware.js';
@@ -46,16 +48,7 @@ dotenv.config();
 
 const app = express();
 
-app.use((_req, res, next) => {
-  res.setTimeout(30000, () => {
-    res.status(503).json({
-      success: false,
-      message: 'Request timed out',
-      errors: [],
-    });
-  });
-  next();
-});
+// Timeout handled per-route via DB socketTimeoutMS (env.DB_SOCKET_TIMEOUT_MS)
 
 app.use(helmet());
 app.use(
@@ -73,15 +66,28 @@ app.use(expressMongoSanitize());
 app.use(compression());
 app.use(morgan('short'));
 
+// Request‑ID middleware – adds X-Request-Id header for tracing
+app.use((req, res, next) => {
+  const requestId = randomUUID();
+  // Attach to request object (TS ignore)
+  (req as any).requestId = requestId;
+  // Expose to client via response header
+  res.setHeader('X-Request-Id', requestId);
+  next();
+});
+app.use(requestLogger);
+
 const authLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 10,
+  max: env.RATE_LIMIT_ENABLED ? 10 : 100000,
+  skip: () => !env.RATE_LIMIT_ENABLED,
   message: { success: false, message: 'Too many requests, please try again later', errors: [] },
 });
 
 const generalLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 100,
+  max: env.RATE_LIMIT_ENABLED ? 100 : 100000,
+  skip: () => !env.RATE_LIMIT_ENABLED,
   message: { success: false, message: 'Too many requests, please try again later', errors: [] },
 });
 

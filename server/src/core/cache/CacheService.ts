@@ -1,9 +1,10 @@
 import NodeCache from 'node-cache';
 import { CACHE_KEYS } from './cache.keys.js';
+import { env } from '../../config/env.js';
 
 const cache = new NodeCache({
-  stdTTL: 3600,
-  checkperiod: 600,
+  stdTTL: env.CACHE_TTL,
+  checkperiod: env.CACHE_CHECK_PERIOD,
   useClones: false,
 });
 

@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { ResponseHandler } from '../../core/response/ResponseHandler.js';
 import { helpdeskService } from './helpdesk.service.js';
 
 export const helpdeskController = {
@@ -6,7 +7,7 @@ export const helpdeskController = {
     try {
       const userId = (req as any).user._id;
       const ticket = await helpdeskService.create(req.body, userId.toString());
-      res.status(201).json({ success: true, data: ticket, message: 'Ticket created' });
+      ResponseHandler.created(res, ticket, 'Ticket created');
     } catch (err) {
       next(err);
     }
@@ -25,7 +26,7 @@ export const helpdeskController = {
         userId: req.query.userId as string,
         assignedTo: req.query.assignedTo as string,
       });
-      res.json({ success: true, ...result });
+      ResponseHandler.paginated(res, result.data, result.meta, 'Helpdesk tickets fetched');
     } catch (err) {
       next(err);
     }
@@ -35,9 +36,9 @@ export const helpdeskController = {
     try {
       const ticket = await helpdeskService.getById(req.params.id);
       if (!ticket) {
-        res.status(404).json({ success: false, message: 'Ticket not found' }); return;
+        ResponseHandler.error(res, 'Ticket not found', 404); return;
       }
-      res.json({ success: true, data: ticket });
+      ResponseHandler.success(res, ticket, 'Ticket fetched');
     } catch (err) {
       next(err);
     }
@@ -48,9 +49,9 @@ export const helpdeskController = {
       const userId = (req as any).user._id;
       const ticket = await helpdeskService.update(req.params.id, req.body, userId.toString());
       if (!ticket) {
-        res.status(404).json({ success: false, message: 'Ticket not found' }); return;
+        ResponseHandler.error(res, 'Ticket not found', 404); return;
       }
-      res.json({ success: true, data: ticket, message: 'Ticket updated' });
+      ResponseHandler.success(res, ticket, 'Ticket updated');
     } catch (err) {
       next(err);
     }
@@ -61,9 +62,9 @@ export const helpdeskController = {
       const userId = (req as any).user._id;
       const ticket = await helpdeskService.addComment(req.params.id, req.body, userId.toString());
       if (!ticket) {
-        res.status(404).json({ success: false, message: 'Ticket not found' }); return;
+        ResponseHandler.error(res, 'Ticket not found', 404); return;
       }
-      res.status(201).json({ success: true, data: ticket, message: 'Comment added' });
+      ResponseHandler.created(res, ticket, 'Comment added');
     } catch (err) {
       next(err);
     }
@@ -74,9 +75,9 @@ export const helpdeskController = {
       const userId = (req as any).user._id;
       const ticket = await helpdeskService.softDelete(req.params.id, userId.toString());
       if (!ticket) {
-        res.status(404).json({ success: false, message: 'Ticket not found' }); return;
+        ResponseHandler.error(res, 'Ticket not found', 404); return;
       }
-      res.json({ success: true, message: 'Ticket deleted' });
+      ResponseHandler.success(res, null, 'Ticket deleted');
     } catch (err) {
       next(err);
     }
@@ -85,7 +86,7 @@ export const helpdeskController = {
   async checkSla(_req: Request, res: Response, next: NextFunction) {
     try {
       const breached = await helpdeskService.checkSla();
-      res.json({ success: true, data: { breached } });
+      ResponseHandler.success(res, { breached }, 'SLA check completed');
     } catch (err) {
       next(err);
     }
@@ -94,7 +95,7 @@ export const helpdeskController = {
   async stats(_req: Request, res: Response, next: NextFunction) {
     try {
       const stats = await helpdeskService.getStats();
-      res.json({ success: true, data: stats });
+      ResponseHandler.success(res, stats, 'Helpdesk stats fetched');
     } catch (err) {
       next(err);
     }

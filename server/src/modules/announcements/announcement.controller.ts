@@ -33,7 +33,7 @@ export const announcementController = {
     try {
       const announcement = await announcementService.getById(req.params.id);
       if (!announcement) {
-        res.status(404).json({ success: false, message: 'Announcement not found' }); return;
+        ResponseHandler.error(res, 'Announcement not found', 404); return;
       }
       ResponseHandler.success(res, announcement);
     } catch (err) {
@@ -46,7 +46,7 @@ export const announcementController = {
       const userId = req.user!.id;
       const announcement = await announcementService.update(req.params.id, req.body, userId.toString());
       if (!announcement) {
-        res.status(404).json({ success: false, message: 'Announcement not found' }); return;
+        ResponseHandler.error(res, 'Announcement not found', 404); return;
       }
       ResponseHandler.success(res, announcement, 'Announcement updated');
     } catch (err) {
@@ -59,7 +59,7 @@ export const announcementController = {
       const userId = req.user!.id;
       const announcement = await announcementService.softDelete(req.params.id, userId.toString());
       if (!announcement) {
-        res.status(404).json({ success: false, message: 'Announcement not found' }); return;
+        ResponseHandler.error(res, 'Announcement not found', 404); return;
       }
       ResponseHandler.success(res, null, 'Announcement deleted');
     } catch (err) {
@@ -72,7 +72,7 @@ export const announcementController = {
       const userId = req.user!.id;
       const announcement = await announcementService.markAsRead(req.params.id, userId.toString());
       if (!announcement) {
-        res.status(404).json({ success: false, message: 'Announcement not found' }); return;
+        ResponseHandler.error(res, 'Announcement not found', 404); return;
       }
       ResponseHandler.success(res, announcement, 'Marked as read');
     } catch (err) {

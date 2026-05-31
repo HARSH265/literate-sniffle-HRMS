@@ -7,7 +7,7 @@ export const documentController = {
   upload: asyncHandler(async (req: Request, res: Response) => {
     const userId = (req as any).user._id;
     if (!req.file) {
-      res.status(400).json({ success: false, message: 'No file uploaded' }); return;
+      ResponseHandler.error(res, 'No file uploaded', 400); return;
     }
     const document = await DocumentService.upload(req.body, req.file, userId.toString());
     ResponseHandler.created(res, document, 'Document uploaded successfully');
@@ -29,7 +29,7 @@ export const documentController = {
   getById: asyncHandler(async (req: Request, res: Response) => {
     const document = await DocumentService.getById(req.params.id);
     if (!document) {
-      res.status(404).json({ success: false, message: 'Document not found' }); return;
+      ResponseHandler.error(res, 'Document not found', 404); return;
     }
     ResponseHandler.success(res, document, 'Document fetched successfully');
   }),
@@ -38,7 +38,7 @@ export const documentController = {
     const userId = (req as any).user._id;
     const document = await DocumentService.update(req.params.id, req.body, req.file, userId.toString());
     if (!document) {
-      res.status(404).json({ success: false, message: 'Document not found' }); return;
+      ResponseHandler.error(res, 'Document not found', 404); return;
     }
     ResponseHandler.success(res, document, 'Document updated successfully');
   }),
@@ -73,7 +73,7 @@ export const documentController = {
   download: asyncHandler(async (req: Request, res: Response) => {
     const document = await DocumentService.incrementDownload(req.params.id);
     if (!document) {
-      res.status(404).json({ success: false, message: 'Document not found' }); return;
+      ResponseHandler.error(res, 'Document not found', 404); return;
     }
     res.redirect(document.file.url);
   }),

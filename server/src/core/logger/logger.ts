@@ -1,4 +1,5 @@
 import winston from 'winston';
+import DailyRotateFile from 'winston-daily-rotate-file';
 import path from 'path';
 
 const { NODE_ENV } = process.env;
@@ -33,6 +34,19 @@ export const logger = winston.createLogger({
       filename: path.join(logDir, 'combined.log'),
       maxsize: 10 * 1024 * 1024,
       maxFiles: 10,
+    }),
+    // Daily rotating file transport for structured JSON logs
+    new DailyRotateFile({
+      filename: path.join(logDir, 'application-%DATE%.log'),
+      datePattern: 'YYYY-MM-DD',
+      zippedArchive: true,
+      maxSize: '20m',
+      maxFiles: '14d', // keep logs for 2 weeks
+      level: 'info',
+      format: winston.format.combine(
+        winston.format.timestamp(),
+        winston.format.json(),
+      ),
     }),
   ],
 });

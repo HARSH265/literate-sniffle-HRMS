@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { employeesController } from './employees.controller.js';
 import { validate } from '../../core/validation/validate.middleware.js';
+import rateLimit from 'express-rate-limit';
 import { createEmployeeSchema, updateEmployeeSchema, bulkAssignShiftSchema, listEmployeesSchema } from './employees.validation.js';
 import { authenticate } from '../../core/permissions/authenticate.middleware.js';
 import { authorize } from '../../core/permissions/authorize.middleware.js';
@@ -8,13 +9,19 @@ import { upload, uploadDocument, uploadPhoto } from '../../core/file/upload.midd
 
 const router = Router();
 
+const importLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 2,
+  message: { success: false, message: 'Too many import requests, try again later', errors: [] },
+});
+
 router.use(authenticate);
 
 router.get('/next-code', employeesController.generateNextCode);
 router.get('/', authorize('view-employees'), validate(listEmployeesSchema), employeesController.list);
 router.get('/export', authorize('view-employees'), employeesController.export);
 router.get('/template', authorize('view-employees'), employeesController.downloadTemplate);
-router.post('/import', authorize('manage-employees'), upload.single('file'), employeesController.import);
+router.post('/import', importLimiter, authorize('manage-employees'), upload.single('file'), employeesController.import);
 router.patch('/bulk/shift', authorize('manage-employees'), validate(bulkAssignShiftSchema), employeesController.bulkAssignShift);
 router.get('/:id', authorize('view-employees'), employeesController.getById);
 router.post('/', authorize('manage-employees'), validate(createEmployeeSchema), employeesController.create);

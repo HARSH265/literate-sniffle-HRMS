@@ -41,13 +41,13 @@ const uploadDocument = asyncHandler(async (req: Request, res: Response) => {
   const { documentType } = req.body;
   
   if (!req.file) {
-    res.status(400).json({ success: false, message: 'No file uploaded' });
+    ResponseHandler.error(res, 'No file uploaded', 400);
     return;
   }
 
   const employee = await Employee.findById(id);
   if (!employee) {
-    res.status(404).json({ success: false, message: 'Employee not found' });
+    ResponseHandler.error(res, 'Employee not found', 404);
     return;
   }
 
@@ -77,7 +77,7 @@ const uploadPhoto = asyncHandler(async (req: Request, res: Response) => {
 
   const employee = await Employee.findById(id);
   if (!employee) {
-    res.status(404).json({ success: false, message: 'Employee not found' });
+    ResponseHandler.error(res, 'Employee not found', 404);
     return;
   }
 
@@ -92,7 +92,7 @@ const removeDocument = asyncHandler(async (req: Request, res: Response) => {
   
   const employee = await Employee.findById(id);
   if (!employee) {
-    res.status(404).json({ success: false, message: 'Employee not found' });
+    ResponseHandler.error(res, 'Employee not found', 404);
     return;
   }
 
@@ -118,18 +118,18 @@ const downloadDocument = asyncHandler(async (req: Request, res: Response) => {
   
   const employee = await Employee.findById(id);
   if (!employee) {
-    res.status(404).json({ success: false, message: 'Employee not found' });
+    ResponseHandler.error(res, 'Employee not found', 404);
     return;
   }
 
   if (employee.status === 'archived' && !['super-admin', 'hr-admin'].includes(userRole)) {
-    res.status(403).json({ success: false, message: 'Access denied' });
+    ResponseHandler.error(res, 'Access denied', 403);
     return;
   }
 
   const doc = (employee.documents || []).find((d: any) => d._id?.toString() === docId);
   if (!doc) {
-    res.status(404).json({ success: false, message: 'Document not found' });
+    ResponseHandler.error(res, 'Document not found', 404);
     return;
   }
 

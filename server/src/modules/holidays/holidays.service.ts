@@ -3,6 +3,7 @@ import { AppError } from '../../core/errors/AppError.js';
 import { AuditService } from '../../core/audit/AuditService.js';
 import { PaginationUtil, PaginationMeta } from '../../core/utils/PaginationUtil.js';
 import { CacheService } from '../../core/cache/CacheService.js';
+import { CACHE_KEYS } from '../../core/cache/cache.keys.js';
 
 export class HolidaysService {
   static async list(queryParams: Record<string, unknown>): Promise<{ data: unknown[]; meta: PaginationMeta }> {
@@ -27,6 +28,12 @@ export class HolidaysService {
       filter.applicableTo = queryParams.applicableTo;
     }
 
+    // Cached result for default first page (no search, limit 20)
+    const cached = CacheService.get<{ data: unknown[]; meta: PaginationMeta }>(CACHE_KEYS.HOLIDAYS);
+    if (cached && !search && page === 1 && limit === 20) {
+      return cached;
+    }
+
     const skip = PaginationUtil.getSkip(page, limit);
     const sortObj: Record<string, 1 | -1> = { [sort]: order === 'asc' ? 1 : -1 };
 
@@ -40,8 +47,13 @@ export class HolidaysService {
       return { ...rest, id: String(_id), _id: undefined };
     });
     const meta = PaginationUtil.getMeta(page, limit, total);
+    const result = { data, meta };
 
-    return { data, meta };
+    if (!search && page === 1 && limit === 20) {
+      CacheService.set(CACHE_KEYS.HOLIDAYS, result, 3600);
+    }
+
+    return result;
   }
 
   static async getById(id: string): Promise<Record<string, unknown>> {

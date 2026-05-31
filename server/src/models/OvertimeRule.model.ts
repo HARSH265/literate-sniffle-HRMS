@@ -33,6 +33,7 @@ const OvertimeRuleSchema = new Schema<IOvertimeRule>(
 
 OvertimeRuleSchema.index({ isActive: 1 });
 OvertimeRuleSchema.index({ applicableTo: 1 });
+OvertimeRuleSchema.index({ isActive: 1, applicableTo: 1 });
 
 const OvertimeRule = mongoose.model<IOvertimeRule, OvertimeRuleModel>('OvertimeRule', OvertimeRuleSchema);
 

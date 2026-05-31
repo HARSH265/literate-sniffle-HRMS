@@ -132,69 +132,93 @@ export class AttendanceService {
 
   static async monthlyView(queryParams: Record<string, unknown>): Promise<Record<string, unknown>[]> {
     const { month, year, department } = queryParams;
-    
+
     const startDate = new Date(Number(year), Number(month) - 1, 1);
     const endDate = new Date(Number(year), Number(month), 0);
 
-    const employeeFilter: Record<string, unknown> = { status: 'active' };
+    // Build employee filter for active status (and optional department)
+    const employeeMatch: Record<string, unknown> = { 'employee.status': 'active' };
     if (department) {
-      employeeFilter.department = department;
+      employeeMatch['employee.department'] = department;
     }
 
-    const attendanceFilter = {
-      date: { $gte: startDate, $lte: endDate },
-    };
-
-    const attendanceRecords = await AttendanceEntry.find(attendanceFilter)
-      .populate('employee', 'fullName employeeCode')
-      .lean();
-
-    const recordsByEmployee: Record<string, Record<string, unknown>> = {};
-    
-    attendanceRecords.forEach((record) => {
-      const empId = String((record.employee as any)._id);
-      if (!recordsByEmployee[empId]) {
-        recordsByEmployee[empId] = {};
-      }
-      const day = new Date(record.date).getDate();
-      recordsByEmployee[empId][day] = record;
-    });
-
-    const employeesWithShifts = await Employee.find(employeeFilter)
-      .populate('shift', 'startTime')
-      .select('fullName employeeCode department shift')
-      .lean();
-
-    const empShiftMap: Record<string, string> = {};
-    employeesWithShifts.forEach((emp: any) => {
-      if (emp.shift) {
-        empShiftMap[String(emp._id)] = emp.shift.startTime;
-      }
-    });
-
-    const result = employeesWithShifts.map((emp: any) => {
-      const empId = String(emp._id);
-      const monthData: Record<string, unknown> = {
-        employee: {
-          id: empId,
-          fullName: emp.fullName,
-          employeeCode: emp.employeeCode,
-          department: emp.department,
+    // Aggregation pipeline to fetch attendance records grouped by employee and day
+    const pipeline = [
+      {
+        $match: {
+          date: { $gte: startDate, $lte: endDate },
         },
-        days: {},
-      };
+      },
+      {
+        $lookup: {
+          from: 'employees',
+          localField: 'employee',
+          foreignField: '_id',
+          as: 'employee',
+        },
+      },
+      { $unwind: '$employee' },
+      { $match: employeeMatch },
+      {
+        $project: {
+          employeeId: '$employee._id',
+          fullName: '$employee.fullName',
+          employeeCode: '$employee.employeeCode',
+          department: '$employee.department',
+          day: { $dayOfMonth: '$date' },
+          status: 1,
+          inTime: 1,
+          outTime: 1,
+          _id: 1,
+        },
+      },
+      {
+        $group: {
+          _id: '$employeeId',
+          employeeInfo: {
+            $first: {
+              fullName: '$fullName',
+              employeeCode: '$employeeCode',
+              department: '$department',
+            },
+          },
+          days: {
+            $push: {
+              day: '$day',
+              record: {
+                id: { $toString: '$_id' },
+                status: '$status',
+                inTime: '$inTime',
+                outTime: '$outTime',
+              },
+            },
+          },
+        },
+      },
+    ];
 
-      for (let day = 1; day <= endDate.getDate(); day++) {
-        const record = recordsByEmployee[empId]?.[day] as any;
-        (monthData.days as Record<string, unknown>)[day] = record ? {
-          id: String(record._id),
-          status: record.status,
-          inTime: record.inTime,
-          outTime: record.outTime,
-        } : null;
+    const aggResult = await AttendanceEntry.aggregate(pipeline as any).exec();
+
+    const result = aggResult.map((group) => {
+      const daysMap: Record<string, unknown> = {};
+      // Initialise every day of the month as null
+      for (let d = 1; d <= endDate.getDate(); d++) {
+        daysMap[d] = null;
       }
+      // Fill in days we have records for
+      (group.days as any[]).forEach((d) => {
+        daysMap[d.day] = d.record;
+      });
 
-      return monthData;
+      return {
+        employee: {
+          id: String(group._id),
+          fullName: group.employeeInfo.fullName,
+          employeeCode: group.employeeInfo.employeeCode,
+          department: group.employeeInfo.department,
+        },
+        days: daysMap,
+      };
     });
 
     return result;

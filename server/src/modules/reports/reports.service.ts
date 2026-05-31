@@ -199,7 +199,22 @@ export class ReportsService {
     }
 
     if (runs.length === 0) {
-      throw new Error('No payroll runs found');
+      await ExcelGeneratorService.generate(
+        res,
+        `Payroll_Report_${new Date().toISOString().split('T')[0]}.xlsx`,
+        'Payroll',
+        [
+          { header: 'Payroll Month', key: 'Payroll Month', width: 20 },
+          { header: 'Status', key: 'Status', width: 12 },
+          { header: 'Employees', key: 'Total Employees', width: 12 },
+          { header: 'Total Gross', key: 'Total Gross', width: 15 },
+          { header: 'Total Deductions', key: 'Total Deductions', width: 15 },
+          { header: 'Total Net Pay', key: 'Total Net Pay', width: 15 },
+          { header: 'Processed Date', key: 'Processed Date', width: 15 },
+        ],
+        [],
+      );
+      return;
     }
 
     const data: any[] = [];

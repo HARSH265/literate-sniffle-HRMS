@@ -25,14 +25,14 @@ export const assetController = {
 
   getById: asyncHandler(async (req: Request, res: Response) => {
     const asset = await AssetService.getById(req.params.id);
-    if (!asset) { res.status(404).json({ success: false, message: 'Asset not found' }); return; }
+    if (!asset) { ResponseHandler.error(res, 'Asset not found', 404); return; }
     ResponseHandler.success(res, asset, 'Asset fetched successfully');
   }),
 
   update: asyncHandler(async (req: Request, res: Response) => {
     const userId = (req as any).user._id;
     const asset = await AssetService.update(req.params.id, req.body, userId.toString());
-    if (!asset) { res.status(404).json({ success: false, message: 'Asset not found' }); return; }
+    if (!asset) { ResponseHandler.error(res, 'Asset not found', 404); return; }
     ResponseHandler.success(res, asset, 'Asset updated successfully');
   }),
 
@@ -40,7 +40,7 @@ export const assetController = {
     const userId = (req as any).user._id;
     const { employeeId, notes } = req.body;
     const asset = await AssetService.allocate(req.params.id, employeeId, notes, userId.toString());
-    if (!asset) { res.status(404).json({ success: false, message: 'Asset not found' }); return; }
+    if (!asset) { ResponseHandler.error(res, 'Asset not found', 404); return; }
     ResponseHandler.success(res, asset, 'Asset allocated successfully');
   }),
 
@@ -48,7 +48,7 @@ export const assetController = {
     const userId = (req as any).user._id;
     const { condition, notes } = req.body;
     const asset = await AssetService.returnAsset(req.params.id, condition, notes, userId.toString());
-    if (!asset) { res.status(404).json({ success: false, message: 'Asset not found' }); return; }
+    if (!asset) { ResponseHandler.error(res, 'Asset not found', 404); return; }
     ResponseHandler.success(res, asset, 'Asset returned successfully');
   }),
 
@@ -56,7 +56,7 @@ export const assetController = {
     const userId = (req as any).user._id;
     const { notes } = req.body;
     const asset = await AssetService.markMaintenance(req.params.id, notes, userId.toString());
-    if (!asset) { res.status(404).json({ success: false, message: 'Asset not found' }); return; }
+    if (!asset) { ResponseHandler.error(res, 'Asset not found', 404); return; }
     ResponseHandler.success(res, asset, 'Asset marked as maintenance');
   }),
 
@@ -64,7 +64,7 @@ export const assetController = {
     const userId = (req as any).user._id;
     const { notes } = req.body;
     const asset = await AssetService.retire(req.params.id, notes, userId.toString());
-    if (!asset) { res.status(404).json({ success: false, message: 'Asset not found' }); return; }
+    if (!asset) { ResponseHandler.error(res, 'Asset not found', 404); return; }
     ResponseHandler.success(res, asset, 'Asset retired successfully');
   }),
 
