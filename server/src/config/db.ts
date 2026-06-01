@@ -33,15 +33,3 @@ mongoose.connection.on('disconnected', () => {
 mongoose.connection.on('error', (err) => {
   logger.error('MongoDB error:', err);
 });
-
-process.on('SIGINT', async () => {
-  await mongoose.connection.close();
-  logger.info('MongoDB connection closed through app termination');
-  process.exit(0);
-});
-
-process.on('SIGTERM', async () => {
-  await mongoose.connection.close();
-  logger.info('MongoDB connection closed through app termination');
-  process.exit(0);
-});

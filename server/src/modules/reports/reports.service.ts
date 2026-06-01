@@ -8,6 +8,7 @@ import CompanySettings from '../../models/CompanySettings.model.js';
 import Department from '../../models/Department.model.js';
 import LeaveApplication from '../../models/LeaveApplication.model.js';
 import { ExcelGeneratorService } from '../../core/excel/ExcelGeneratorService.js';
+import { AppError } from '../../core/errors/AppError.js';
 import { Response } from 'express';
 
 export class ReportsService {
@@ -80,7 +81,7 @@ export class ReportsService {
       start = new Date(Number(year), Number(month) - 1, 1);
       end = new Date(Number(year), Number(month), 0);
     } else {
-      throw new Error('Either month/year or startDate/endDate required');
+      throw new AppError('Either month/year or startDate/endDate is required', 400, 'MISSING_PARAMS');
     }
 
     const settings = await CompanySettings.findOne().lean();
@@ -479,7 +480,7 @@ export class ReportsService {
       start = new Date(Number(year), Number(month) - 1, 1);
       end = new Date(Number(year), Number(month), 0);
     } else {
-      throw new Error('Either month/year or startDate/endDate required');
+      throw new AppError('Either month/year or startDate/endDate is required', 400, 'MISSING_PARAMS');
     }
 
     const employeeFilter: Record<string, unknown> = { status: 'active' };
@@ -1001,7 +1002,7 @@ export class ReportsService {
 
   static async saveScheduledExportConfig(config: Record<string, unknown>, userId?: string): Promise<Record<string, unknown>> {
     const settings = await CompanySettings.findOne();
-    if (!settings) throw new Error('Company settings not found');
+    if (!settings) throw new AppError('Company settings not found', 404, 'SETTINGS_NOT_FOUND');
     (settings as any).reportsConfig = { ...((settings as any).reportsConfig || {}), ...config };
     if (userId) (settings as any).updatedBy = userId;
     await settings.save();
