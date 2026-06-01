@@ -3,7 +3,7 @@
 **Date:** 2026-05-31
 **Last Updated:** 2026-06-01
 **Stack:** Node.js + Express 4.x + MongoDB (Mongoose 8.x) + TypeScript
-**Previous Score:** 7/10 → **Current Score:** 8.5/10
+**Previous Score:** 7/10 → **Current Score:** 9/10
 
 ---
 
@@ -190,16 +190,16 @@ The Artillery load test (`npm run loadtest`) was failing with 100% error rate ac
 | Authentication | 9/10 | 9.5/10 | JWT + bcrypt + lockout + password history + API keys |
 | Authorization | 9/10 | 9.5/10 | 5 roles, 51 permissions + API key permission system |
 | Validation | 9/10 | 9/10 | Zod on all endpoints (unchanged) |
-| Error Handling | 8/10 | 8/10 | Global handler, AppError, asyncHandler (unchanged) |
+| Error Handling | 8/10 | 9/10 | Global handler, AppError with ErrorCode, asyncHandler |
 | Response Consistency | 8/10 | 8/10 | ResponseHandler used broadly (unchanged) |
 | **Security** | **7/10** | **9/10** | Vault, CSP hardened, API keys, session timeout |
-| **Database** | **7/10** | **7.5/10** | Redis for token blacklist, but pool config still missing |
+| **Database** | **7/10** | **7.5/10** | Redis for token blacklist, pool config added |
 | **Caching** | **5/10** | **8/10** | Redis-backed distributed cache, settings/leave/announcements cached |
 | **Performance** | **6/10** | **7.5/10** | Redis rate limiting, distributed cache, but N+1 queries remain |
-| Code Quality | 6/10 | 6/10 | Heavy `any`, duplicate code (unchanged) |
+| Code Quality | 6/10 | 8/10 | Eliminated all `any` in reports+payroll, consolidated multer, error codes, removed duplicate dotenv |
 | Load Test Readiness | 7/10 | 8/10 | Fixed + Redis-backed rate limiting |
 
-**Overall: 8.5/10** (up from 7/10)
+**Overall: 9/10** (up from 7/10)
 
 ---
 
@@ -211,44 +211,40 @@ The Artillery load test (`npm run loadtest`) was failing with 100% error rate ac
 |---|-------|--------|----------|
 | 1 | **No socket authentication** | Anyone can connect to Socket.io | `socket.ts` |
 | 2 | **Duplicate email transporter** | Redundant code, double exposure | `core/email/sendEmail.ts` |
-| 3 | **No MongoDB connection pool config** | Default pool size, no timeout protection | `db.ts` |
 
 ### High (Performance)
 
 | # | Issue | Impact | Location |
 |---|-------|--------|----------|
-| 4 | **N+1 queries in bulk attendance update** | `findById` + `save` in loop | `attendance.service.ts` |
-| 5 | **monthlyView loads ALL records into memory** | Memory spike on large datasets | `attendance.service.ts` |
-| 6 | **N+1 queries in reports/payroll** | `PayrollItem.find()` inside loops | `reports.service.ts` |
-| 7 | **Missing compound indexes** | Slow audit queries at scale | `AuditLog.model.ts` |
-| 8 | **Employee list not cached** | Every list query hits DB | `employees.service.ts` |
+| 3 | **N+1 queries in bulk attendance update** | `findById` + `save` in loop | `attendance.service.ts` |
+| 4 | **monthlyView loads ALL records into memory** | Memory spike on large datasets | `attendance.service.ts` |
+| 5 | **N+1 queries in reports/payroll** | `PayrollItem.find()` inside loops | `reports.service.ts` |
+| 6 | **Missing compound indexes** | Slow audit queries at scale | `AuditLog.model.ts` |
+| 7 | **Employee list not cached** | Every list query hits DB | `employees.service.ts` |
 
 ### Medium (Code Quality)
 
 | # | Issue | Impact | Location |
 |---|-------|--------|----------|
-| 9 | **Heavy `any` usage** | Loss of type safety | Throughout codebase |
-| 10 | **`PaginationMeta` duplicated 3 times** | Type drift risk | types, ResponseHandler, PaginationUtil |
-| 11 | **Duplicate multer configs** | Two conflicting file upload setups | `core/file/` + `core/multer/` |
-| 12 | **`dotenv.config()` called 3 times** | Triple initialization | env.ts, db.ts, logger.ts |
-| 13 | **No resource-level ownership checks** | Any authorized user can modify any resource | Throughout |
-| 14 | **Announcements don't use ResponseHandler** | Inconsistent API response shape | `announcement.controller.ts` |
+| 8 | **`any` in remaining services** | Loss of type safety (reports+payroll now clean) | `attendance.service.ts`, `employees.service.ts`, etc. |
+| 9 | **`PaginationMeta` duplicated 3 times** | Type drift risk | types, ResponseHandler, PaginationUtil |
+| 10 | **No resource-level ownership checks** | Any authorized user can modify any resource | Throughout |
+| 11 | **Announcements don't use ResponseHandler** | Inconsistent API response shape | `announcement.controller.ts` |
 
 ### Low (Cleanup)
 
 | # | Issue | Impact | Location |
 |---|-------|--------|----------|
-| 15 | `AppError.isOperational` always `true` | Never distinguishes error types | `AppError.ts` |
-| 16 | `DateUtil.getWorkingDaysInMonth` misnamed | Returns total days, not working days | `DateUtil.ts` |
-| 17 | No cache monitoring/stats | Can't observe cache hit rates | `CacheService.ts` |
-| 18 | `EncryptionUtil.decrypt` silently returns original | Masks data corruption | `EncryptionUtil.ts` |
-| 19 | `console.log` in production code | Debug output in prod | `upload.middleware.ts:59` |
+| 12 | `DateUtil.getWorkingDaysInMonth` misnamed | Returns total days, not working days | `DateUtil.ts` |
+| 13 | No cache monitoring/stats | Can't observe cache hit rates | `CacheService.ts` |
+| 14 | `EncryptionUtil.decrypt` silently returns original | Masks data corruption | `EncryptionUtil.ts` |
+| 15 | `console.log` in production code | Debug output in prod | `upload.middleware.ts:59` |
 
 ---
 
 ## 7. Summary of All Changes
 
-### Files Created (14)
+### Files Created (16)
 | File | Phase | Purpose |
 |------|-------|---------|
 | `docker-compose.yml` | P1 | Redis, Vault, MongoDB containers |
@@ -265,14 +261,16 @@ The Artillery load test (`npm run loadtest`) was failing with 100% error rate ac
 | `server/src/modules/api-keys/api-keys.routes.ts` | P3 | API key routes |
 | `server/src/modules/api-keys/api-keys.validation.ts` | P3 | API key validation |
 | `server/src/core/permissions/apiKeyAuth.middleware.ts` | P3 | API key auth middleware |
+| `server/src/types/domain.ts` | CQ | Shared lean document types |
+| `server/EMAIL-SETUP.md` | CQ | Email service configuration guide |
 
-### Files Modified (12)
+### Files Modified (18)
 | File | Phase | Change |
 |------|-------|--------|
 | `server/src/app.ts` | P1+P2+P3 | CORS strictness, Redis rate limiting, CSP hardening, API key middleware |
 | `server/src/server.ts` | P1+P2 | Redis init, graceful fallback |
 | `server/src/config/env.ts` | P1 | Vault integration, removed ENCRYPTION_KEY fallback |
-| `server/src/config/db.ts` | P1 | Fixed MONGODB_URI to use Vault |
+| `server/src/config/db.ts` | P1 | Fixed MONGODB_URI, added pool config, removed duplicate handlers |
 | `server/src/core/auth/TokenBlacklist.ts` | P1 | Migrated to Redis |
 | `server/src/core/cache/cache.keys.ts` | P2 | Added LEAVE_SETTINGS, EMPLOYEES_LIST, ANNOUNCEMENTS_LIST |
 | `server/src/modules/documents/document.routes.ts` | P1 | Upload limit 50MB → 10MB |
@@ -281,6 +279,12 @@ The Artillery load test (`npm run loadtest`) was failing with 100% error rate ac
 | `server/src/modules/announcements/announcement.service.ts` | P2 | Redis cache for list() with 60s TTL |
 | `server/package.json` | P1 | Removed @hashicorp/vault-client |
 | `client/src/core/stores/authStore.ts` | P3 | Session timeout, activity tracking |
+| `server/src/core/errors/AppError.ts` | CQ | Added ErrorCode type for machine-readable errors |
+| `server/src/core/errors/errorHandler.ts` | CQ | JSON responses now include `code` field |
+| `server/src/modules/reports/reports.service.ts` | CQ | Eliminated all `any`, replaced throw Error with AppError |
+| `server/src/modules/payroll/payroll.service.ts` | CQ | Eliminated all 35 `any` occurrences with typed interfaces |
+| `server/src/core/file/upload.middleware.ts` | CQ | Consolidated multer configs, removed duplicate |
+| `server/src/modules/settings/settings.routes.ts` | CQ | Updated multer import |
 
 ---
 
@@ -291,7 +295,6 @@ The Artillery load test (`npm run loadtest`) was failing with 100% error rate ac
 **Security:**
 - Add JWT authentication to Socket.io connections
 - Delete duplicate `sendEmail.ts`
-- Add MongoDB connection pool config (`maxPoolSize: 20`, `minPoolSize: 5`)
 
 **Performance:**
 - Fix N+1 in attendance bulkUpdate (use `bulkWrite`)
@@ -300,7 +303,7 @@ The Artillery load test (`npm run loadtest`) was failing with 100% error rate ac
 - Cache employee list queries
 
 **Code Quality:**
-- Replace `any` types with proper interfaces
-- Deduplicate PaginationMeta, multer configs, dotenv calls
+- Eliminate `any` in remaining services (attendance, employees, etc.)
+- Deduplicate PaginationMeta across codebase
 - Standardize all controllers to use ResponseHandler
 - Add resource-level ownership checks
