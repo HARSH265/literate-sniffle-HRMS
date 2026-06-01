@@ -12,6 +12,7 @@ import { randomUUID } from 'crypto';
 import { requestLogger } from './core/middleware/requestLogger.js';
 import { errorHandler } from './core/errors/errorHandler.js';
 import { env } from './config/env.js';
+import { authenticateApiKey } from './core/permissions/apiKeyAuth.middleware.js';
 
 // Enforce a strict CORS whitelist in non‑development environments
 if (env.NODE_ENV !== 'development') {
@@ -53,6 +54,7 @@ import documentRoutes from './modules/documents/document.routes.js';
 import shiftSwapRoutes from './modules/shift-swap/shiftSwap.routes.js';
 import performanceRoutes from './modules/performance/performance.routes.js';
 import trainingRoutes from './modules/training/training.routes.js';
+import apiKeyRoutes from './modules/api-keys/api-keys.routes.js';
 
 dotenv.config();
 
@@ -60,7 +62,31 @@ const app = express();
 
 // Timeout handled per-route via DB socketTimeoutMS (env.DB_SOCKET_TIMEOUT_MS)
 
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", 'data:', 'https:'],
+      fontSrc: ["'self'"],
+      connectSrc: ["'self'"],
+      frameSrc: ["'none'"],
+      objectSrc: ["'none'"],
+      baseUri: ["'self'"],
+      formAction: ["'self'"],
+      upgradeInsecureRequests: [],
+    },
+  },
+  crossOriginEmbedderPolicy: false,
+  crossOriginResourcePolicy: { policy: 'same-site' },
+  referrerPolicy: { policy: 'no-referrer' },
+  hsts: { maxAge: 31536000, includeSubDomains: true, preload: true },
+  noSniff: true,
+  xssFilter: true,
+  hidePoweredBy: true,
+  frameguard: { action: 'deny' },
+}));
 app.use(
   cors({
     origin: env.NODE_ENV === 'development'
@@ -105,6 +131,8 @@ if (env.RATE_LIMIT_ENABLED) {
   app.use('/api/v1', RateLimiterDynamic.middleware(generalLimiter));
 }
 
+app.use(authenticateApiKey);
+
 app.get('/api/v1/health', async (_req, res) => {
   try {
     const mongoose = await import('mongoose');
@@ -139,6 +167,7 @@ app.get('/api/v1/health', async (_req, res) => {
 });
 
 app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/api-keys', apiKeyRoutes);
 app.use('/api/v1/users', auditMiddleware, userRoutes);
 app.use('/api/v1/departments', auditMiddleware, departmentRoutes);
 app.use('/api/v1/designations', auditMiddleware, designationRoutes);
