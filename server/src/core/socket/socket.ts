@@ -58,32 +58,61 @@ export function initSocket(httpServer: HTTPServer): Server {
   });
 
   io.on('connection', (socket) => {
-    logger.info(`Socket connected: ${socket.id}`);
+  // Helper to enforce role‑based access on socket events
+  const hasRole = (allowed: string[]) => {
+    const user = (socket as any).user as { role: string } | undefined;
+    return user && allowed.includes(user.role);
+  };
 
-    socket.on('join-kiosk', (kioskId: string) => {
-      socket.join(`kiosk:${kioskId}`);
-    });
-
-    socket.on('leave-kiosk', (kioskId: string) => {
-      socket.leave(`kiosk:${kioskId}`);
-    });
-
-    socket.on('kiosk-ping', async (kioskId: string) => {
-      try {
-        const isObjectId = mongoose.Types.ObjectId.isValid(kioskId);
-        const filter = isObjectId ? { _id: kioskId } : { deviceCode: kioskId };
-        await KioskDevice.updateOne(filter, { lastSeenAt: new Date() });
-      } catch (err) {
-        logger.error('Kiosk ping error:', err);
-      }
-    });
-
-    socket.on('disconnect', () => {
-      logger.info(`Socket disconnected: ${socket.id}`);
-    });
-
-    // End of connection handler
+  // Generic guard – reject any event if the socket is not authenticated
+  socket.use((packet, next) => {
+    if (!(socket as any).user) {
+      logger.warn(`Unauthenticated socket attempted event ${packet[0]}`);
+      return next(new Error('Authentication required'));
+    }
+    next();
   });
+
+  logger.info(`Socket connected: ${socket.id}`);
+
+  socket.on('join-kiosk', (kioskId: string) => {
+    // Example: only admins or super‑admins can join kiosk rooms
+    if (!hasRole(['super-admin', 'hr-admin', 'admin'])) {
+      logger.warn(`Socket ${socket.id} unauthorized to join kiosk ${kioskId}`);
+      return socket.emit('error', 'Unauthorized');
+    }
+    socket.join(`kiosk:${kioskId}`);
+  });
+
+  socket.on('leave-kiosk', (kioskId: string) => {
+    if (!hasRole(['super-admin', 'hr-admin', 'admin'])) {
+      logger.warn(`Socket ${socket.id} unauthorized to leave kiosk ${kioskId}`);
+      return socket.emit('error', 'Unauthorized');
+    }
+    socket.leave(`kiosk:${kioskId}`);
+  });
+
+  socket.on('kiosk-ping', async (kioskId: string) => {
+    if (!hasRole(['super-admin', 'hr-admin', 'admin'])) {
+      logger.warn(`Socket ${socket.id} unauthorized to ping kiosk ${kioskId}`);
+      return socket.emit('error', 'Unauthorized');
+    }
+    try {
+      const isObjectId = mongoose.Types.ObjectId.isValid(kioskId);
+      const filter = isObjectId ? { _id: kioskId } : { deviceCode: kioskId };
+      await KioskDevice.updateOne(filter, { lastSeenAt: new Date() });
+    } catch (err) {
+      logger.error('Kiosk ping error:', err);
+    }
+  });
+
+  socket.on('disconnect', () => {
+    logger.info(`Socket disconnected: ${socket.id}`);
+  });
+
+  // End of connection handler
+});
+
 
   return io;
 }

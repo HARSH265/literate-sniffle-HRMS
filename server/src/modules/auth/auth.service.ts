@@ -23,7 +23,10 @@ async function getAuthConfig(): Promise<{ tokenExpiry: string; refreshTokenExpir
 
 export class AuthService {
   static async login(email: string, password: string, ipAddress?: string, userAgent?: string) {
+
+
     const user = await User.findOne({ email: email.toLowerCase() });
+
 
     if (!user) {
       throw new AppError('Invalid email or password', 401);
@@ -234,6 +237,7 @@ export class AuthService {
 
   static async forgotPassword(email: string) {
     const user = await User.findOne({ email: email.toLowerCase() });
+
 
     if (!user) {
       return { message: 'If an account exists, a reset email has been sent.' };

@@ -271,14 +271,12 @@ export class AttendanceService {
 
     for (const entry of data.entries) {
       try {
-        const emp = employees.find((e: any) => String(e._id) === String(entry.employee));
-        if (!emp) {
+        const shift = empShiftMap[String(entry.employee)];
+        if (!shift) {
           results.push({ employee: entry.employee, status: 'failed', error: 'Employee not found' });
           continue;
         }
-
-        const shift = empShiftMap[String(entry.employee)];
-        const shiftStartTime = shift?.startTime;
+        const shiftStartTime = shift.startTime;
 
         if (entry.inTime && entry.outTime) {
           const inMinutes = parseTimeToMinutes(entry.inTime as string);
