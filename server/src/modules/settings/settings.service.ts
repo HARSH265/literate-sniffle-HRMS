@@ -1,6 +1,9 @@
 import CompanySettings from '../../models/CompanySettings.model.js';
 import { AuditService } from '../../core/audit/AuditService.js';
 import { encryptEmailConfig, decryptEmailConfig } from '../../core/utils/EncryptionUtil.js';
+import { RedisCacheService } from '../../core/cache/RedisCacheService.js';
+import { CACHE_KEYS } from '../../core/cache/cache.keys.js';
+import { EmailService } from '../../core/email/EmailService.js';
 
 function getChangedFields(oldObj: any, newObj: any, prefix = ''): Record<string, { old: any; new: any }> {
   const changes: Record<string, { old: any; new: any }> = {};
@@ -25,6 +28,9 @@ function getChangedFields(oldObj: any, newObj: any, prefix = ''): Record<string,
 
 export class SettingsService {
   static async get(): Promise<Record<string, unknown>> {
+    const cached = await RedisCacheService.get<Record<string, unknown>>(CACHE_KEYS.SETTINGS);
+    if (cached) return cached;
+
     let settings = await CompanySettings.findOne().lean() as any;
     
     if (!settings) {
@@ -36,6 +42,7 @@ export class SettingsService {
       result.emailConfig = decryptEmailConfig(result.emailConfig);
     }
     
+    await RedisCacheService.set(CACHE_KEYS.SETTINGS, result, 300);
     return result;
   }
 
@@ -151,6 +158,9 @@ export class SettingsService {
 
     (settings as any).updatedBy = userId;
     await (settings as any).save();
+
+    await RedisCacheService.invalidate(CACHE_KEYS.SETTINGS);
+    await RedisCacheService.invalidate(CACHE_KEYS.LEAVE_SETTINGS);
 
     const changedFields = Object.keys(changes);
     const changeSummary = changedFields.length > 0 

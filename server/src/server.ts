@@ -8,9 +8,18 @@ import { env } from './config/env.js';
 import { logger } from './core/logger/logger.js';
 import { initSocket, closeSocket } from './core/socket/socket.js';
 import { announcementService } from './modules/announcements/announcement.service.js';
+import { RedisService } from './core/redis/redis.service.js';
 
 async function startServer() {
   await connectDatabase();
+
+  // Initialize Redis connection
+  try {
+    await RedisService.getClient();
+    logger.info('Redis connected');
+  } catch (err) {
+    logger.warn('Redis unavailable – caching and rate limiting will use in-memory fallback');
+  }
 
   // Try to bind the HTTP server. If the default port is already in use,
   // increment the port number (up to a few attempts) so the process can start.

@@ -9,6 +9,8 @@ import { AppError } from '../../core/errors/AppError.js';
 import { AuditService } from '../../core/audit/AuditService.js';
 import { NotificationService } from '../../core/notification/NotificationService.js';
 import { PaginationUtil, PaginationMeta } from '../../core/utils/PaginationUtil.js';
+import { RedisCacheService } from '../../core/cache/RedisCacheService.js';
+import { CACHE_KEYS } from '../../core/cache/cache.keys.js';
 
 function parseDate(dateStr: string): Date {
   const [y, m, d] = dateStr.split('-').map(Number);
@@ -31,8 +33,11 @@ function countCalendarDays(start: Date, end: Date): number {
 }
 
 async function getLeaveSettings() {
+  const cached = await RedisCacheService.get<any>(CACHE_KEYS.LEAVE_SETTINGS);
+  if (cached) return cached;
+
   const settings = await CompanySettings.findOne().lean();
-  return (settings as any)?.leaveConfig || {
+  const result = (settings as any)?.leaveConfig || {
     financialYearStartMonth: 4,
     accrualDayOfMonth: 1,
     defaultApprovalLevels: 1,
@@ -42,6 +47,9 @@ async function getLeaveSettings() {
     allowanceProRateMode: 'days',
     deductionProRateMode: 'days',
   };
+
+  await RedisCacheService.set(CACHE_KEYS.LEAVE_SETTINGS, result, 300);
+  return result;
 }
 
 function mapId(doc: any): any {

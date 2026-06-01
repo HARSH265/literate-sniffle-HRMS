@@ -4,6 +4,7 @@ import User from '../../models/User.model.js';
 import Employee from '../../models/Employee.model.js';
 import { AuditService } from '../../core/audit/AuditService.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
+import { RedisCacheService } from '../../core/cache/RedisCacheService.js';
 
 interface CreateAnnouncementData {
   title: string;
@@ -109,6 +110,7 @@ export const announcementService = {
       );
     }
 
+    await RedisCacheService.invalidatePattern('announcements:list:*');
     return announcement;
   },
 
@@ -145,6 +147,11 @@ export const announcementService = {
       ];
     }
 
+    const cacheKey = `announcements:list:${page}:${limit}:${options.priority || ''}:${options.status || ''}:${options.search || ''}:${options.sort || ''}`;
+
+    const cached = await RedisCacheService.get<{ data: any[]; meta: any }>(cacheKey);
+    if (cached) return cached;
+
     const sortOrder: Record<string, 1 | -1> = {};
     if (options.sort === 'oldest') {
       sortOrder.createdAt = 1;
@@ -165,7 +172,9 @@ export const announcementService = {
       Announcement.countDocuments(filter),
     ]);
 
-    return { data, meta: { page, limit, total, totalPages: Math.ceil(total / limit) } };
+    const result = { data, meta: { page, limit, total, totalPages: Math.ceil(total / limit) } };
+    await RedisCacheService.set(cacheKey, result, 60);
+    return result;
   },
 
   async getById(id: string): Promise<IAnnouncement | null> {
@@ -199,6 +208,7 @@ export const announcementService = {
         targetName: announcement.title,
         details: { updatedFields: Object.keys(updateData) },
       });
+      await RedisCacheService.invalidatePattern('announcements:list:*');
     }
 
     return announcement;
@@ -219,6 +229,7 @@ export const announcementService = {
         targetId: announcement._id.toString(),
         targetName: announcement.title,
       });
+      await RedisCacheService.invalidatePattern('announcements:list:*');
     }
 
     return announcement;

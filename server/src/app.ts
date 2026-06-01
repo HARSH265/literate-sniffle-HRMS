@@ -5,8 +5,9 @@ import morgan from 'morgan';
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import expressMongoSanitize from 'express-mongo-sanitize';
-import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
+import { RateLimiterDynamic } from './core/cache/RateLimiterDynamic.js';
+import { RedisService } from './core/redis/redis.service.js';
 import { randomUUID } from 'crypto';
 import { requestLogger } from './core/middleware/requestLogger.js';
 import { errorHandler } from './core/errors/errorHandler.js';
@@ -86,34 +87,44 @@ app.use((req, res, next) => {
 });
 app.use(requestLogger);
 
-const authLimiter = rateLimit({
+const authLimiter = new RateLimiterDynamic({
   windowMs: 60 * 1000,
   max: env.RATE_LIMIT_ENABLED ? 10 : 100000,
-  skip: () => !env.RATE_LIMIT_ENABLED,
-  message: { success: false, message: 'Too many requests, please try again later', errors: [] },
+  keyPrefix: 'auth',
+  blockDurationMs: 5 * 60 * 1000,
 });
 
-const generalLimiter = rateLimit({
+const generalLimiter = new RateLimiterDynamic({
   windowMs: 60 * 1000,
   max: env.RATE_LIMIT_ENABLED ? 100 : 100000,
-  skip: () => !env.RATE_LIMIT_ENABLED,
-  message: { success: false, message: 'Too many requests, please try again later', errors: [] },
+  keyPrefix: 'general',
 });
 
-app.use('/api/v1/auth', authLimiter);
-app.use('/api/v1', generalLimiter);
+if (env.RATE_LIMIT_ENABLED) {
+  app.use('/api/v1/auth', RateLimiterDynamic.middleware(authLimiter));
+  app.use('/api/v1', RateLimiterDynamic.middleware(generalLimiter));
+}
 
 app.get('/api/v1/health', async (_req, res) => {
   try {
     const mongoose = await import('mongoose');
     const dbState = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
     const memUsage = process.memoryUsage();
+
+    let redisStatus = 'unavailable';
+    try {
+      const redis = await RedisService.getClient();
+      await redis.ping();
+      redisStatus = 'connected';
+    } catch { /* Redis not available */ }
+
     res.json({
       success: true,
       message: 'Server is healthy',
       data: {
         uptime: process.uptime(),
         database: dbState,
+        redis: redisStatus,
         memory: {
           rss: Math.round(memUsage.rss / 1024 / 1024) + ' MB',
           heapUsed: Math.round(memUsage.heapUsed / 1024 / 1024) + ' MB',
