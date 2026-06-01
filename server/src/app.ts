@@ -5,7 +5,6 @@ import morgan from 'morgan';
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import expressMongoSanitize from 'express-mongo-sanitize';
-import dotenv from 'dotenv';
 import { RateLimiterDynamic } from './core/cache/RateLimiterDynamic.js';
 import { RedisService } from './core/redis/redis.service.js';
 import { randomUUID } from 'crypto';
@@ -55,8 +54,6 @@ import shiftSwapRoutes from './modules/shift-swap/shiftSwap.routes.js';
 import performanceRoutes from './modules/performance/performance.routes.js';
 import trainingRoutes from './modules/training/training.routes.js';
 import apiKeyRoutes from './modules/api-keys/api-keys.routes.js';
-
-dotenv.config();
 
 const app = express();
 
