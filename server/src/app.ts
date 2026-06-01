@@ -11,6 +11,15 @@ import { randomUUID } from 'crypto';
 import { requestLogger } from './core/middleware/requestLogger.js';
 import { errorHandler } from './core/errors/errorHandler.js';
 import { env } from './config/env.js';
+
+// Enforce a strict CORS whitelist in non‑development environments
+if (env.NODE_ENV !== 'development') {
+  // allowedOrigins is derived from CLIENT_URL – ensure it does not contain a wildcard
+  if (!env.allowedOrigins.length || env.allowedOrigins.includes('*')) {
+    throw new Error('CORS configuration error: In production you must provide a non‑wildcard CLIENT_URL (comma‑separated list)');
+  }
+}
+
 import { auditMiddleware } from './core/audit/AuditMiddleware.js';
 import authRoutes from './modules/auth/auth.routes.js';
 import userRoutes from './modules/users/users.routes.js';

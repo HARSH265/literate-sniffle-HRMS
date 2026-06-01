@@ -210,3 +210,28 @@ The Artillery load test (`npm run loadtest`) was failing with 100% error rate ac
 13. Deduplicate PaginationMeta, multer configs, dotenv calls
 14. Standardize all controllers to use ResponseHandler
 15. Add resource-level ownership checks where needed
+
+## 6. Hardening Implementation Details (Best Practices)
+
+### Secret Management
+- Use a local HashiCorp Vault container (docker‑compose).
+- Store all production‑like secrets (MongoDB URI, JWT secrets, ENCRYPTION_KEY, Cloudinary creds, email password) under `secret/data/hrms`.
+- Add a `scripts/vault-setup.sh` script to seed these secrets in a fresh dev environment.
+- Introduce `src/core/vault/vault.service.ts` that lazily loads and caches the entire secret set.
+- `src/config/env.ts` now retrieves sensitive values via `VaultService` and throws if any are missing.
+- `.env` is limited to non‑sensitive values (PORT, CLIENT_URL, REDIS_URL, VAULT_ADDR, VAULT_TOKEN) and is ignored by Git.
+
+### Rate‑Limiting Strategy
+- Rate limiters are **always enabled**; a new `DEV_RATE_LIMIT` flag (default `true`) allows load‑test scripts to temporarily skip them.
+- Auth limiter: 20 req/min per IP (production), 10 req/min for dev.
+- General limiter: 200 req/min per IP (production), 100 req/min for dev.
+- QR attendance endpoint limiter: 10 req/min per IP (still enforced after adding authentication).
+
+### Additional Hardening Items
+- Reduce public document upload limit from **50 MB** to **10 MB** and enforce strict MIME whitelist.
+- Enforce strict CORS whitelist in any non‑development environment; abort start‑up if mis‑configured.
+- Move token blacklist from in‑memory collection to Redis (shared with Socket.io adapter).
+- Add JWT authentication to Socket.io connections.
+- Encrypt `CompanySettings.email.password` at rest using `EncryptionUtil`.
+
+These details expand the previously listed “Recommended Next Steps” with concrete implementation choices and rationale.

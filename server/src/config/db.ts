@@ -3,7 +3,7 @@ import { logger } from '../core/logger/logger.js';
 import { createMissingIndexes } from './indexes.js';
 import { env } from '../config/env.js';
 
-const { MONGODB_URI } = process.env;
+const { MONGODB_URI } = env;
 
 export async function connectDatabase(): Promise<void> {
   try {

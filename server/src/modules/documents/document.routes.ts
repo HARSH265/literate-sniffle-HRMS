@@ -9,7 +9,7 @@ import { authorize } from '../../core/permissions/authorize.middleware.js';
 const memoryStorage = multer.memoryStorage();
 const documentUpload = multer({
   storage: memoryStorage,
-  limits: { fileSize: 50 * 1024 * 1024 },
+  limits: { fileSize: 10 * 1024 * 1024 },
 });
 
 function parseJsonFields(fields: string[]) {
