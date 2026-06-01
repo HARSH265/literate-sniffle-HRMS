@@ -1,12 +1,14 @@
-import PayrollRun from '../../models/PayrollRun.model.js';
+import PayrollRun, { IPayrollRun } from '../../models/PayrollRun.model.js';
 import mongoose from 'mongoose';
-import PayrollItem from '../../models/PayrollItem.model.js';
+import PayrollItem, { IPayrollItem } from '../../models/PayrollItem.model.js';
 import Employee from '../../models/Employee.model.js';
+import type { LeanEmployee } from '../../types/domain.js';
 import { calculateStatutoryForEmployee } from '../statutory/statutory.service.js';
 import AttendanceEntry from '../../models/AttendanceEntry.model.js';
 import OvertimeEntry from '../../models/OvertimeEntry.model.js';
 import OvertimeRule from '../../models/OvertimeRule.model.js';
 import CompanySettings from '../../models/CompanySettings.model.js';
+import type { AllowanceConfig, DeductionConfig } from '../../models/CompanySettings.model.js';
 import LeaveApplication from '../../models/LeaveApplication.model.js';
 import LoanRepayment from '../../models/LoanRepayment.model.js';
 import User from '../../models/User.model.js';
@@ -15,6 +17,55 @@ import { AuditService } from '../../core/audit/AuditService.js';
 import { PaginationUtil, PaginationMeta } from '../../core/utils/PaginationUtil.js';
 import { NotificationService } from '../../core/notification/NotificationService.js';
 import dayjs from 'dayjs';
+
+type PayrollConfig = {
+  overtimeBase: 'basic' | 'basicPlusAllowances';
+  overtimeMultiplier: number;
+  halfDayDeductionPercent: number;
+  lateDeductionPerDay: number;
+  paidWeeklyOff: boolean;
+  paidHolidays: boolean;
+  defaultWorkingDays: number;
+  standardHoursPerDay: number;
+  payrollLockDays: number;
+  unfinalizeWindowDays: number;
+  otTricksEnabled: boolean;
+  otRoundingMinutes: number;
+  otRoundingMethod: 'floor' | 'ceil' | 'round';
+  otMultiplierBasicOnly: boolean;
+};
+
+interface PayrollCalcResult {
+  totalDays: number;
+  presentDays: number;
+  absentDays: number;
+  halfDays: number;
+  paidLeaveDays: number;
+  unpaidLeaveDays: number;
+  weeklyOffs: number;
+  holidays: number;
+  effectiveWorkingDays: number;
+  overtimeHours: number;
+  overtimeHoursAllowed: number;
+  overtimeRuleApplied: { name: string; multiplier: number } | null;
+  overtimeAmount: number;
+  basicEarnings: number;
+  allowances: { name: string; type: string; value: number; calculatedValue: number }[];
+  allowancesTotal: number;
+  grossEarnings: number;
+  deductions: { name: string; type: string; value: number; calculatedValue: number }[];
+  totalDeductions: number;
+  employerContributions: { name: string; calculatedValue: number }[];
+  loanEmiDeduction: number;
+  netPay: number;
+  employee: { id: string; name: string; code: string };
+  _loanRepaymentId?: string;
+}
+
+interface PayrollResultRow {
+  id: string;
+  [key: string]: unknown;
+}
 
 function getDaysInMonth(year: number, month: number): number {
   return new Date(year, month, 0).getDate();
@@ -27,13 +78,22 @@ function formatDate(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
-function getPayrollLockDays(config: any): number {
+function getPayrollLockDays(config: PayrollConfig): number {
   const value = config.payrollLockDays ?? config.unfinalizeWindowDays ?? 7;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? Math.max(0, parsed) : 7;
 }
 
-async function getApplicableOvertimeRule(category: string): Promise<any | null> {
+interface LeanOvertimeRule {
+  name: string;
+  applicableTo: string;
+  multiplier: number;
+  maxHoursPerDay: number;
+  maxHoursPerMonth: number;
+  isActive: boolean;
+}
+
+async function getApplicableOvertimeRule(category: string): Promise<LeanOvertimeRule | null> {
   const applicableTo = category === 'worker' ? 'worker' : 'office-staff';
   let rule = await OvertimeRule.findOne({ isActive: true, applicableTo }).lean();
   if (!rule) {
@@ -42,7 +102,7 @@ async function getApplicableOvertimeRule(category: string): Promise<any | null> 
   return rule;
 }
 
-function applyOvertimeRules(hours: number, rule: any): number {
+function applyOvertimeRules(hours: number, rule: LeanOvertimeRule | null): number {
   if (!rule) return hours;
   let allowedHours = hours;
   if (rule.maxHoursPerDay && allowedHours > rule.maxHoursPerDay) {
@@ -51,7 +111,7 @@ function applyOvertimeRules(hours: number, rule: any): number {
   return allowedHours;
 }
 
-function calculateAllowances(baseEarnings: number, employeeCategory: string, employeeType: string, allowances: any[]): { name: string; type: string; value: number; calculatedValue: number }[] {
+function calculateAllowances(baseEarnings: number, employeeCategory: string, employeeType: string, allowances: AllowanceConfig[]): { name: string; type: string; value: number; calculatedValue: number }[] {
   const appliedAllowances = [];
   
   for (const allowance of allowances) {
@@ -83,7 +143,7 @@ function calculateAllowances(baseEarnings: number, employeeCategory: string, emp
   return appliedAllowances;
 }
 
-function calculateDeductions(baseEarnings: number, _grossEarnings: number, employeeCategory: string, employeeType: string, deductions: any[]): { name: string; type: string; value: number; calculatedValue: number }[] {
+function calculateDeductions(baseEarnings: number, _grossEarnings: number, employeeCategory: string, employeeType: string, deductions: DeductionConfig[]): { name: string; type: string; value: number; calculatedValue: number }[] {
   const appliedDeductions = [];
   
   for (const deduction of deductions) {
@@ -120,11 +180,11 @@ function calculateDeductions(baseEarnings: number, _grossEarnings: number, emplo
   return appliedDeductions;
 }
 
-async function addRevision(run: any, action: string, userId: string, changes?: Record<string, unknown>): Promise<void> {
+async function addRevision(run: IPayrollRun, action: string, userId: string, changes?: Record<string, unknown>): Promise<void> {
   const user = await User.findById(userId).select('name').lean();
   run.revisions.push({
     action,
-    userId: userId as any,
+    userId: new mongoose.Types.ObjectId(userId),
     userName: user?.name || 'Unknown',
     changes,
     timestamp: new Date(),
@@ -132,9 +192,9 @@ async function addRevision(run: any, action: string, userId: string, changes?: R
 }
 
 async function calculatePayrollForEmployee(
-  emp: any, _month: number, _year: number, config: any, allowances: any[], deductions: any[],
+  emp: LeanEmployee, _month: number, _year: number, config: PayrollConfig, allowances: AllowanceConfig[], deductions: DeductionConfig[],
   startDate: Date, endDate: Date, totalDays: number, workingDays: number, standardHours: number,
-): Promise<any> {
+): Promise<PayrollCalcResult> {
   const category = emp.category || 'worker';
   const employmentType = emp.employmentType || 'permanent';
 
@@ -161,10 +221,10 @@ async function calculatePayrollForEmployee(
   let totalOvertimeHours = 0;
 
   const leaveDayMap: Record<string, { isPaid: boolean; deductionMethod: string }> = {};
-  for (const app of leaveApplications as any[]) {
+  for (const app of leaveApplications) {
     const appStart = new Date(Math.max(startDate.getTime(), new Date(app.startDate).getTime()));
     const appEnd = new Date(Math.min(endDate.getTime(), new Date(app.endDate).getTime()));
-    const lt = app.leaveType;
+    const lt = app.leaveType as unknown as { isPaid: boolean; deductionMethod?: string } | null;
     if (!lt) continue;
     for (let d = new Date(appStart); d <= appEnd; d.setDate(d.getDate() + 1)) {
       const key = formatDate(d);
@@ -175,7 +235,7 @@ async function calculatePayrollForEmployee(
   for (const att of attendances) {
     switch (att.status) {
       case 'present': {
-        if ((att as any).isLatePresent) {
+        if (att.isLatePresent) {
           absentDays++;
         } else {
           presentDays++;
@@ -253,8 +313,11 @@ async function calculatePayrollForEmployee(
   let unpaidLeaveDeduction = 0;
   if (unpaidLeaveDays > 0) {
     const dailyRate = isMonthly ? baseSalary / workingDays : dailyWage;
-    const unpaidLeaveType = leaveApplications.find((app: any) => app.leaveType && !app.leaveType.isPaid) as any;
-    const deductionMethod = unpaidLeaveType?.leaveType?.deductionMethod || 'basic-only';
+    const unpaidLeaveType = leaveApplications.find((app) => {
+      const lt = app.leaveType as unknown as { isPaid: boolean } | null;
+      return lt && !lt.isPaid;
+    });
+    const deductionMethod = (unpaidLeaveType?.leaveType as unknown as { deductionMethod?: string })?.deductionMethod || 'basic-only';
     switch (deductionMethod) {
       case 'none': unpaidLeaveDeduction = 0; break;
       case 'basic-only': unpaidLeaveDeduction = Math.round(dailyRate * unpaidLeaveDays); break;
@@ -351,7 +414,7 @@ export class PayrollService {
       PayrollRun.countDocuments(filter),
     ]);
 
-    const data = runs.map((r: any) => ({ ...r, id: String(r._id), _id: undefined }));
+    const data = runs.map((r) => ({ ...r, id: String(r._id), _id: undefined })) as PayrollResultRow[];
     const meta = PaginationUtil.getMeta(page, limit, total);
 
     return { data, meta };
@@ -374,9 +437,9 @@ export class PayrollService {
       }
       
       const settings = await CompanySettings.findOne().lean().session(session);
-      const config = (settings?.payrollConfig as any) || {};
-      const allowances = (settings?.allowanceConfig as any[]) || [];
-      const deductions = (settings?.deductionConfig as any[]) || [];
+      const config = (settings?.payrollConfig as PayrollConfig) || {} as PayrollConfig;
+      const allowances = (settings?.allowanceConfig as AllowanceConfig[]) || [];
+      const deductions = (settings?.deductionConfig as DeductionConfig[]) || [];
       
       const startDate = new Date(year, month - 1, 1);
       const endDate = new Date(year, month, 0);
@@ -401,7 +464,7 @@ export class PayrollService {
           status: 'draft',
           totalEmployees: employees.length,
           totalNetPay,
-          processedBy: userId as any,
+          processedBy: new mongoose.Types.ObjectId(userId),
         }],
         { session },
       );
@@ -471,9 +534,9 @@ export class PayrollService {
     const monthStr = `${year}-${String(month).padStart(2, '0')}`;
 
     const settings = await CompanySettings.findOne().lean();
-    const config = (settings?.payrollConfig as any) || {};
-    const allowances = (settings?.allowanceConfig as any[]) || [];
-    const deductions = (settings?.deductionConfig as any[]) || [];
+    const config = (settings?.payrollConfig as PayrollConfig) || {} as PayrollConfig;
+    const allowances = (settings?.allowanceConfig as AllowanceConfig[]) || [];
+    const deductions = (settings?.deductionConfig as DeductionConfig[]) || [];
 
     const startDate = new Date(year, month - 1, 1);
     const endDate = new Date(year, month, 0);
@@ -506,7 +569,7 @@ export class PayrollService {
     if (run.status !== 'draft') throw new AppError('Only draft payroll can be submitted', 400);
 
     run.status = 'submitted';
-    run.submittedBy = userId as any;
+    run.submittedBy = new mongoose.Types.ObjectId(userId);
     run.submittedAt = new Date();
     await addRevision(run, 'Submitted for approval', userId);
     await run.save();
@@ -523,7 +586,7 @@ export class PayrollService {
     if (run.status !== 'submitted') throw new AppError('Only submitted payroll can be approved', 400);
 
     run.status = 'approved';
-    run.approvedBy = userId as any;
+    run.approvedBy = new mongoose.Types.ObjectId(userId);
     run.approvedAt = new Date();
     await addRevision(run, 'Approved', userId);
     await run.save();
@@ -559,7 +622,7 @@ export class PayrollService {
     if (run.status !== 'approved') throw new AppError('Only approved payroll can be finalized', 400);
 
     run.status = 'finalized';
-    run.finalizedBy = userId as any;
+    run.finalizedBy = new mongoose.Types.ObjectId(userId);
     run.finalizedAt = new Date();
     if (remarks) run.remarks = remarks;
     await addRevision(run, 'Finalized', userId);
@@ -574,7 +637,7 @@ export class PayrollService {
       payrollRun: id,
       loanRepayment: { $exists: true, $ne: null },
     }).select('loanRepayment').lean();
-    const loanRepaymentIds = loanLinkedItems.map((item: any) => item.loanRepayment).filter(Boolean);
+    const loanRepaymentIds = loanLinkedItems.map((item) => item.loanRepayment).filter(Boolean);
     if (loanRepaymentIds.length > 0) {
       await LoanRepayment.updateMany(
         { _id: { $in: loanRepaymentIds }, status: 'pending' },
@@ -611,7 +674,7 @@ export class PayrollService {
     if (run.status !== 'finalized') throw new AppError('Can only unfinalize finalized payroll', 400);
 
     const settings = await CompanySettings.findOne().lean();
-    const config = (settings?.payrollConfig as any) || {};
+    const config = (settings?.payrollConfig as PayrollConfig) || {} as PayrollConfig;
     const windowDays = getPayrollLockDays(config);
     if (windowDays <= 0) {
       throw new AppError('Cannot unfinalize: payroll is locked immediately by payroll settings', 400);
@@ -659,7 +722,7 @@ export class PayrollService {
     if (!run) throw new AppError('Payroll run not found', 404);
 
     const settings = await CompanySettings.findOne().lean();
-    const config = (settings?.payrollConfig as any) || {};
+    const config = (settings?.payrollConfig as PayrollConfig) || {} as PayrollConfig;
     const unfinalizeWindowDays = getPayrollLockDays(config);
     const unfinalizeLocked = !!(run.finalizedAt && (unfinalizeWindowDays <= 0 || dayjs().diff(dayjs(run.finalizedAt), 'day') >= unfinalizeWindowDays));
 
@@ -667,33 +730,36 @@ export class PayrollService {
       .populate('employee', 'fullName employeeCode')
       .lean();
 
-    const itemsData = items.map((item: any) => ({
-      id: String(item._id),
-      employee: {
-        id: String(item.employee._id),
-        name: item.employee.fullName,
-        code: item.employee.employeeCode,
-      },
-      totalDays: item.totalDays,
-      presentDays: item.presentDays,
-      absentDays: item.absentDays,
-      halfDays: item.halfDays,
-      paidLeaveDays: item.paidLeaveDays,
-      unpaidLeaveDays: item.unpaidLeaveDays,
-      weeklyOffs: item.weeklyOffs,
-      holidays: item.holidays,
-      effectiveWorkingDays: item.effectiveWorkingDays,
-      overtimeHours: item.overtimeHours,
-      basicEarnings: item.basicEarnings,
-      allowances: item.allowances,
-      allowancesTotal: item.allowances?.reduce((sum: number, a: any) => sum + a.calculatedValue, 0) || 0,
-      overtimeAmount: item.overtimeAmount,
-      grossEarnings: item.grossEarnings,
-      deductions: item.deductions,
-      totalDeductions: item.totalDeductions,
-      netPay: item.netPay,
-      status: item.status,
-    }));
+    const itemsData = items.map((item) => {
+      const emp = item.employee as unknown as { _id: mongoose.Types.ObjectId; fullName: string; employeeCode: string };
+      return {
+        id: String(item._id),
+        employee: {
+          id: String(emp._id),
+          name: emp.fullName,
+          code: emp.employeeCode,
+        },
+        totalDays: item.totalDays,
+        presentDays: item.presentDays,
+        absentDays: item.absentDays,
+        halfDays: item.halfDays,
+        paidLeaveDays: item.paidLeaveDays,
+        unpaidLeaveDays: item.unpaidLeaveDays,
+        weeklyOffs: item.weeklyOffs,
+        holidays: item.holidays,
+        effectiveWorkingDays: item.effectiveWorkingDays,
+        overtimeHours: item.overtimeHours,
+        basicEarnings: item.basicEarnings,
+        allowances: item.allowances,
+        allowancesTotal: item.allowances?.reduce((sum, a) => sum + a.calculatedValue, 0) || 0,
+        overtimeAmount: item.overtimeAmount,
+        grossEarnings: item.grossEarnings,
+        deductions: item.deductions,
+        totalDeductions: item.totalDeductions,
+        netPay: item.netPay,
+        status: item.status,
+      };
+    });
 
     return { ...run, id: String(run._id), _id: undefined, items: itemsData, unfinalizeWindowDays, unfinalizeLocked };
   }
@@ -713,11 +779,11 @@ export class PayrollService {
     }
     if (data.allowances !== undefined) {
       changes.allowances = { updated: true };
-      item.allowances = data.allowances as any;
+      item.allowances = data.allowances as IPayrollItem['allowances'];
     }
     if (data.deductions !== undefined) {
       changes.deductions = { updated: true };
-      item.deductions = data.deductions as any;
+      item.deductions = data.deductions as IPayrollItem['deductions'];
     }
     if (data.netPay !== undefined && item.netPay !== data.netPay) {
       changes.netPay = { from: item.netPay, to: data.netPay };
@@ -764,8 +830,8 @@ export class PayrollService {
         }
         if (entry.data.basicEarnings !== undefined) item.basicEarnings = entry.data.basicEarnings as number;
         if (entry.data.netPay !== undefined) item.netPay = entry.data.netPay as number;
-        if (entry.data.allowances !== undefined) item.allowances = entry.data.allowances as any;
-        if (entry.data.deductions !== undefined) item.deductions = entry.data.deductions as any;
+        if (entry.data.allowances !== undefined) item.allowances = entry.data.allowances as IPayrollItem['allowances'];
+        if (entry.data.deductions !== undefined) item.deductions = entry.data.deductions as IPayrollItem['deductions'];
         if (entry.data.presentDays !== undefined) item.presentDays = entry.data.presentDays as number;
         if (entry.data.absentDays !== undefined) item.absentDays = entry.data.absentDays as number;
         if (entry.data.halfDays !== undefined) item.halfDays = entry.data.halfDays as number;
@@ -796,7 +862,7 @@ export class PayrollService {
       targetId: id, details: { items: items.length, results },
     });
 
-    return { updated: results.filter((r: any) => r.status === 'updated').length, failed: results.filter((r: any) => r.status === 'failed').length, results };
+    return { updated: results.filter((r) => r.status === 'updated').length, failed: results.filter((r) => r.status === 'failed').length, results };
   }
 
   static async deleteRun(id: string, userId: string): Promise<void> {
@@ -826,33 +892,36 @@ export class PayrollService {
       .sort({ month: -1 })
       .lean();
 
-    return items.map((item: any) => ({
-      id: String(item._id),
-      month: item.month,
-      payrollRun: item.payrollRun ? {
-        id: String(item.payrollRun._id),
-        month: item.payrollRun.month,
-        status: item.payrollRun.status,
-      } : null,
-      totalDays: item.totalDays,
-      presentDays: item.presentDays,
-      absentDays: item.absentDays,
-      halfDays: item.halfDays,
-      paidLeaveDays: item.paidLeaveDays,
-      unpaidLeaveDays: item.unpaidLeaveDays,
-      weeklyOffs: item.weeklyOffs,
-      holidays: item.holidays,
-      effectiveWorkingDays: item.effectiveWorkingDays,
-      overtimeHours: item.overtimeHours,
-      basicEarnings: item.basicEarnings,
-      allowances: item.allowances,
-      allowancesTotal: item.allowances?.reduce((sum: number, a: any) => sum + a.calculatedValue, 0) || 0,
-      overtimeAmount: item.overtimeAmount,
-      grossEarnings: item.grossEarnings,
-      deductions: item.deductions,
-      totalDeductions: item.totalDeductions,
-      netPay: item.netPay,
-      status: item.status,
-    }));
+    return items.map((item) => {
+      const pr = item.payrollRun as unknown as { _id: mongoose.Types.ObjectId; month: string; status: string } | null;
+      return {
+        id: String(item._id),
+        month: item.month,
+        payrollRun: pr ? {
+          id: String(pr._id),
+          month: pr.month,
+          status: pr.status,
+        } : null,
+        totalDays: item.totalDays,
+        presentDays: item.presentDays,
+        absentDays: item.absentDays,
+        halfDays: item.halfDays,
+        paidLeaveDays: item.paidLeaveDays,
+        unpaidLeaveDays: item.unpaidLeaveDays,
+        weeklyOffs: item.weeklyOffs,
+        holidays: item.holidays,
+        effectiveWorkingDays: item.effectiveWorkingDays,
+        overtimeHours: item.overtimeHours,
+        basicEarnings: item.basicEarnings,
+        allowances: item.allowances,
+        allowancesTotal: item.allowances?.reduce((sum, a) => sum + a.calculatedValue, 0) || 0,
+        overtimeAmount: item.overtimeAmount,
+        grossEarnings: item.grossEarnings,
+        deductions: item.deductions,
+        totalDeductions: item.totalDeductions,
+        netPay: item.netPay,
+        status: item.status,
+      };
+    });
   }
 }

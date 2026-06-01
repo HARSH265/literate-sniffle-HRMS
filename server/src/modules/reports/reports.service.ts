@@ -7,9 +7,21 @@ import OvertimeRule from '../../models/OvertimeRule.model.js';
 import CompanySettings from '../../models/CompanySettings.model.js';
 import Department from '../../models/Department.model.js';
 import LeaveApplication from '../../models/LeaveApplication.model.js';
+import mongoose from 'mongoose';
 import { ExcelGeneratorService } from '../../core/excel/ExcelGeneratorService.js';
 import { AppError } from '../../core/errors/AppError.js';
 import { Response } from 'express';
+import type { LeanEmployee, LeanPayrollRun, LeanPayrollItem, LeanAttendanceEntry, LeanOvertimeEntry, LeanOvertimeRule, PayrollConfig, AttendanceSummaryRow, LeanLeaveApplication } from '../../types/domain.js';
+
+function populateName(field: unknown): string {
+  if (field && typeof field === 'object' && 'name' in field) return (field as { name: string }).name;
+  return 'N/A';
+}
+
+function populateCode(field: unknown): string {
+  if (field && typeof field === 'object' && 'code' in field) return (field as { code?: string }).code || 'N/A';
+  return 'N/A';
+}
 
 export class ReportsService {
   static async exportEmployees(filters: Record<string, unknown>, res: Response): Promise<void> {
@@ -26,16 +38,16 @@ export class ReportsService {
       .populate('shift', 'name')
       .lean();
 
-    const data = employees.map((emp: any) => ({
+    const data = employees.map((emp: LeanEmployee) => ({
       'Employee Code': emp.employeeCode,
       'Full Name': emp.fullName,
       "Father's Name": emp.fatherName,
       Category: emp.category === 'worker' ? 'Manufacturing Worker' : 'Office Staff',
       'Employment Type': emp.employmentType,
-      Department: emp.department?.name || 'N/A',
-      'Department Code': emp.department?.code || 'N/A',
-      Designation: emp.designation?.name || 'N/A',
-      Shift: emp.shift?.name || 'N/A',
+      Department: populateName(emp.department),
+      'Department Code': populateCode(emp.department),
+      Designation: populateName(emp.designation),
+      Shift: populateName(emp.shift),
       'Joining Date': emp.joiningDate ? new Date(emp.joiningDate).toLocaleDateString() : 'N/A',
       'Salary Type': emp.salaryType === 'monthly' ? 'Monthly' : 'Daily',
       'Base Salary': emp.baseSalary || emp.dailyWage || 0,
@@ -85,7 +97,7 @@ export class ReportsService {
     }
 
     const settings = await CompanySettings.findOne().lean();
-    const config = (settings?.payrollConfig as any) || {};
+    const config = (settings?.payrollConfig as unknown as PayrollConfig) || {};
     const paidWeeklyOff = config.paidWeeklyOff !== false;
     const paidHolidays = config.paidHolidays !== false;
 
@@ -94,35 +106,35 @@ export class ReportsService {
 
     const employees = await Employee.find(employeeFilter)
       .populate('department', 'name')
-      .lean();
+      .lean() as unknown as LeanEmployee[];
 
-    const empIds = employees.map((e: any) => e._id);
+    const empIds = employees.map((e) => e._id);
 
     const attendances = await AttendanceEntry.find({
       employee: { $in: empIds },
       date: { $gte: start, $lte: end },
     })
       .populate('employee', 'fullName employeeCode')
-      .lean();
+      .lean() as unknown as LeanAttendanceEntry[];
 
-    const empMap: Record<string, any> = {};
-    employees.forEach((emp: any) => {
+    const empMap: Record<string, LeanEmployee> = {};
+    employees.forEach((emp) => {
       empMap[String(emp._id)] = emp;
     });
 
-    const summary: Record<string, any> = {};
+    const summary: Record<string, AttendanceSummaryRow> = {};
     const reportTitle = startDate && endDate 
       ? `${new Date(start).toLocaleDateString()} - ${new Date(end).toLocaleDateString()}`
       : new Date(Number(year), Number(month) - 1).toLocaleString('default', { month: 'long', year: 'numeric' });
 
-    attendances.forEach((att: any) => {
+    attendances.forEach((att) => {
       const empId = String(att.employee._id);
       if (!summary[empId]) {
         const emp = empMap[empId];
         summary[empId] = {
-          'Employee Code': att.employee.employeeCode,
-          'Employee Name': att.employee.fullName,
-          'Department': emp?.department?.name || 'N/A',
+          'Employee Code': (att.employee as { employeeCode: string }).employeeCode,
+          'Employee Name': (att.employee as { fullName: string }).fullName,
+          'Department': (emp?.department as { name: string })?.name || 'N/A',
           'Present': 0,
           'Absent': 0,
           'Half Day': 0,
@@ -152,7 +164,7 @@ export class ReportsService {
       }
     });
 
-    Object.values(summary).forEach((emp: any) => {
+    Object.values(summary).forEach((emp) => {
       emp['Working Days'] = emp['Present'] + (emp['Half Day'] * 0.5) + emp['Paid WO'] + emp['Paid Holiday'];
     });
 
@@ -184,19 +196,19 @@ export class ReportsService {
   static async exportPayroll(filters: Record<string, unknown>, res: Response): Promise<void> {
     const { month, startDate, endDate, department } = filters;
     
-    let runs: any[] = [];
+    let runs: LeanPayrollRun[] = [];
 
     if (month) {
-      const run = await PayrollRun.findOne({ month: String(month) }).lean();
+      const run = await PayrollRun.findOne({ month: String(month) }).lean() as unknown as LeanPayrollRun | null;
       if (run) runs = [run];
     } else if (startDate && endDate) {
       const start = new Date(startDate as string);
       const end = new Date(endDate as string);
       runs = await PayrollRun.find({
         createdAt: { $gte: start, $lte: end },
-      }).lean();
+      }).lean() as unknown as LeanPayrollRun[];
     } else {
-      runs = await PayrollRun.find({ status: 'finalized' }).sort({ createdAt: -1 }).limit(12).lean();
+      runs = await PayrollRun.find({ status: 'finalized' }).sort({ createdAt: -1 }).limit(12).lean() as unknown as LeanPayrollRun[];
     }
 
     if (runs.length === 0) {
@@ -218,19 +230,19 @@ export class ReportsService {
       return;
     }
 
-    const data: any[] = [];
+    const data: Record<string, string | number>[] = [];
     for (const run of runs) {
-      const query: any = { payrollRun: run._id };
+      const query: Record<string, unknown> = { payrollRun: run._id };
       if (department) {
         const employees = await Employee.find({ department }).select('_id').lean();
-        query.employee = { $in: employees.map((e: any) => e._id) };
+        query.employee = { $in: employees.map((e) => e._id) };
       }
 
-      const items = await PayrollItem.find(query).lean();
+      const items = await PayrollItem.find(query).lean() as unknown as LeanPayrollItem[];
       
-      const totalGross = items.reduce((sum: number, i: any) => sum + (i.grossEarnings || 0), 0);
-      const totalDeductions = items.reduce((sum: number, i: any) => sum + (i.totalDeductions || 0), 0);
-      const totalNet = items.reduce((sum: number, i: any) => sum + (i.netPay || 0), 0);
+      const totalGross = items.reduce((sum, i) => sum + (i.grossEarnings || 0), 0);
+      const totalDeductions = items.reduce((sum, i) => sum + (i.totalDeductions || 0), 0);
+      const totalNet = items.reduce((sum, i) => sum + (i.netPay || 0), 0);
 
       const monthName = new Date(run.month + '-01').toLocaleString('default', { month: 'long', year: 'numeric' });
 
@@ -280,21 +292,21 @@ export class ReportsService {
     }
 
     const settings = await CompanySettings.findOne().lean();
-    const config = (settings?.payrollConfig as any) || {};
+    const config = (settings?.payrollConfig as unknown as PayrollConfig) || {};
 
     const employeeFilter: Record<string, unknown> = { status: 'active' };
     if (department) employeeFilter.department = department;
 
     const employees = await Employee.find(employeeFilter)
       .populate('department', 'name')
-      .lean();
+      .lean() as unknown as LeanEmployee[];
 
-    const empIds = employees.map((e: any) => e._id);
+    const empIds = employees.map((e) => e._id);
 
     const attendances = await AttendanceEntry.find({
       employee: { $in: empIds },
       date: { $gte: start, $lte: end },
-    }).lean();
+    }).lean() as unknown as LeanAttendanceEntry[];
 
     const stats = {
       totalEmployees: employees.length,
@@ -304,11 +316,11 @@ export class ReportsService {
       totalLeave: 0,
       totalWeeklyOff: 0,
       totalHoliday: 0,
-      byDepartment: {} as Record<string, any>,
+      byDepartment: {} as Record<string, { employees: number; present: number; absent: number; halfDay: number; leave: number; weeklyOff: number; holiday: number }>,
     };
 
-    employees.forEach((emp: any) => {
-      const deptName = emp.department?.name || 'Unassigned';
+    employees.forEach((emp) => {
+      const deptName = (emp.department as { name: string })?.name || 'Unassigned';
       if (!stats.byDepartment[deptName]) {
         stats.byDepartment[deptName] = {
           employees: 0,
@@ -323,9 +335,10 @@ export class ReportsService {
       stats.byDepartment[deptName].employees++;
     });
 
-    attendances.forEach((att: any) => {
-      const emp = employees.find((e: any) => String(e._id) === String(att.employee));
-      const deptName = (emp as any)?.department?.name || 'Unassigned';
+    attendances.forEach((att) => {
+      const empId = String(att.employee);
+      const emp = employees.find((e) => String(e._id) === empId);
+      const deptName = (emp?.department as { name: string })?.name || 'Unassigned';
 
       switch (att.status) {
         case 'present': 
@@ -365,7 +378,7 @@ export class ReportsService {
   static async getPayrollSummary(filters: Record<string, unknown>): Promise<Record<string, unknown>> {
     const { year, startDate, endDate, department } = filters;
 
-    let runs: any[] = [];
+    let runs: LeanPayrollRun[] = [];
 
     if (startDate && endDate) {
       const start = new Date(startDate as string);
@@ -373,38 +386,38 @@ export class ReportsService {
       runs = await PayrollRun.find({
         status: 'finalized',
         createdAt: { $gte: start, $lte: end },
-      }).sort({ createdAt: -1 }).lean();
+      }).sort({ createdAt: -1 }).lean() as unknown as LeanPayrollRun[];
     } else if (year) {
       const start = new Date(Number(year), 0, 1);
       const end = new Date(Number(year), 11, 31);
       runs = await PayrollRun.find({
         status: 'finalized',
         createdAt: { $gte: start, $lte: end },
-      }).sort({ createdAt: -1 }).lean();
+      }).sort({ createdAt: -1 }).lean() as unknown as LeanPayrollRun[];
     } else {
       runs = await PayrollRun.find({ status: 'finalized' })
         .sort({ createdAt: -1 })
         .limit(12)
-        .lean();
+        .lean() as unknown as LeanPayrollRun[];
     }
 
-    const monthlyData: any[] = [];
+    const monthlyData: { month: string; employees: number; gross: number; deductions: number; net: number }[] = [];
     let ytdTotalNet = 0;
     let ytdTotalGross = 0;
     let ytdTotalDeductions = 0;
 
     for (const run of runs) {
-      const query: any = { payrollRun: run._id };
+      const query: Record<string, unknown> = { payrollRun: run._id };
       if (department) {
         const employees = await Employee.find({ department }).select('_id').lean();
-        query.employee = { $in: employees.map((e: any) => e._id) };
+        query.employee = { $in: employees.map((e) => e._id) };
       }
 
-      const items = await PayrollItem.find(query).lean();
+      const items = await PayrollItem.find(query).lean() as unknown as LeanPayrollItem[];
       
-      const totalGross = items.reduce((sum: number, i: any) => sum + (i.grossEarnings || 0), 0);
-      const totalDeductions = items.reduce((sum: number, i: any) => sum + (i.totalDeductions || 0), 0);
-      const totalNet = items.reduce((sum: number, i: any) => sum + (i.netPay || 0), 0);
+      const totalGross = items.reduce((sum, i) => sum + (i.grossEarnings || 0), 0);
+      const totalDeductions = items.reduce((sum, i) => sum + (i.totalDeductions || 0), 0);
+      const totalNet = items.reduce((sum, i) => sum + (i.netPay || 0), 0);
 
       ytdTotalGross += totalGross;
       ytdTotalDeductions += totalDeductions;
@@ -435,10 +448,14 @@ export class ReportsService {
       .populate('department', 'name')
       .lean();
 
-    const deptStats: Record<string, any> = {};
+    const deptStats: Record<string, {
+      totalEmployees: number; workers: number; officeStaff: number;
+      permanent: number; contract: number; temporary: number; trainee: number;
+      monthlySalary: number; dailyWage: number;
+    }> = {};
 
-    employees.forEach((emp: any) => {
-      const deptName = emp.department?.name || 'Unassigned';
+    employees.forEach((emp: LeanEmployee) => {
+      const deptName = (emp.department as { name: string })?.name || 'Unassigned';
       if (!deptStats[deptName]) {
         deptStats[deptName] = {
           totalEmployees: 0,
@@ -465,7 +482,7 @@ export class ReportsService {
       else deptStats[deptName].dailyWage++;
     });
 
-    return { departments: Object.entries(deptStats).map(([name, stats]) => ({ name, ...stats as any })) };
+    return { departments: Object.entries(deptStats).map(([name, stats]) => ({ name, ...stats })) };
   }
 
   static async exportOvertime(filters: Record<string, unknown>, res: Response): Promise<void> {
@@ -488,9 +505,9 @@ export class ReportsService {
 
     const employees = await Employee.find(employeeFilter)
       .populate('department', 'name')
-      .lean();
+      .lean() as unknown as LeanEmployee[];
 
-    const empIds = employees.map((e: any) => e._id);
+    const empIds = employees.map((e) => e._id);
 
     const overtimes = await OvertimeEntry.find({
       employee: { $in: empIds },
@@ -498,17 +515,17 @@ export class ReportsService {
     })
       .populate('employee', 'fullName employeeCode')
       .populate('overtimeRule', 'name multiplier')
-      .lean();
+      .lean() as unknown as (LeanOvertimeEntry & { employee?: { fullName: string; employeeCode: string; _id: mongoose.Types.ObjectId }; overtimeRule?: { name: string; multiplier: number } })[];
 
-    const empMap: Record<string, any> = {};
-    employees.forEach((emp: any) => {
+    const empMap: Record<string, LeanEmployee> = {};
+    employees.forEach((emp) => {
       empMap[String(emp._id)] = emp;
     });
 
-    const data = overtimes.map((ot: any) => ({
+    const data = overtimes.map((ot) => ({
       'Employee Code': ot.employee?.employeeCode || 'N/A',
       'Employee Name': ot.employee?.fullName || 'N/A',
-      'Department': empMap[String(ot.employee?._id)]?.department?.name || 'N/A',
+      'Department': (empMap[String(ot.employee?._id)]?.department as { name: string })?.name || 'N/A',
       'Date': new Date(ot.date).toLocaleDateString(),
       'Hours': ot.hours || 0,
       'Overtime Rule': ot.overtimeRule?.name || 'N/A',
@@ -555,44 +572,44 @@ export class ReportsService {
       end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
     }
 
-    const rules = await OvertimeRule.find({ isActive: true }).lean();
-    const rulesMap: Record<string, any> = {};
-    rules.forEach((r: any) => { rulesMap[String(r._id)] = r; });
+    const rules = await OvertimeRule.find({ isActive: true }).lean() as unknown as LeanOvertimeRule[];
+    const rulesMap: Record<string, LeanOvertimeRule> = {};
+    rules.forEach((r) => { rulesMap[String(r._id)] = r; });
 
     const employeeFilter: Record<string, unknown> = { status: 'active' };
     if (department) employeeFilter.department = department;
 
     const employees = await Employee.find(employeeFilter)
       .populate('department', 'name')
-      .lean();
+      .lean() as unknown as LeanEmployee[];
 
-    const empIds = employees.map((e: any) => e._id);
+    const empIds = employees.map((e) => e._id);
 
     const overtimes = await OvertimeEntry.find({
       employee: { $in: empIds },
       date: { $gte: start, $lte: end },
-    }).lean();
+    }).lean() as unknown as LeanOvertimeEntry[];
 
     const stats = {
       totalEmployeesWithOT: 0,
       totalOvertimeHours: 0,
       totalEntries: overtimes.length,
-      byEmployee: {} as Record<string, any>,
-      byDepartment: {} as Record<string, any>,
+      byEmployee: {} as Record<string, { name: string; code: string; totalHours: number; entries: number; department: string }>,
+      byDepartment: {} as Record<string, { totalHours: number; employees: number }>,
       ruleUsage: {} as Record<string, number>,
     };
 
-    overtimes.forEach((ot: any) => {
+    overtimes.forEach((ot) => {
       const empId = String(ot.employee);
-      const emp = employees.find((e: any) => String(e._id) === empId);
-      const deptName = (emp as any)?.department?.name || 'Unassigned';
+      const emp = employees.find((e) => String(e._id) === empId);
+      const deptName = (emp?.department as { name: string })?.name || 'Unassigned';
 
       stats.totalOvertimeHours += ot.hours || 0;
 
       if (!stats.byEmployee[empId]) {
         stats.byEmployee[empId] = {
-          name: (emp as any)?.fullName || 'Unknown',
-          code: (emp as any)?.employeeCode || 'N/A',
+          name: emp?.fullName || 'Unknown',
+          code: emp?.employeeCode || 'N/A',
           totalHours: 0,
           entries: 0,
           department: deptName,
@@ -614,27 +631,24 @@ export class ReportsService {
 
     stats.totalEmployeesWithOT = Object.keys(stats.byEmployee).length;
 
-    Object.values(stats.byDepartment).forEach((dept: any) => {
-      const deptEmployees = employees.filter((e: any) => (e as any)?.department?.name === Object.keys(stats.byDepartment).find(
+    Object.values(stats.byDepartment).forEach((dept) => {
+      const deptName = Object.keys(stats.byDepartment).find(
         d => stats.byDepartment[d] === dept
-      ));
-      if (deptEmployees.length > 0) {
-        const deptName = Object.keys(stats.byDepartment).find(d => stats.byDepartment[d] === dept);
-        const deptEmps = employees.filter((e: any) => (e as any)?.department?.name === deptName);
-        dept.employees = deptEmps.length;
-      }
+      );
+      const deptEmps = employees.filter((e) => (e?.department as { name: string })?.name === deptName);
+      dept.employees = deptEmps.length;
     });
 
     return {
       period: { start: start.toISOString(), end: end.toISOString() },
       stats,
-      rules: rules.map((r: any) => ({ id: String(r._id), name: r.name, multiplier: r.multiplier, maxHoursPerDay: r.maxHoursPerDay, maxHoursPerMonth: r.maxHoursPerMonth })),
+      rules: rules.map((r) => ({ id: String(r._id), name: r.name, multiplier: r.multiplier, maxHoursPerDay: r.maxHoursPerDay, maxHoursPerMonth: r.maxHoursPerMonth })),
     };
   }
 
   static async getCustomReport(params: {
     fields: string[];
-    filters: Record<string, any>;
+    filters: Record<string, string | undefined>;
     groupBy?: string;
     sortBy?: string;
     sortOrder?: 'asc' | 'desc';
@@ -663,7 +677,7 @@ export class ReportsService {
       ? fields.filter((f) => availableFields[f])
       : Object.keys(availableFields);
 
-    const query: Record<string, any> = {};
+    const query: Record<string, unknown> = {};
     if (filters) {
       if (filters.status) query.status = filters.status;
       if (filters.category) query.category = filters.category;
@@ -682,21 +696,21 @@ export class ReportsService {
       .populate('department', 'name code')
       .populate('designation', 'name')
       .populate('shift', 'name')
-      .lean();
+      .lean() as unknown as LeanEmployee[];
 
-    let data = employees.map((emp: any) => {
-      const row: Record<string, any> = {};
+    let data = employees.map((emp) => {
+      const row: Record<string, string | number | null> = {};
       selectedFields.forEach((field) => {
-        if (field === 'department') row['department'] = emp.department?.name || 'N/A';
-        else if (field === 'designation') row['designation'] = emp.designation?.name || 'N/A';
-        else if (field === 'shift') row['shift'] = emp.shift?.name || 'N/A';
-        else row[field] = emp[field] ?? 'N/A';
+        if (field === 'department') row['department'] = (emp.department as { name: string })?.name || 'N/A';
+        else if (field === 'designation') row['designation'] = (emp.designation as { name: string })?.name || 'N/A';
+        else if (field === 'shift') row['shift'] = (emp.shift as { name: string })?.name || 'N/A';
+        else row[field] = (emp as Record<string, unknown>)[field] as string | number ?? 'N/A';
       });
       return row;
     });
 
     if (groupBy && availableFields[groupBy]) {
-      const grouped: Record<string, any[]> = {};
+      const grouped: Record<string, Record<string, unknown>[]> = {};
       data.forEach((row) => {
         const key = String(row[groupBy] || 'Unknown');
         if (!grouped[key]) grouped[key] = [];
@@ -706,11 +720,11 @@ export class ReportsService {
         group: key,
         count: items.length,
         items: items.slice(0, 100),
-      }));
+      })) as unknown as Record<string, string | number | null>[];
     }
 
     if (sortBy && data.length > 0 && data[0][sortBy] !== undefined) {
-      data.sort((a: any, b: any) => {
+      data.sort((a, b) => {
         const aVal = a[sortBy] ?? '';
         const bVal = b[sortBy] ?? '';
         const cmp = String(aVal).localeCompare(String(bVal));
@@ -750,41 +764,41 @@ export class ReportsService {
       const employeeFilter: Record<string, unknown> = { status: 'active' };
       const employees = await Employee.find(employeeFilter)
         .populate('department', 'name')
-        .lean();
+        .lean() as unknown as LeanEmployee[];
 
       const attendances = await AttendanceEntry.find({
-        employee: { $in: employees.map((e: any) => e._id) },
+        employee: { $in: employees.map((e) => e._id) },
         date: { $gte: start, $lte: end },
-      }).lean();
+      }).lean() as unknown as LeanAttendanceEntry[];
 
       if (groupBy === 'month') {
-        const byMonth: Record<string, any> = {};
-        attendances.forEach((att: any) => {
+        const byMonth: Record<string, { month: string; present: number; absent: number; halfDay: number; leave: number; [key: string]: string | number }> = {};
+        attendances.forEach((att) => {
           const d = new Date(att.date);
           const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
           if (!byMonth[key]) byMonth[key] = { month: key, present: 0, absent: 0, halfDay: 0, leave: 0 };
           const status = att.status === 'half-day' ? 'halfDay' : att.status;
-          if (byMonth[key][status] !== undefined) byMonth[key][status]++;
+          if (Object.prototype.hasOwnProperty.call(byMonth[key], status)) byMonth[key][status]++;
         });
-        return { chartType, groupBy: 'month', data: Object.values(byMonth).sort((a: any, b: any) => a.month.localeCompare(b.month)) };
+        return { chartType, groupBy: 'month', data: Object.values(byMonth).sort((a, b) => a.month.localeCompare(b.month)) };
       }
 
       if (groupBy === 'department') {
-        const byDept: Record<string, any> = {};
-        attendances.forEach((att: any) => {
-          const emp = employees.find((e: any) => String(e._id) === String(att.employee));
-          const deptName = (emp as any)?.department?.name || 'Unassigned';
+        const byDept: Record<string, { department: string; present: number; absent: number; halfDay: number; [key: string]: string | number }> = {};
+        attendances.forEach((att) => {
+          const emp = employees.find((e) => String(e._id) === String(att.employee));
+          const deptName = (emp?.department as { name: string })?.name || 'Unassigned';
           if (!byDept[deptName]) byDept[deptName] = { department: deptName, present: 0, absent: 0, halfDay: 0 };
           const status = att.status === 'half-day' ? 'halfDay' : att.status;
-          if (byDept[deptName][status] !== undefined) byDept[deptName][status]++;
+          if (Object.prototype.hasOwnProperty.call(byDept[deptName], status)) byDept[deptName][status]++;
         });
         return { chartType, groupBy: 'department', data: Object.values(byDept) };
       }
 
-      const totalPresent = attendances.filter((a: any) => a.status === 'present').length;
-      const totalAbsent = attendances.filter((a: any) => a.status === 'absent').length;
-      const totalHalfDay = attendances.filter((a: any) => a.status === 'half-day').length;
-      const totalLeave = attendances.filter((a: any) => a.status === 'leave').length;
+      const totalPresent = attendances.filter((a) => a.status === 'present').length;
+      const totalAbsent = attendances.filter((a) => a.status === 'absent').length;
+      const totalHalfDay = attendances.filter((a) => a.status === 'half-day').length;
+      const totalLeave = attendances.filter((a) => a.status === 'leave').length;
 
       return {
         chartType,
@@ -803,22 +817,23 @@ export class ReportsService {
         createdAt: { $gte: start, $lte: end },
       }).sort({ createdAt: 1 }).lean();
 
-      const data: any[] = [];
+      const data: { month: string; gross: number; deductions: number; net: number; employees: number }[] = [];
       for (const run of runs) {
-        const items = await PayrollItem.find({ payrollRun: run._id }).lean();
-        const gross = items.reduce((s: number, i: any) => s + (i.grossEarnings || 0), 0);
-        const deductions = items.reduce((s: number, i: any) => s + (i.totalDeductions || 0), 0);
-        const net = items.reduce((s: number, i: any) => s + (i.netPay || 0), 0);
+        const items = await PayrollItem.find({ payrollRun: run._id }).lean() as unknown as LeanPayrollItem[];
+        const gross = items.reduce((s, i) => s + (i.grossEarnings || 0), 0);
+        const deductions = items.reduce((s, i) => s + (i.totalDeductions || 0), 0);
+        const net = items.reduce((s, i) => s + (i.netPay || 0), 0);
         data.push({ month: run.month, gross, deductions, net, employees: items.length });
       }
 
       if (groupBy === 'department') {
-        const byDept: Record<string, any> = {};
+        const byDept: Record<string, { department: string; gross: number; deductions: number; net: number; employees: Set<string> }> = {};
         for (const run of runs) {
-          const items = await PayrollItem.find({ payrollRun: run._id }).populate('employee', 'department').lean();
-          items.forEach((item: any) => {
-            const dept = (item.employee as any)?.department || 'Unassigned';
-            const deptName = typeof dept === 'object' ? (dept as any)?.name || 'Unknown' : 'Unknown';
+          const items = await PayrollItem.find({ payrollRun: run._id }).populate('employee', 'department').lean() as unknown as LeanPayrollItem[];
+          items.forEach((item) => {
+            const emp = item.employee as { department?: { name?: string } };
+            const dept = emp?.department || 'Unassigned';
+            const deptName = typeof dept === 'object' ? dept?.name || 'Unknown' : 'Unknown';
             if (!byDept[deptName]) byDept[deptName] = { department: deptName, gross: 0, deductions: 0, net: 0, employees: new Set() };
             byDept[deptName].gross += item.grossEarnings || 0;
             byDept[deptName].deductions += item.totalDeductions || 0;
@@ -829,7 +844,7 @@ export class ReportsService {
         return {
           chartType,
           groupBy: 'department',
-          data: Object.values(byDept).map((d: any) => ({ ...d, employees: d.employees.size })),
+          data: Object.values(byDept).map((d) => ({ ...d, employees: d.employees.size })),
         };
       }
 
@@ -839,11 +854,11 @@ export class ReportsService {
     if (chartType === 'department') {
       const employees = await Employee.find({ status: 'active' })
         .populate('department', 'name')
-        .lean();
+        .lean() as unknown as LeanEmployee[];
 
-      const byDept: Record<string, any> = {};
-      employees.forEach((emp: any) => {
-        const deptName = emp.department?.name || 'Unassigned';
+      const byDept: Record<string, { department: string; total: number; workers: number; officeStaff: number; monthly: number; daily: number }> = {};
+      employees.forEach((emp) => {
+        const deptName = (emp.department as { name: string })?.name || 'Unassigned';
         if (!byDept[deptName]) byDept[deptName] = { department: deptName, total: 0, workers: 0, officeStaff: 0, monthly: 0, daily: 0 };
         byDept[deptName].total++;
         if (emp.category === 'worker') byDept[deptName].workers++;
@@ -858,16 +873,16 @@ export class ReportsService {
     if (chartType === 'leave') {
       const leaves = await LeaveApplication.find({
         createdAt: { $gte: start, $lte: end },
-      }).populate('leaveType', 'name').lean();
+      }).populate('leaveType', 'name').lean() as unknown as LeanLeaveApplication[];
 
       const byType: Record<string, number> = {};
-      leaves.forEach((l: any) => {
-        const typeName = l.leaveType?.name || 'Unknown';
+      leaves.forEach((l) => {
+        const typeName = (l.leaveType as { name: string })?.name || 'Unknown';
         byType[typeName] = (byType[typeName] || 0) + (l.totalDays || 1);
       });
 
       const byStatus = { applied: 0, approved: 0, rejected: 0, cancelled: 0 };
-      leaves.forEach((l: any) => {
+      leaves.forEach((l) => {
         if (byStatus[l.status as keyof typeof byStatus] !== undefined) byStatus[l.status as keyof typeof byStatus]++;
       });
 
@@ -886,7 +901,7 @@ export class ReportsService {
     entity: 'attendance' | 'payroll' | 'department' | 'leave';
     id?: string;
     period?: { start?: string; end?: string };
-    filters?: Record<string, any>;
+    filters?: Record<string, string>;
     page?: number;
     limit?: number;
   }): Promise<Record<string, unknown>> {
@@ -894,7 +909,7 @@ export class ReportsService {
     const skip = (page - 1) * limit;
 
     if (entity === 'attendance') {
-      let query: Record<string, any> = {};
+      let query: Record<string, unknown> = {};
       if (id) query.employee = id;
       if (filters?.status) query.status = filters.status;
       if (period?.start && period?.end) {
@@ -902,7 +917,7 @@ export class ReportsService {
       }
       if (filters?.department) {
         const empIds = await Employee.find({ department: filters.department }).select('_id').lean();
-        query.employee = { $in: empIds.map((e: any) => e._id) };
+        query.employee = { $in: empIds.map((e) => e._id) };
       }
 
       const [records, total] = await Promise.all([
@@ -919,11 +934,11 @@ export class ReportsService {
     }
 
     if (entity === 'payroll') {
-      let query: Record<string, any> = {};
+      let query: Record<string, unknown> = {};
       if (id) query.payrollRun = id;
       if (filters?.department) {
         const empIds = await Employee.find({ department: filters.department }).select('_id').lean();
-        query.employee = { $in: empIds.map((e: any) => e._id) };
+        query.employee = { $in: empIds.map((e) => e._id) };
       }
 
       const [records, total] = await Promise.all([
@@ -944,11 +959,11 @@ export class ReportsService {
 
       const employees = await Employee.find({ status: 'active' })
         .populate('department', 'name')
-        .lean();
+        .lean() as unknown as LeanEmployee[];
 
-      const byDept: Record<string, any> = {};
-      employees.forEach((emp: any) => {
-        const deptName = emp.department?.name || 'Unassigned';
+      const byDept: Record<string, { name: string; employees: { code: string; name: string; category: string; type: string; status: string }[]; count: number }> = {};
+      employees.forEach((emp) => {
+        const deptName = (emp.department as { name: string })?.name || 'Unassigned';
         if (!byDept[deptName]) byDept[deptName] = { name: deptName, employees: [], count: 0 };
         byDept[deptName].employees.push({
           code: emp.employeeCode,
@@ -971,7 +986,7 @@ export class ReportsService {
     }
 
     if (entity === 'leave') {
-      let query: Record<string, any> = {};
+      let query: Record<string, unknown> = {};
       if (id) query.employee = id;
       if (filters?.status) query.status = filters.status;
       if (period?.start && period?.end) {
@@ -997,15 +1012,16 @@ export class ReportsService {
 
   static async getScheduledExportConfig(): Promise<Record<string, unknown>> {
     const settings = await CompanySettings.findOne().lean();
-    return { config: (settings as any)?.reportsConfig || {} };
+    return { config: (settings as unknown as { reportsConfig?: Record<string, unknown> })?.reportsConfig || {} };
   }
 
   static async saveScheduledExportConfig(config: Record<string, unknown>, userId?: string): Promise<Record<string, unknown>> {
     const settings = await CompanySettings.findOne();
     if (!settings) throw new AppError('Company settings not found', 404, 'SETTINGS_NOT_FOUND');
-    (settings as any).reportsConfig = { ...((settings as any).reportsConfig || {}), ...config };
-    if (userId) (settings as any).updatedBy = userId;
+    const settingsDoc = settings as unknown as { reportsConfig?: Record<string, unknown>; updatedBy?: string };
+    settingsDoc.reportsConfig = { ...(settingsDoc.reportsConfig || {}), ...config };
+    if (userId) settingsDoc.updatedBy = userId;
     await settings.save();
-    return { config: (settings as any).reportsConfig };
+    return { config: settingsDoc.reportsConfig };
   }
 }
