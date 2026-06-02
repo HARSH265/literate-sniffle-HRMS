@@ -1,9 +1,13 @@
 node_modules/
 dist/
-docs/
-.notes.md
 .env
 .env.example
 *.log
 .DS_Store
 Thumbs.db
+
+# Development docs — not tracked in git
+docs/
+*.md
+!README.md
+notes.md
