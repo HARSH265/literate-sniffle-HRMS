@@ -1,11 +1,14 @@
 node_modules/
 dist/
+logs/
 server/logs/
+package.json
+package-lock.json
+server/vault-config.hcl
 
 *.tsbuildinfo
 .notes.md
 .env
-.env.example
 *.log
 .DS_Store
 Thumbs.db
