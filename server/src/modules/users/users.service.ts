@@ -4,6 +4,7 @@ import { AppError } from '../../core/errors/AppError.js';
 import { AuditService } from '../../core/audit/AuditService.js';
 import { PaginationUtil, PaginationMeta } from '../../core/utils/PaginationUtil.js';
 import { NotificationService } from '../../core/notification/NotificationService.js';
+import { generatePassword } from '../../core/utils/CredentialUtil.js';
 
 export class UsersService {
   static async list(queryParams: Record<string, unknown>): Promise<{ data: unknown[]; meta: PaginationMeta }> {
@@ -65,7 +66,11 @@ export class UsersService {
       throw new AppError('Email already in use', 400);
     }
 
-    const user = await User.create({ ...data, createdBy: createdById });
+    // Auto-generate password if not provided
+    const password = (data.password as string) || generatePassword();
+    const generatedPassword = !data.password ? password : undefined;
+
+    const user = await User.create({ ...data, password, createdBy: createdById });
     await AuditService.log({
       action: 'create',
       module: 'users',
@@ -86,7 +91,20 @@ export class UsersService {
       });
     }
 
-    return { ...user.toObject(), id: user._id.toString(), _id: undefined, password: undefined };
+    // Return credentials if auto-generated
+    const result: Record<string, unknown> = {
+      ...user.toObject(),
+      id: user._id.toString(),
+      _id: undefined,
+      password: undefined,
+    };
+
+    if (generatedPassword) {
+      result.generatedPassword = generatedPassword;
+      result.loginEmail = user.email;
+    }
+
+    return result;
   }
 
   static async update(id: string, data: Record<string, unknown>, updatedById: string) {

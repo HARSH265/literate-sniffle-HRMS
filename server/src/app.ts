@@ -54,6 +54,7 @@ import shiftSwapRoutes from './modules/shift-swap/shiftSwap.routes.js';
 import performanceRoutes from './modules/performance/performance.routes.js';
 import trainingRoutes from './modules/training/training.routes.js';
 import apiKeyRoutes from './modules/api-keys/api-keys.routes.js';
+import permissionsRoutes from './modules/permissions/permissions.routes.js';
 
 const app = express();
 
@@ -195,6 +196,7 @@ app.use('/api/v1/shift-swaps', auditMiddleware, shiftSwapRoutes);
 app.use('/api/v1/performance', auditMiddleware, performanceRoutes);
 app.use('/api/v1/training', auditMiddleware, trainingRoutes);
 app.use('/api/v1/audit-logs', auditRoutes);
+app.use('/api/v1/permissions', auditMiddleware, permissionsRoutes);
 
 app.use(errorHandler);
 

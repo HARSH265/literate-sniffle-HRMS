@@ -3,10 +3,12 @@ import { notificationsController } from './notifications.controller.js';
 import { validate } from '../../core/validation/validate.middleware.js';
 import { listNotificationsSchema, markAsReadSchema, markAllAsReadSchema } from './notifications.validation.js';
 import { authenticate } from '../../core/permissions/authenticate.middleware.js';
+import { authorize } from '../../core/permissions/authorize.middleware.js';
 
 const router = Router();
 
 router.use(authenticate);
+router.use(authorize('view-notifications'));
 
 router.get('/', validate(listNotificationsSchema, 'query'), notificationsController.getMyNotifications);
 router.get('/unread-count', notificationsController.getUnreadCount);
