@@ -15,23 +15,23 @@ export interface RolePermissionsResponse {
 }
 
 export const permissionsService = {
-  async getGroups(): Promise<{ data: PermissionGroups }> {
-    const res = await apiClient.get(API_ENDPOINTS.permissions.groups);
-    return res.data;
+  async getGroups(): Promise<PermissionGroups> {
+    const { data } = await apiClient.get(API_ENDPOINTS.permissions.groups);
+    return data.data;
   },
 
-  async getRolePermissions(): Promise<{ data: RolePermissionsResponse }> {
-    const res = await apiClient.get(API_ENDPOINTS.permissions.roles);
-    return res.data;
+  async getRolePermissions(): Promise<RolePermissionsResponse> {
+    const { data } = await apiClient.get(API_ENDPOINTS.permissions.roles);
+    return data.data;
   },
 
   async updateRolePermissions(role: string, permissions: string[]): Promise<{ message: string }> {
-    const res = await apiClient.put(API_ENDPOINTS.permissions.role(role), { permissions });
-    return res.data;
+    const { data } = await apiClient.put(API_ENDPOINTS.permissions.role(role), { permissions });
+    return data;
   },
 
   async resetRolePermissions(role: string): Promise<{ message: string }> {
-    const res = await apiClient.post(API_ENDPOINTS.permissions.resetRole(role));
-    return res.data;
+    const { data } = await apiClient.post(API_ENDPOINTS.permissions.resetRole(role));
+    return data;
   },
 };

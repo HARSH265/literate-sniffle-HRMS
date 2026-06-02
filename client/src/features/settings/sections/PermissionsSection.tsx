@@ -32,27 +32,27 @@ export function PermissionsSection(_props: PermissionsSectionProps) {
   const [editedPermissions, setEditedPermissions] = useState<Record<string, string[]>>({});
   const [hasChanges, setHasChanges] = useState(false);
 
-  const { data: groups, isLoading: groupsLoading } = useQuery({
+  const { data: groupsData, isLoading: groupsLoading } = useQuery({
     queryKey: ['permission-groups'],
     queryFn: () => permissionsService.getGroups(),
   });
 
-  const { data: roleData, isLoading: rolesLoading } = useQuery({
+  const { data: rolePermissions, isLoading: rolesLoading } = useQuery({
     queryKey: ['role-permissions'],
     queryFn: () => permissionsService.getRolePermissions(),
   });
 
   // Initialize edited permissions when data loads
   useEffect(() => {
-    if (roleData?.data) {
+    if (rolePermissions) {
       const initial: Record<string, string[]> = {};
-      for (const [role, config] of Object.entries(roleData.data)) {
+      for (const [role, config] of Object.entries(rolePermissions)) {
         initial[role] = [...config.permissions];
       }
       setEditedPermissions(initial);
       setHasChanges(false);
     }
-  }, [roleData]);
+  }, [rolePermissions]);
 
   const updateMutation = useMutation({
     mutationFn: ({ role, permissions }: { role: string; permissions: string[] }) =>
@@ -123,11 +123,11 @@ export function PermissionsSection(_props: PermissionsSectionProps) {
     );
   }
 
-  const groupsData = groups?.data || {};
-  const rolePermissions = roleData?.data || {};
+  const groupsDataFinal = groupsData || {};
+  const rolePerms = rolePermissions || {};
   const currentPermissions = new Set(editedPermissions[activeRole] || []);
   const isSuperAdmin = activeRole === 'super-admin';
-  const isCustom = rolePermissions[activeRole]?.isCustom || false;
+  const isCustom = rolePerms[activeRole]?.isCustom || false;
 
   return (
     <div>
@@ -153,7 +153,7 @@ export function PermissionsSection(_props: PermissionsSectionProps) {
             <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <span style={{ color: meta.color }}>{meta.icon}</span>
               {meta.label}
-              {rolePermissions[role]?.isCustom && (
+              {rolePerms[role]?.isCustom && (
                 <Tag color="orange" style={{ marginLeft: 4, fontSize: 10 }}>Custom</Tag>
               )}
             </span>
@@ -193,8 +193,9 @@ export function PermissionsSection(_props: PermissionsSectionProps) {
       ) : (
         <>
           <div style={{ maxHeight: 'calc(100vh - 380px)', overflow: 'auto', paddingRight: 8 }}>
-            {Object.entries(groupsData).map(([groupName, permissions]) => {
-              const permArray = permissions as string[];
+            {Object.entries(groupsDataFinal).map(([groupName, permissions]) => {
+              const permArray = Array.isArray(permissions) ? permissions : [];
+              if (permArray.length === 0) return null;
               const allChecked = permArray.every((p) => currentPermissions.has(p));
               const someChecked = permArray.some((p) => currentPermissions.has(p));
 
