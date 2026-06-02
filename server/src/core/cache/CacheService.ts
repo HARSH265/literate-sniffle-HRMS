@@ -29,6 +29,10 @@ export class CacheService {
     cache.flushAll();
   }
 
+  static getStats(): any {
+    return (cache as any).getStats();
+  }
+
   static invalidateDepartments(): void {
     cache.del(CACHE_KEYS.DEPARTMENTS);
   }

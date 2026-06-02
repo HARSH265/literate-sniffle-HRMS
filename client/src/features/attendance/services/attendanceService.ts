@@ -9,8 +9,10 @@ export interface AttendanceEntry {
   status: 'present' | 'absent' | 'half-day' | 'leave' | 'weekly-off' | 'holiday';
   inTime?: string;
   outTime?: string;
+  totalHours?: number;
   isLate?: boolean;
   remarks?: string;
+  autoCheckout?: boolean;
 }
 
 export interface MonthlyAttendanceView {
@@ -82,6 +84,17 @@ export const attendanceService = {
 
   async delete(id: string): Promise<void> {
     await apiClient.delete(`/attendance/${id}`);
+  },
+
+  async adminCheckout(employeeId: string, reason: string): Promise<{
+    id: string;
+    outTime: string;
+    totalHours: number;
+    otHours: number;
+    message: string;
+  }> {
+    const { data } = await apiClient.post(`/attendance/admin-checkout/${employeeId}`, { reason });
+    return data.data;
   },
 
   async getByEmployee(employeeId: string, startDate?: string, endDate?: string): Promise<AttendanceEntry[]> {

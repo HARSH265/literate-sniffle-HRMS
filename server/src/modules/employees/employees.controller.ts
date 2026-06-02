@@ -137,12 +137,12 @@ const downloadDocument = asyncHandler(async (req: Request, res: Response) => {
 });
 
 const remove = asyncHandler(async (req: Request, res: Response) => {
-  await EmployeesService.delete(req.params.id, req.user!.id);
+  await EmployeesService.delete(req.params.id, req.user!.id, req.user!.role);
   ResponseHandler.noContent(res);
 });
 
 const restore = asyncHandler(async (req: Request, res: Response) => {
-  const result = await EmployeesService.restore(req.params.id, req.user!.id);
+  const result = await EmployeesService.restore(req.params.id, req.user!.id, req.user!.role);
   ResponseHandler.success(res, result, 'Employee restored successfully');
 });
 
@@ -388,7 +388,7 @@ const generateNextCode = asyncHandler(async (_req: Request, res: Response) => {
 
 const bulkAssignShift = asyncHandler(async (req: Request, res: Response) => {
   const { employeeIds, shiftId } = req.body;
-  const result = await EmployeesService.bulkAssignShift(employeeIds, shiftId, req.user!.id);
+  const result = await EmployeesService.bulkAssignShift(employeeIds, shiftId, req.user!.id, req.user!.role);
   ResponseHandler.success(res, result, `${result.modifiedCount} employee(s) updated`);
 });
 

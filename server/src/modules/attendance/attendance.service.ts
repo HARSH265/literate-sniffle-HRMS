@@ -4,19 +4,80 @@ import CompanySettings from '../../models/CompanySettings.model.js';
 import { AppError } from '../../core/errors/AppError.js';
 import { AuditService } from '../../core/audit/AuditService.js';
 import { PaginationUtil, PaginationMeta } from '../../core/utils/PaginationUtil.js';
+import dayjs from 'dayjs';
+import mongoose from 'mongoose';
+
+interface AttendanceConfig {
+  pastEntryLimitDays: number;
+  lateMarkEnabled: boolean;
+  lateMarkThresholdMinutes: number;
+  lateToHalfDayAfterOccurrences: number;
+  shiftStartTime: string;
+  shiftEndTime: string;
+  gracePeriodMinutes: number;
+  lateMarkAsAbsent: boolean;
+  lateTreatWorkAsOT: boolean;
+  autoCheckoutEnabled: boolean;
+  autoCheckoutGraceMinutes: number;
+  breakMinutes: number;
+}
+
+interface AttendanceAggDay {
+  day: number;
+  record: {
+    id: string;
+    status: string;
+    inTime: string;
+    outTime: string;
+  };
+}
+
+interface AttendanceAggEmployeeInfo {
+  fullName: string;
+  employeeCode: string;
+  department: string;
+}
+
+interface AttendanceAggGroup {
+  _id: string;
+  employeeInfo: AttendanceAggEmployeeInfo;
+  days: AttendanceAggDay[];
+}
+
+interface BulkEntry {
+  employee: string;
+  status: string;
+  inTime?: string;
+  outTime?: string;
+  remarks?: string;
+  isLate?: boolean;
+}
 
 function parseTimeToMinutes(time: string): number {
   const [hours, minutes] = time.split(':').map(Number);
   return hours * 60 + minutes;
 }
 
-async function getAttendanceSettings() {
+function getMinutesDiff(inTime: string, outTime: string): number {
+  return parseTimeToMinutes(outTime) - parseTimeToMinutes(inTime);
+}
+
+async function getAttendanceSettings(): Promise<AttendanceConfig> {
   const settings = await CompanySettings.findOne().lean();
-  return (settings?.attendanceConfig as any) || {
-    pastEntryLimitDays: 7,
-    lateMarkEnabled: false,
-    lateMarkThresholdMinutes: 15,
-    lateToHalfDayAfterOccurrences: 3,
+  const raw = settings?.attendanceConfig as Record<string, unknown> | undefined;
+  return {
+    pastEntryLimitDays: (raw?.pastEntryLimitDays as number) ?? 7,
+    lateMarkEnabled: (raw?.lateMarkEnabled as boolean) ?? false,
+    lateMarkThresholdMinutes: (raw?.lateMarkThresholdMinutes as number) ?? 15,
+    lateToHalfDayAfterOccurrences: (raw?.lateToHalfDayAfterOccurrences as number) ?? 3,
+    shiftStartTime: (raw?.shiftStartTime as string) ?? '09:00',
+    shiftEndTime: (raw?.shiftEndTime as string) ?? '18:00',
+    gracePeriodMinutes: (raw?.gracePeriodMinutes as number) ?? 5,
+    lateMarkAsAbsent: (raw?.lateMarkAsAbsent as boolean) ?? true,
+    lateTreatWorkAsOT: (raw?.lateTreatWorkAsOT as boolean) ?? true,
+    autoCheckoutEnabled: (raw?.autoCheckoutEnabled as boolean) ?? true,
+    autoCheckoutGraceMinutes: (raw?.autoCheckoutGraceMinutes as number) ?? 30,
+    breakMinutes: (raw?.breakMinutes as number) ?? 30,
   };
 }
 
@@ -69,20 +130,22 @@ export class AttendanceService {
 
     const data = entries.map((e) => {
       const { _id, ...rest } = e as Record<string, unknown>;
+      const emp = rest.employee as Record<string, unknown> | null;
+      const sh = rest.shift as Record<string, unknown> | null;
       return {
         ...rest,
         id: String(_id),
-        employee: rest.employee ? {
-          id: String((rest.employee as any)._id),
-          fullName: (rest.employee as any).fullName,
-          employeeCode: (rest.employee as any).employeeCode,
-          department: (rest.employee as any).department,
+        employee: emp ? {
+          id: String(emp._id),
+          fullName: emp.fullName,
+          employeeCode: emp.employeeCode,
+          department: emp.department,
         } : null,
-        shift: rest.shift ? {
-          id: String((rest.shift as any)._id),
-          name: (rest.shift as any).name,
-          startTime: (rest.shift as any).startTime,
-          endTime: (rest.shift as any).endTime,
+        shift: sh ? {
+          id: String(sh._id),
+          name: sh.name,
+          startTime: sh.startTime,
+          endTime: sh.endTime,
         } : null,
         overtimeHours: undefined,
         _id: undefined,
@@ -116,14 +179,15 @@ export class AttendanceService {
 
     return entries.map((e) => {
       const { _id, ...rest } = e as Record<string, unknown>;
+      const sh = rest.shift as Record<string, unknown> | null;
       return {
         ...rest,
         id: String(_id),
-        shift: rest.shift ? {
-          id: String((rest.shift as any)._id),
-          name: (rest.shift as any).name,
-          startTime: (rest.shift as any).startTime,
-          endTime: (rest.shift as any).endTime,
+        shift: sh ? {
+          id: String(sh._id),
+          name: sh.name,
+          startTime: sh.startTime,
+          endTime: sh.endTime,
         } : null,
         _id: undefined,
       };
@@ -132,6 +196,8 @@ export class AttendanceService {
 
   static async monthlyView(queryParams: Record<string, unknown>): Promise<Record<string, unknown>[]> {
     const { month, year, department } = queryParams;
+    // Parse pagination parameters (defaults handled by PaginationUtil)
+    const { page, limit } = PaginationUtil.parseFromObject(queryParams);
 
     const startDate = new Date(Number(year), Number(month) - 1, 1);
     const endDate = new Date(Number(year), Number(month), 0);
@@ -197,16 +263,16 @@ export class AttendanceService {
       },
     ];
 
-    const aggResult = await AttendanceEntry.aggregate(pipeline as any).exec();
+    const aggResult = await AttendanceEntry.aggregate(pipeline).exec() as unknown as AttendanceAggGroup[];
 
-    const result = aggResult.map((group) => {
+    const fullResult = aggResult.map((group) => {
       const daysMap: Record<string, unknown> = {};
       // Initialise every day of the month as null
       for (let d = 1; d <= endDate.getDate(); d++) {
         daysMap[d] = null;
       }
       // Fill in days we have records for
-      (group.days as any[]).forEach((d) => {
+      group.days.forEach((d) => {
         daysMap[d.day] = d.record;
       });
 
@@ -221,7 +287,10 @@ export class AttendanceService {
       };
     });
 
-    return result;
+    // Apply pagination to the aggregated results
+    const skip = (page - 1) * limit;
+    const paginated = fullResult.slice(skip, skip + limit);
+    return paginated;
   }
 
   static async bulkCreate(data: { date: string; entries: Array<Record<string, unknown>> }, userId: string) {
@@ -246,14 +315,14 @@ export class AttendanceService {
       .select('_id employeeCode shift')
       .lean();
 
-    const empShiftMap: Record<string, any> = {};
-    employees.forEach((emp: any) => {
-      empShiftMap[String(emp._id)] = emp.shift;
+    const empShiftMap: Record<string, Record<string, unknown>> = {};
+    employees.forEach((emp) => {
+      empShiftMap[String(emp._id)] = emp.shift as unknown as Record<string, unknown>;
     });
 
-    const results = [];
-    const toUpdate: any[] = [];
-    const toCreate: any[] = [];
+    const results: Array<Record<string, unknown>> = [];
+    const toUpdate: Array<{ filter: Record<string, unknown>; update: Record<string, unknown> }> = [];
+    const toCreate: Array<Record<string, unknown>> = [];
     const attendanceDateStart = new Date(date);
     attendanceDateStart.setHours(0, 0, 0, 0);
     const attendanceDateEnd = new Date(date);
@@ -264,34 +333,33 @@ export class AttendanceService {
       date: { $gte: attendanceDateStart, $lt: attendanceDateEnd },
     }).lean();
 
-    const existingMap: Record<string, any> = {};
-    existingEntries.forEach((e: any) => {
-      existingMap[String(e.employee)] = e;
+    const existingMap: Record<string, Record<string, unknown>> = {};
+    existingEntries.forEach((e) => {
+      existingMap[String(e.employee)] = e as unknown as Record<string, unknown>;
     });
 
-    for (const entry of data.entries) {
+    for (const entry of data.entries as unknown as BulkEntry[]) {
       try {
         const shift = empShiftMap[String(entry.employee)];
         if (!shift) {
           results.push({ employee: entry.employee, status: 'failed', error: 'Employee not found' });
           continue;
         }
-        const shiftStartTime = shift.startTime;
+        const shiftStartTime = shift.startTime as string;
 
         if (entry.inTime && entry.outTime) {
-          const inMinutes = parseTimeToMinutes(entry.inTime as string);
-          const outMinutes = parseTimeToMinutes(entry.outTime as string);
+          const inMinutes = parseTimeToMinutes(entry.inTime);
+          const outMinutes = parseTimeToMinutes(entry.outTime);
           if (outMinutes <= inMinutes) {
             results.push({ employee: entry.employee, status: 'failed', error: 'Out time must be greater than in time' });
             continue;
           }
         }
 
+        let isLate = false;
         if (settings.lateMarkEnabled && entry.status === 'present' && entry.inTime && shiftStartTime) {
-          const isLate = calculateLateStatus(entry.inTime as string, shiftStartTime, settings.lateMarkThresholdMinutes);
-          if (isLate) {
-            (entry as any).isLate = true;
-          }
+          isLate = calculateLateStatus(entry.inTime, shiftStartTime, settings.lateMarkThresholdMinutes);
+          entry.isLate = isLate;
         }
 
         const existing = existingMap[String(entry.employee)];
@@ -304,7 +372,7 @@ export class AttendanceService {
               outTime: entry.outTime,
               remarks: entry.remarks,
               updatedBy: userId,
-              ...((entry as any).isLate !== undefined && { isLate: (entry as any).isLate }),
+              ...(isLate !== undefined && { isLate }),
             },
           });
           results.push({ employee: entry.employee, status: 'updated' });
@@ -312,14 +380,14 @@ export class AttendanceService {
           toCreate.push({
             employee: entry.employee,
             date: new Date(data.date),
-            shift: shift?._id,
+            shift: shift._id,
             status: entry.status,
             inTime: entry.inTime,
             outTime: entry.outTime,
             remarks: entry.remarks,
             source: 'manual-register-entry',
             enteredBy: userId,
-            ...((entry as any).isLate !== undefined && { isLate: (entry as any).isLate }),
+            ...(isLate !== undefined && { isLate }),
           });
           results.push({ employee: entry.employee, status: 'created' });
         }
@@ -335,7 +403,7 @@ export class AttendanceService {
           update: u.update,
         },
       }));
-      await AttendanceEntry.bulkWrite(bulkUpdateOps as any);
+      await AttendanceEntry.bulkWrite(bulkUpdateOps);
     }
 
     if (toCreate.length > 0) {
@@ -382,15 +450,16 @@ export class AttendanceService {
     }
 
     let isLate = undefined;
-    if (settings.lateMarkEnabled && data.status === 'present' && data.inTime && (employee as any).shift) {
-      const shiftStartTime = (employee as any).shift.startTime;
+    const empShift = employee.shift as unknown as Record<string, unknown> | null;
+    if (settings.lateMarkEnabled && data.status === 'present' && data.inTime && empShift) {
+      const shiftStartTime = empShift.startTime as string;
       isLate = calculateLateStatus(data.inTime as string, shiftStartTime, settings.lateMarkThresholdMinutes);
     }
 
     const entry = await AttendanceEntry.create({
       ...data,
       date: new Date(data.date as string),
-      shift: (employee as any).shift?._id,
+      shift: empShift?._id,
       overtimeHours: undefined,
       ...(isLate !== undefined && { isLate }),
       enteredBy: userId,
@@ -427,9 +496,10 @@ export class AttendanceService {
     delete updateData.overtimeHours;
 
     if (settings.lateMarkEnabled && data.status === 'present' && data.inTime) {
-      const emp = entry.employee as any;
-      if (emp?.shift?.startTime) {
-        const isLate = calculateLateStatus(data.inTime as string, emp.shift.startTime, settings.lateMarkThresholdMinutes);
+      const emp = entry.employee as unknown as Record<string, unknown> | null;
+      const empShift = emp?.shift as Record<string, unknown> | null;
+      if (empShift?.startTime) {
+        const isLate = calculateLateStatus(data.inTime as string, empShift.startTime as string, settings.lateMarkThresholdMinutes);
         updateData.isLate = isLate;
       }
     } else if (settings.lateMarkEnabled && data.status !== 'present') {
@@ -469,7 +539,7 @@ export class AttendanceService {
       };
     });
 
-    const result = await AttendanceEntry.bulkWrite(bulkOps as any);
+    const result = await AttendanceEntry.bulkWrite(bulkOps);
 
     await AuditService.log({
       action: 'bulk-update',
@@ -479,6 +549,220 @@ export class AttendanceService {
     });
 
     return { updated: result.modifiedCount, failed: entries.length - result.modifiedCount, results: entries.map((e, i) => ({ id: e.id, status: i < result.modifiedCount ? 'updated' : 'failed' })) };
+  }
+
+  static calculateOTHours(
+    inTime: string,
+    outTime: string,
+    isLate: boolean,
+    config: AttendanceConfig,
+    maxOTHours: number,
+  ): { totalHours: number; otHours: number } {
+    const workMinutes = getMinutesDiff(inTime, outTime);
+    const totalHours = Math.max(0, workMinutes / 60);
+
+    if (isLate && config.lateTreatWorkAsOT) {
+      const otHours = Math.min(totalHours, maxOTHours);
+      return { totalHours, otHours: Math.max(0, otHours) };
+    }
+
+    const shiftStartMinutes = parseTimeToMinutes(config.shiftStartTime);
+    const shiftEndMinutes = parseTimeToMinutes(config.shiftEndTime);
+    const shiftDurationMinutes = shiftEndMinutes - shiftStartMinutes;
+
+    const regularMinutes = Math.min(workMinutes, shiftDurationMinutes);
+    const otMinutes = Math.max(0, workMinutes - regularMinutes - config.breakMinutes);
+    const otHours = Math.min(otMinutes / 60, maxOTHours);
+
+    return { totalHours, otHours: Math.max(0, otHours) };
+  }
+
+  static async adminCheckout(
+    employeeId: string,
+    adminId: string,
+    reason: string,
+  ) {
+    const settings = await getAttendanceSettings();
+
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
+
+    const entry = await AttendanceEntry.findOne({
+      employee: employeeId,
+      date: { $gte: todayStart, $lte: todayEnd },
+      outTime: { $exists: false },
+    });
+
+    if (!entry) {
+      throw new AppError('No active check-in found for this employee today', 400);
+    }
+
+    const now = dayjs();
+    const outTime = now.format('HH:mm');
+
+    entry.outTime = outTime;
+    entry.checkOutMethod = 'admin-override';
+    entry.source = 'supervisor-override';
+    entry.adminCheckout = {
+      by: adminId as unknown as mongoose.Types.ObjectId,
+      reason,
+    };
+
+    const overtimeRule = await import('../../models/OvertimeRule.model.js').then((m) =>
+      m.default.findOne({ isActive: true, applicableTo: 'all' }).lean(),
+    );
+    const maxOTHours = (overtimeRule as Record<string, unknown>)?.maxHoursPerDay as number || 4;
+
+    const employeeIsLate = entry.isLate || entry.isLatePresent;
+
+    const { totalHours, otHours } = this.calculateOTHours(
+      entry.inTime!,
+      outTime,
+      employeeIsLate,
+      settings,
+      maxOTHours,
+    );
+
+    entry.totalHours = totalHours;
+    await entry.save();
+
+    if (otHours > 0) {
+      const OvertimeEntry = (await import('../../models/OvertimeEntry.model.js')).default;
+      const existingOT = await OvertimeEntry.findOne({
+        employee: employeeId,
+        date: { $gte: todayStart, $lte: todayEnd },
+      });
+
+      if (existingOT) {
+        existingOT.hours = otHours;
+        existingOT.remarks = 'Admin checkout';
+        await existingOT.save();
+      } else {
+        await OvertimeEntry.create({
+          employee: employeeId,
+          date: now.toDate(),
+          hours: otHours,
+          remarks: 'Admin checkout',
+          enteredBy: adminId,
+        });
+      }
+    }
+
+    await AuditService.log({
+      action: 'attendance-checkout',
+      module: 'attendance',
+      userId: adminId,
+      targetId: String(entry._id),
+      details: { method: 'admin-override', outTime, reason, totalHours, otHours },
+    });
+
+    return {
+      id: String(entry._id),
+      outTime,
+      totalHours,
+      otHours,
+      message: 'Admin checkout completed',
+    };
+  }
+
+  static async runAutoCheckout(): Promise<{ processed: number; checkedOut: number }> {
+    const settings = await getAttendanceSettings();
+    if (!settings.autoCheckoutEnabled) {
+      return { processed: 0, checkedOut: 0 };
+    }
+
+    const overtimeRule = await import('../../models/OvertimeRule.model.js').then((m) =>
+      m.default.findOne({ isActive: true, applicableTo: 'all' }).lean(),
+    );
+    const maxOTHours = (overtimeRule as Record<string, unknown>)?.maxHoursPerDay as number || 4;
+
+    const defaultShiftEndTime = settings.shiftEndTime;
+
+    const yesterdayStart = new Date();
+    yesterdayStart.setDate(yesterdayStart.getDate() - 1);
+    yesterdayStart.setHours(0, 0, 0, 0);
+
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
+
+    const stuckEntries = await AttendanceEntry.find({
+      outTime: { $exists: false },
+      date: { $gte: yesterdayStart, $lte: todayEnd },
+    }).populate('shift', 'startTime endTime');
+
+    let checkedOut = 0;
+
+    for (const entry of stuckEntries) {
+      const entryDate = dayjs(entry.date);
+      const shiftData = entry.shift as unknown as { startTime?: string; endTime?: string } | null;
+      const entryDayShiftEnd = parseTimeToMinutes(shiftData?.endTime || defaultShiftEndTime);
+      const entryDayAutoCheckout = entryDayShiftEnd + (maxOTHours * 60) + settings.autoCheckoutGraceMinutes;
+
+      const autoCheckoutHour = Math.floor(entryDayAutoCheckout / 60);
+      const autoCheckoutMinute = entryDayAutoCheckout % 60;
+
+      const autoCheckoutTime = entryDate.hour(autoCheckoutHour).minute(autoCheckoutMinute).second(0);
+
+      if (dayjs().isBefore(autoCheckoutTime)) {
+        continue;
+      }
+
+      const outTime = `${String(autoCheckoutHour).padStart(2, '0')}:${String(autoCheckoutMinute).padStart(2, '0')}`;
+
+      entry.outTime = outTime;
+      entry.autoCheckout = true;
+      entry.checkOutMethod = 'auto-checkout';
+      entry.source = 'auto-checkout';
+
+      const employeeIsLate = entry.isLate || entry.isLatePresent;
+
+      const { totalHours, otHours } = this.calculateOTHours(
+        entry.inTime!,
+        outTime,
+        employeeIsLate,
+        settings,
+        maxOTHours,
+      );
+
+      entry.totalHours = totalHours;
+      await entry.save();
+
+      if (otHours > 0) {
+        const OvertimeEntry = (await import('../../models/OvertimeEntry.model.js')).default;
+        const existingOT = await OvertimeEntry.findOne({
+          employee: entry.employee,
+          date: { $gte: entryDate.startOf('day').toDate(), $lte: entryDate.endOf('day').toDate() },
+        });
+
+        if (existingOT) {
+          existingOT.hours = otHours;
+          existingOT.remarks = 'Auto-checkout';
+          await existingOT.save();
+        } else {
+          await OvertimeEntry.create({
+            employee: entry.employee,
+            date: entryDate.toDate(),
+            hours: otHours,
+            remarks: 'Auto-checkout',
+            enteredBy: entry.employee,
+          });
+        }
+      }
+
+      await AuditService.log({
+        action: 'attendance-checkout',
+        module: 'attendance',
+        userId: String(entry.employee),
+        targetId: String(entry._id),
+        details: { method: 'auto-checkout', outTime, totalHours, otHours },
+      });
+
+      checkedOut++;
+    }
+
+    return { processed: stuckEntries.length, checkedOut };
   }
 
   static async delete(id: string, userId: string) {

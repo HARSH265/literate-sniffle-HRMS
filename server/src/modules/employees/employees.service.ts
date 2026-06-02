@@ -1,4 +1,5 @@
 import Employee from '../../models/Employee.model.js';
+import mongoose from 'mongoose';
 import Shift from '../../models/Shift.model.js';
 import User from '../../models/User.model.js';
 import Notification from '../../models/Notification.model.js';
@@ -7,6 +8,8 @@ import { AppError } from '../../core/errors/AppError.js';
 import { AuditService } from '../../core/audit/AuditService.js';
 import { PaginationUtil, PaginationMeta } from '../../core/utils/PaginationUtil.js';
 import { encryptBankDetails, decryptBankDetails } from '../../core/utils/EncryptionUtil.js';
+import { RedisCacheService } from '../../core/cache/RedisCacheService.js';
+import { CACHE_KEYS } from '../../core/cache/cache.keys.js';
 
 const SALARY_ACCESS_ROLES = ['super-admin', 'hr-admin', 'hr-staff', 'accounts'];
 
@@ -73,33 +76,36 @@ export class EmployeesService {
     const skip = PaginationUtil.getSkip(page, limit);
     const sortObj: Record<string, 1 | -1> = { [sort]: order === 'asc' ? 1 : -1 };
 
-    const [employees, total] = await Promise.all([
-      Employee.find(filter)
-        .populate('department', 'name code')
-        .populate('designation', 'name')
-        .populate('shift', 'name')
-        .sort(sortObj)
-        .skip(skip)
-        .limit(limit)
-        .lean(),
-      Employee.countDocuments(filter),
-    ]);
+    const cacheKey = `${CACHE_KEYS.EMPLOYEES_LIST}:${userRole}:${JSON.stringify(queryParams)}`;
+    return await RedisCacheService.getOrSet(cacheKey, async () => {
+      const [employees, total] = await Promise.all([
+        Employee.find(filter)
+          .populate('department', 'name code')
+          .populate('designation', 'name')
+          .populate('shift', 'name')
+          .sort(sortObj)
+          .skip(skip)
+          .limit(limit)
+          .lean(),
+        Employee.countDocuments(filter),
+      ]);
 
-    const data: unknown[] = employees.map((e) => {
-      const { _id, ...rest } = e as Record<string, unknown>;
-      const emp = {
-        ...rest,
-        id: String(_id),
-        _id: undefined,
-        department: e.department ? { id: (e.department as any)._id.toString(), name: (e.department as any).name } : null,
-        designation: e.designation ? { id: (e.designation as any)._id.toString(), name: (e.designation as any).name } : null,
-        shift: e.shift ? { id: (e.shift as any)._id.toString(), name: (e.shift as any).name } : null,
-      };
-      return sanitizeEmployee(emp, userRole);
-    });
+      const data: unknown[] = employees.map((e) => {
+        const { _id, ...rest } = e as Record<string, unknown>;
+        const emp = {
+          ...rest,
+          id: String(_id),
+          _id: undefined,
+          department: e.department ? { id: (e.department as any)._id.toString(), name: (e.department as any).name } : null,
+          designation: e.designation ? { id: (e.designation as any)._id.toString(), name: (e.designation as any).name } : null,
+          shift: e.shift ? { id: (e.shift as any)._id.toString(), name: (e.shift as any).name } : null,
+        };
+        return sanitizeEmployee(emp, userRole);
+      });
 
-    const meta = PaginationUtil.getMeta(page, limit, total);
-    return { data, meta };
+      const meta = PaginationUtil.getMeta(page, limit, total);
+      return { data, meta };
+    }, 300);
   }
 
   static async getById(id: string, userRole: string): Promise<Record<string, unknown>> {
@@ -218,6 +224,7 @@ export class EmployeesService {
       }
     }
 
+    await RedisCacheService.invalidate(CACHE_KEYS.EMPLOYEES_LIST);
     return this.getById(emp._id.toString(), userRole);
   }
 
@@ -244,17 +251,24 @@ export class EmployeesService {
       details: data,
     });
 
+    await RedisCacheService.invalidate(CACHE_KEYS.EMPLOYEES_LIST);
     return this.getById(id, userRole);
   }
 
-  static async delete(id: string, deletedById: string) {
+  static async delete(id: string, deletedById: string, userRole: string) {
     const emp = await Employee.findById(id);
     if (!emp) {
       throw new AppError('Employee not found', 404);
     }
+    // Resource‑level ownership: allow privileged roles or creator
+    const privileged = ['super-admin', 'hr-admin', 'hr-staff'];
+    const creatorId = (emp.createdBy as any)?.toString();
+    if (!privileged.includes(userRole) && creatorId !== deletedById) {
+      throw new AppError('Unauthorized to delete employee', 403);
+    }
 
     emp.status = 'archived';
-    emp.updatedBy = deletedById as any;
+    emp.updatedBy = deletedById as unknown as mongoose.Types.ObjectId;
     await emp.save();
 
     await AuditService.log({
@@ -263,9 +277,11 @@ export class EmployeesService {
       userId: deletedById,
       targetId: id,
     });
+
+    await RedisCacheService.invalidate(CACHE_KEYS.EMPLOYEES_LIST);
   }
 
-  static async restore(id: string, restoredById: string) {
+  static async restore(id: string, restoredById: string, userRole: string) {
     const emp = await Employee.findById(id);
     if (!emp) {
       throw new AppError('Employee not found', 404);
@@ -275,8 +291,14 @@ export class EmployeesService {
       throw new AppError('Only archived employees can be restored', 400);
     }
 
+    const privileged = ['super-admin', 'hr-admin', 'hr-staff'];
+    const creatorId = (emp.createdBy as any)?.toString();
+    if (!privileged.includes(userRole) && creatorId !== restoredById) {
+      throw new AppError('Unauthorized to restore employee', 403);
+    }
+
     emp.status = 'active';
-    emp.updatedBy = restoredById as any;
+    emp.updatedBy = restoredById as unknown as mongoose.Types.ObjectId;
     await emp.save();
 
     await AuditService.log({
@@ -286,18 +308,32 @@ export class EmployeesService {
       targetId: id,
     });
 
-    return this.getById(id, 'super-admin');
+    await RedisCacheService.invalidate(CACHE_KEYS.EMPLOYEES_LIST);
+    return this.getById(id, userRole);
   }
 
-  static async bulkAssignShift(employeeIds: string[], shiftId: string, updatedById: string) {
+  static async bulkAssignShift(employeeIds: string[], shiftId: string, updatedById: string, userRole: string) {
     const shift = await Shift.findById(shiftId);
     if (!shift) {
       throw new AppError('Shift not found', 404);
     }
 
+    const privileged = ['super-admin', 'hr-admin', 'hr-staff'];
+    if (!privileged.includes(userRole)) {
+      const ownedEmployees = await Employee.find({
+        _id: { $in: employeeIds },
+        createdBy: updatedById,
+      }).select('_id').lean();
+      const ownedIds = new Set(ownedEmployees.map((e) => e._id.toString()));
+      const unauthorized = employeeIds.filter((id) => !ownedIds.has(id));
+      if (unauthorized.length > 0) {
+        throw new AppError('Unauthorized to modify some employees', 403);
+      }
+    }
+
     const result = await Employee.updateMany(
       { _id: { $in: employeeIds } },
-      { $set: { shift: shiftId as any, updatedBy: updatedById as any } },
+      { $set: { shift: shiftId as unknown as mongoose.Types.ObjectId, updatedBy: updatedById as unknown as mongoose.Types.ObjectId } },
     );
 
     await AuditService.log({
@@ -309,6 +345,7 @@ export class EmployeesService {
       details: { shiftId, employeeCount: result.modifiedCount },
     });
 
+    await RedisCacheService.invalidate(CACHE_KEYS.EMPLOYEES_LIST);
     return { modifiedCount: result.modifiedCount };
   }
 

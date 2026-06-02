@@ -41,9 +41,10 @@ export function decrypt(encryptedText: string): string {
     decrypted += decipher.final('utf8');
     
     return decrypted;
-  } catch {
-    return encryptedText;
-  }
+   } catch (error) {
+     // Propagate error so calling code can handle decryption failures
+     throw error;
+   }
 }
 
 export function encryptBankDetails(bankDetails: Record<string, unknown> | undefined): Record<string, unknown> | undefined {

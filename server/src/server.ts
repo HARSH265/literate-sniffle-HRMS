@@ -8,6 +8,7 @@ import { env } from './config/env.js';
 import { logger } from './core/logger/logger.js';
 import { initSocket, closeSocket } from './core/socket/socket.js';
 import { announcementService } from './modules/announcements/announcement.service.js';
+import { AttendanceService } from './modules/attendance/attendance.service.js';
 import { RedisService } from './core/redis/redis.service.js';
 
 async function startServer() {
@@ -61,6 +62,17 @@ async function startServer() {
       logger.error('Failed to process scheduled announcements:', err);
     }
   }, 60_000);
+
+  setInterval(async () => {
+    try {
+      const result = await AttendanceService.runAutoCheckout();
+      if (result.checkedOut > 0) {
+        logger.info(`Auto-checkout: ${result.checkedOut}/${result.processed} entries processed`);
+      }
+    } catch (err) {
+      logger.error('Failed to run auto-checkout:', err);
+    }
+  }, 15 * 60 * 1000);
 
   const shutdown = (signal: string) => {
     logger.info(`${signal} received, shutting down gracefully`);

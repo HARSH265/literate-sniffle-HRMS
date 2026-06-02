@@ -21,6 +21,7 @@ router.get('/employee/:employeeId', authorize('view-employees'), attendanceContr
 router.get('/monthly-view', authorize('view-employees'), attendanceController.monthlyView);
 router.post('/bulk', bulkLimiter, authorize('manage-attendance'), validate(bulkAttendanceSchema), attendanceController.bulkCreate);
 router.patch('/bulk-update', bulkLimiter, authorize('manage-attendance'), attendanceController.bulkUpdateEntries);
+router.post('/admin-checkout/:employeeId', authorize('manage-attendance'), attendanceController.adminCheckout);
 router.post('/', authorize('manage-attendance'), validate(createAttendanceEntrySchema), attendanceController.create);
 router.patch('/:id', authorize('manage-attendance'), attendanceController.update);
 router.delete('/:id', authorize('manage-attendance'), attendanceController.remove);

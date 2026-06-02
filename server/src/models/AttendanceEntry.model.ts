@@ -7,14 +7,20 @@ export interface IAttendanceEntry extends Document {
   status: 'present' | 'absent' | 'half-day' | 'leave' | 'weekly-off' | 'holiday';
   inTime?: string;
   outTime?: string;
+  totalHours?: number;
   isLate?: boolean;
   isLateCount?: number;
   remarks?: string;
-  source: 'manual-register-entry' | 'qr-kiosk' | 'supervisor-override';
+  source: 'manual-register-entry' | 'qr-kiosk' | 'supervisor-override' | 'auto-checkout';
   enteredBy: mongoose.Types.ObjectId;
   updatedBy?: mongoose.Types.ObjectId;
+  autoCheckout?: boolean;
+  adminCheckout?: {
+    by: mongoose.Types.ObjectId;
+    reason: string;
+  };
   checkInMethod?: 'qr-biometric' | 'qr-totp' | 'supervisor' | 'manual';
-  checkOutMethod?: 'qr-biometric' | 'qr-totp' | 'supervisor' | 'manual';
+  checkOutMethod?: 'qr-biometric' | 'qr-totp' | 'supervisor' | 'manual' | 'auto-checkout' | 'admin-override';
   checkInDeviceId?: string;
   checkOutDeviceId?: string;
   checkInGPS?: { latitude: number; longitude: number; accuracy?: number };
@@ -47,14 +53,20 @@ const AttendanceEntrySchema = new Schema<IAttendanceEntry>(
     },
     inTime: { type: String },
     outTime: { type: String },
+    totalHours: { type: Number },
     isLate: { type: Boolean, default: false },
     isLateCount: { type: Number, default: 0 },
     remarks: { type: String },
-    source: { type: String, default: 'manual-register-entry' },
+    source: { type: String, default: 'manual-register-entry', enum: ['manual-register-entry', 'qr-kiosk', 'supervisor-override', 'auto-checkout'] },
     enteredBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    autoCheckout: { type: Boolean, default: false },
+    adminCheckout: {
+      by: { type: Schema.Types.ObjectId, ref: 'User' },
+      reason: { type: String },
+    },
     checkInMethod: { type: String, enum: ['qr-biometric', 'qr-totp', 'supervisor', 'manual'] },
-    checkOutMethod: { type: String, enum: ['qr-biometric', 'qr-totp', 'supervisor', 'manual'] },
+    checkOutMethod: { type: String, enum: ['qr-biometric', 'qr-totp', 'supervisor', 'manual', 'auto-checkout', 'admin-override'] },
     checkInDeviceId: { type: String },
     checkOutDeviceId: { type: String },
     checkInGPS: {

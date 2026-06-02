@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
-import { Button, Modal, Form, Input, Select, DatePicker, message, Tag, Row, Col, Tabs, Card, Table } from 'antd';
+import { Button, Modal, Form, Input, Select, DatePicker, message, Tag, Row, Col, Tabs, Card, Table, Tooltip } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { SaveOutlined, CalendarOutlined } from '@ant-design/icons';
+import { SaveOutlined, CalendarOutlined, LogoutOutlined } from '@ant-design/icons';
 import { PageHeader } from '../../../core/components/PageHeader';
 import { DataTable } from '../../../core/components/DataTable';
 import { attendanceService, AttendanceEntry } from '../services/attendanceService';
@@ -32,6 +32,9 @@ export function AttendancePage() {
   const [bulkForm] = Form.useForm();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isBulkUpdateOpen, setIsBulkUpdateOpen] = useState(false);
+  const [checkoutModalOpen, setCheckoutModalOpen] = useState(false);
+  const [checkoutRecord, setCheckoutRecord] = useState<AttendanceEntry | null>(null);
+  const [checkoutReason, setCheckoutReason] = useState('');
   const [selectedDate, setSelectedDate] = useState(dayjs());
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(20);
@@ -89,6 +92,20 @@ export function AttendancePage() {
       queryClient.invalidateQueries({ queryKey: ['attendance-monthly'] });
     },
     onError: (err: any) => message.error(err?.response?.data?.message || 'Failed to bulk update attendance'),
+  });
+
+  const checkoutMutation = useMutation({
+    mutationFn: ({ employeeId, reason }: { employeeId: string; reason: string }) =>
+      attendanceService.adminCheckout(employeeId, reason),
+    onSuccess: (res) => {
+      message.success(`Checked out at ${res.outTime} — ${res.totalHours}h worked, ${res.otHours}h OT`);
+      setCheckoutModalOpen(false);
+      setCheckoutRecord(null);
+      setCheckoutReason('');
+      queryClient.invalidateQueries({ queryKey: ['attendance'] });
+      queryClient.invalidateQueries({ queryKey: ['attendance-monthly'] });
+    },
+    onError: (err: any) => message.error(err?.response?.data?.message || 'Failed to checkout'),
   });
 
   const handleBulkSave = () => {
@@ -175,6 +192,28 @@ export function AttendancePage() {
       dataIndex: 'remarks',
       key: 'remarks',
       render: (v: string) => v || '-',
+    },
+    {
+      title: '',
+      key: 'actions',
+      width: 80,
+      render: (_: unknown, record: AttendanceEntry) => {
+        if (record.outTime) return null;
+        return (
+          <Tooltip title="Force Checkout">
+            <Button
+              type="link"
+              icon={<LogoutOutlined />}
+              size="small"
+              style={{ color: 'var(--hrms-warning, #faad14)' }}
+              onClick={() => {
+                setCheckoutRecord(record);
+                setCheckoutModalOpen(true);
+              }}
+            />
+          </Tooltip>
+        );
+      },
     },
   ], []);
 
@@ -461,6 +500,56 @@ export function AttendancePage() {
             />
           </div>
         </Form>
+      </Modal>
+
+      <Modal
+        title="Force Checkout"
+        open={checkoutModalOpen}
+        onCancel={() => {
+          setCheckoutModalOpen(false);
+          setCheckoutRecord(null);
+          setCheckoutReason('');
+        }}
+        footer={[
+          <Button key="cancel" onClick={() => { setCheckoutModalOpen(false); setCheckoutRecord(null); setCheckoutReason(''); }}>
+            Cancel
+          </Button>,
+          <Button
+            key="checkout"
+            type="primary"
+            icon={<LogoutOutlined />}
+            danger
+            disabled={!checkoutReason.trim()}
+            loading={checkoutMutation.isPending}
+            onClick={() => {
+              if (checkoutRecord?.employee?.id) {
+                checkoutMutation.mutate({
+                  employeeId: checkoutRecord.employee.id,
+                  reason: checkoutReason.trim(),
+                });
+              }
+            }}
+          >
+            Checkout
+          </Button>,
+        ]}
+      >
+        {checkoutRecord && (
+          <div style={{ marginBottom: 16 }}>
+            <p><strong>Employee:</strong> {checkoutRecord.employee?.fullName} ({checkoutRecord.employee?.employeeCode})</p>
+            <p><strong>Date:</strong> {checkoutRecord.date}</p>
+            <p><strong>In Time:</strong> {checkoutRecord.inTime || 'N/A'}</p>
+          </div>
+        )}
+        <div>
+          <label style={{ fontWeight: 500, marginBottom: 4, display: 'block' }}>Reason *</label>
+          <Input.TextArea
+            rows={3}
+            value={checkoutReason}
+            onChange={(e) => setCheckoutReason(e.target.value)}
+            placeholder="Why are you checking out this employee manually?"
+          />
+        </div>
       </Modal>
     </div>
   );

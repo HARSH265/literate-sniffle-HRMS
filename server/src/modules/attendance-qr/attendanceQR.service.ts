@@ -2,20 +2,13 @@ import AttendanceEntry from '../../models/AttendanceEntry.model.js';
 import Employee from '../../models/Employee.model.js';
 import CompanySettings from '../../models/CompanySettings.model.js';
 import OvertimeEntry from '../../models/OvertimeEntry.model.js';
+import OvertimeRule from '../../models/OvertimeRule.model.js';
 import { KioskService } from '../kiosk/kiosk.service.js';
 import { TOTPService } from '../totp/totp.service.js';
 import { AppError } from '../../core/errors/AppError.js';
 import { AuditService } from '../../core/audit/AuditService.js';
+import { AttendanceService } from '../attendance/attendance.service.js';
 import dayjs from 'dayjs';
-
-function parseTimeToMinutes(time: string): number {
-  const [hours, minutes] = time.split(':').map(Number);
-  return hours * 60 + minutes;
-}
-
-function getMinutesDiff(inTime: string, outTime: string): number {
-  return parseTimeToMinutes(outTime) - parseTimeToMinutes(inTime);
-}
 
 export class AttendanceQRService {
   static async checkIn(data: {
@@ -161,47 +154,53 @@ export class AttendanceQRService {
       ? { latitude: data.latitude, longitude: data.longitude, accuracy: data.gpsAccuracy }
       : undefined;
     entry.checkOutTokenNonce = nonce;
+
+    const shift = await entry.populate('shift', 'startTime endTime');
+    const shiftRecord = shift.shift as unknown as { startTime: string; endTime: string } | null;
+    const shiftEndTime = config.shiftEndTime || shiftRecord?.endTime || '18:00';
+
+    const overtimeRule = await OvertimeRule.findOne({ isActive: true, applicableTo: 'all' }).lean();
+    const maxOTHours = overtimeRule?.maxHoursPerDay || 4;
+
+    const { totalHours, otHours } = AttendanceService.calculateOTHours(
+      entry.inTime!,
+      outTime,
+      entry.isLatePresent,
+      {
+        ...config,
+        shiftStartTime: config.shiftStartTime || shiftRecord?.startTime || '09:00',
+        shiftEndTime,
+        gracePeriodMinutes: config.gracePeriodMinutes || 5,
+        lateMarkAsAbsent: config.lateMarkAsAbsent !== false,
+        lateTreatWorkAsOT: config.lateTreatWorkAsOT !== false,
+        autoCheckoutEnabled: config.autoCheckoutEnabled !== false,
+        autoCheckoutGraceMinutes: config.autoCheckoutGraceMinutes || 30,
+        breakMinutes: config.breakMinutes || 30,
+      },
+      maxOTHours,
+    );
+
+    entry.totalHours = totalHours;
     await entry.save();
 
-    if (entry.isLatePresent && config.lateTreatWorkAsOT) {
-      const workMinutes = getMinutesDiff(entry.inTime!, outTime);
-      const breakMinutes = 30;
-      const otMinutes = Math.max(0, workMinutes - breakMinutes);
+    if (otHours > 0) {
+      const existingOT = await OvertimeEntry.findOne({
+        employee: employee._id,
+        date: { $gte: todayStart, $lte: todayEnd },
+      });
 
-      const payrollSettings = (settings?.payrollConfig as any) || {};
-      let otHours: number;
-      if (payrollSettings.otTricksEnabled) {
-        const roundingMinutes = payrollSettings.otRoundingMinutes || 60;
-        if (payrollSettings.otRoundingMethod === 'floor') {
-          otHours = Math.floor(otMinutes / roundingMinutes) * (roundingMinutes / 60);
-        } else if (payrollSettings.otRoundingMethod === 'ceil') {
-          otHours = Math.ceil(otMinutes / roundingMinutes) * (roundingMinutes / 60);
-        } else {
-          otHours = Math.round(otMinutes / roundingMinutes) * (roundingMinutes / 60);
-        }
+      if (existingOT) {
+        existingOT.hours = otHours;
+        existingOT.remarks = 'Auto-calculated from QR check-out';
+        await existingOT.save();
       } else {
-        otHours = otMinutes / 60;
-      }
-
-      if (otHours > 0) {
-        const existingOT = await OvertimeEntry.findOne({
+        await OvertimeEntry.create({
           employee: employee._id,
-          date: { $gte: todayStart, $lte: todayEnd },
+          date: now.toDate(),
+          hours: otHours,
+          remarks: 'Auto-calculated from QR check-out',
+          enteredBy: employee._id,
         });
-
-        if (existingOT) {
-          existingOT.hours = otHours;
-          existingOT.remarks = 'Auto-calculated from QR check-out (late present)';
-          await existingOT.save();
-        } else {
-          await OvertimeEntry.create({
-            employee: employee._id,
-            date: now.toDate(),
-            hours: otHours,
-            remarks: 'Auto-calculated from QR check-out (late present)',
-            enteredBy: employee._id,
-          });
-        }
       }
     }
 
@@ -216,6 +215,8 @@ export class AttendanceQRService {
     return {
       id: String(entry._id),
       outTime,
+      totalHours,
+      otHours,
       message: 'Check-out successful',
     };
   }

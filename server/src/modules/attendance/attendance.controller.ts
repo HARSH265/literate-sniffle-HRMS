@@ -51,4 +51,15 @@ const bulkUpdateEntries = asyncHandler(async (req: Request, res: Response) => {
   ResponseHandler.success(res, result, 'Bulk update completed');
 });
 
-export const attendanceController = { list, getByEmployee, monthlyView, bulkCreate, create, update, remove, bulkUpdateEntries };
+const adminCheckout = asyncHandler(async (req: Request, res: Response) => {
+  const { employeeId } = req.params;
+  const { reason } = req.body;
+  if (!reason) {
+    ResponseHandler.error(res, 'Reason is required for admin checkout', 400);
+    return;
+  }
+  const result = await AttendanceService.adminCheckout(employeeId, req.user!.id, reason);
+  ResponseHandler.success(res, result, 'Admin checkout completed');
+});
+
+export const attendanceController = { list, getByEmployee, monthlyView, bulkCreate, create, update, remove, bulkUpdateEntries, adminCheckout };

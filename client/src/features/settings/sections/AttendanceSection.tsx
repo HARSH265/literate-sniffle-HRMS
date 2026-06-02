@@ -59,6 +59,25 @@ export function AttendanceSection({ form, onSave }: { form: any; onSave: (values
         </Col>
       </Row>
 
+      <h4 style={{ margin: '16px 0 8px' }}>Auto-Checkout</h4>
+      <Row gutter={16}>
+        <Col span={6}>
+          <Form.Item name={['attendanceConfig', 'autoCheckoutEnabled']} label="Enable Auto-Checkout" valuePropName="checked">
+            <Switch />
+          </Form.Item>
+        </Col>
+        <Col span={6}>
+          <Form.Item name={['attendanceConfig', 'autoCheckoutGraceMinutes']} label="Grace After Max OT (Min)">
+            <InputNumber style={{ width: '100%', height: 40 }} min={0} max={120} />
+          </Form.Item>
+        </Col>
+        <Col span={6}>
+          <Form.Item name={['attendanceConfig', 'breakMinutes']} label="Break Duration (Min)">
+            <InputNumber style={{ width: '100%', height: 40 }} min={0} max={120} />
+          </Form.Item>
+        </Col>
+      </Row>
+
       <div style={{ marginTop: 24, padding: 16, background: '#f0f5ff', borderRadius: 8, border: '1px solid #d9e6ff' }}>
         <h4 style={{ marginBottom: 12 }}>QR Kiosk System</h4>
         <Row gutter={16}>
