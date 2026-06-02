@@ -20,3 +20,4 @@ export { AnnouncementSection } from './AnnouncementSection';
 export { ShiftSwapSection } from './ShiftSwapSection';
 export { AssetSection } from './AssetSection';
 export { DocumentSection } from './DocumentSection';
+export { PermissionsSection } from './PermissionsSection';

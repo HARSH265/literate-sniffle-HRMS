@@ -7,7 +7,7 @@ import {
   SafetyCertificateOutlined, UserOutlined, ClockCircleOutlined,
   BankOutlined, MailOutlined, DollarOutlined, CalendarOutlined,
   GiftOutlined, CodeOutlined, BarChartOutlined, BellOutlined,
-  SwapOutlined, LaptopOutlined, FolderOutlined,
+  SwapOutlined, LaptopOutlined, FolderOutlined, LockOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { settingsService, CompanySettings } from '../services/settingsService';
@@ -22,7 +22,7 @@ import {
   AttendanceSection, AllowancesSection, OvertimeSection, WeeklyOffSection,
   HolidaysSection, CodeConfigSection, LeaveSection, ReportsSection,
   LoanConfigSection, StatutoryConfigSection, EssSection, AnnouncementSection,
-  ShiftSwapSection, AssetSection, DocumentSection,
+  ShiftSwapSection, AssetSection, DocumentSection, PermissionsSection,
 } from '../sections';
 import { TotpSection } from '../sections/TotpSection';
 import { SettingsModals } from '../components/SettingsModals';
@@ -49,6 +49,7 @@ const SETTINGS_MENU = [
   { key: 'assets', label: 'Asset Management', icon: <LaptopOutlined />, group: 'features' },
   { key: 'documents', label: 'Document Repository', icon: <FolderOutlined />, group: 'features' },
   { key: 'totp', label: 'TOTP Enrollment', icon: <SafetyCertificateOutlined />, group: 'security' },
+  { key: 'permissions', label: 'Role Permissions', icon: <LockOutlined />, group: 'security' },
 ];
 
 const MENU_GROUPS = [
@@ -189,6 +190,8 @@ export function SettingsPage() {
         return <StatutoryConfigSection form={companyForm} onSave={handleSaveCompany} />;
       case 'totp':
         return <TotpSection employees={employees?.data || []} />;
+      case 'permissions':
+        return <PermissionsSection form={companyForm} onSave={handleSaveCompany} />;
       default:
         return null;
     }

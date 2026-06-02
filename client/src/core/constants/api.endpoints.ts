@@ -227,4 +227,11 @@ export const API_ENDPOINTS = {
     logo: '/upload/logo',
     employeePhoto: '/upload/employee-photo',
   },
+
+  permissions: {
+    groups: '/permissions/groups',
+    roles: '/permissions/roles',
+    role: (role: string) => `/permissions/roles/${role}`,
+    resetRole: (role: string) => `/permissions/roles/${role}/reset`,
+  },
 } as const;
