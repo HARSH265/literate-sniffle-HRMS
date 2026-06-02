@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { authController } from './auth.controller.js';
 import { validate } from '../../core/validation/validate.middleware.js';
-import { loginSchema, changePasswordSchema, refreshTokenSchema, forgotPasswordSchema, resetPasswordSchema, unlockAccountSchema } from './auth.validation.js';
+import { loginSchema, changePasswordSchema, refreshTokenSchema, forgotPasswordSchema, resetPasswordSchema, unlockAccountSchema, forceChangePasswordSchema } from './auth.validation.js';
 import { authenticate } from '../../core/permissions/authenticate.middleware.js';
 import { authorize } from '../../core/permissions/authorize.middleware.js';
 
@@ -15,6 +15,7 @@ router.post('/logout', authenticate, authController.logout);
 router.post('/logout-all-devices', authenticate, authController.logoutAllDevices);
 router.get('/me', authenticate, authController.getMe);
 router.post('/change-password', authenticate, validate(changePasswordSchema), authController.changePassword);
+router.post('/force-change-password', authenticate, validate(forceChangePasswordSchema), authController.forceChangePassword);
 router.post('/unlock-account', authenticate, authorize('manage-users'), validate(unlockAccountSchema), authController.unlockAccount);
 
 export default router;

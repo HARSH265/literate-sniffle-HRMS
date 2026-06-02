@@ -11,6 +11,7 @@ const SYSTEM_ROLES = [
   ROLES.HR_STAFF,
   ROLES.ACCOUNTS,
   ROLES.MANAGER,
+  ROLES.WORKER,
 ] as const;
 
 export class PermissionManagementService {

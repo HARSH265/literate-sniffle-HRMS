@@ -6,6 +6,7 @@ export const ROLES = {
   HR_STAFF: 'hr-staff',
   ACCOUNTS: 'accounts',
   MANAGER: 'manager',
+  WORKER: 'worker',
   API: 'api',
 } as const;
 

@@ -332,6 +332,34 @@ export const permissions: Record<string, Permission[]> = {
     'view-own-profile',
   ],
 
+  // WORKER: Mobile-first role — ESS-only, minimal permissions
+  // Workers only need: check-in/out, view own shifts, leave, profile, announcements
+  [ROLES.WORKER]: [
+    // Attendance — can check in/out
+    'check-in-out',
+
+    // Shifts — view own only
+    'view-own-shifts', 'request-shift-swap',
+
+    // Leave — apply and view own
+    'manage-leave-applications',
+
+    // Loans — can apply
+    'apply-loan',
+
+    // Training — view and enroll
+    'view-own-training', 'enroll-training',
+
+    // Announcements — view only
+    'view-announcements',
+
+    // Notifications
+    'view-notifications',
+
+    // Profile — own only
+    'view-own-profile', 'update-own-profile',
+  ],
+
   // API keys get read-only access to core data
   // Actual permissions are checked per-key via requireApiKeyPermission()
   [ROLES.API]: [

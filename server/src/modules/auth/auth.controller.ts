@@ -111,12 +111,24 @@ const unlockAccount = asyncHandler(async (req: Request, res: Response) => {
   ResponseHandler.success(res, null, result.message);
 });
 
+const forceChangePassword = asyncHandler(async (req: Request, res: Response) => {
+  const { newPassword } = req.body;
+  const ipAddress = req.ip || req.socket.remoteAddress;
+  const userAgent = req.headers['user-agent'];
+
+  await AuthService.forceChangePassword(req.user!.id, newPassword, ipAddress, userAgent);
+
+  res.clearCookie('jwt');
+  ResponseHandler.success(res, null, 'Password changed successfully. Please login with your new password.');
+});
+
 export const authController = {
   login,
   logout,
   logoutAllDevices,
   getMe,
   changePassword,
+  forceChangePassword,
   refreshToken,
   forgotPassword,
   resetPassword,

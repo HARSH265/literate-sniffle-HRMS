@@ -91,6 +91,7 @@ export class AuthService {
         email: user.email,
         role: user.role,
         employeeId: user.employeeId?.toString() || null,
+        mustChangePassword: user.mustChangePassword || false,
       },
       token,
       refreshToken,
@@ -161,6 +162,53 @@ export class AuthService {
     });
 
     return { message: 'Password changed successfully' };
+  }
+
+  /**
+   * Force change password — used when mustChangePassword is true (auto-generated credentials).
+   * Does NOT require current password.
+   */
+  static async forceChangePassword(
+    userId: string,
+    newPassword: string,
+    ipAddress?: string,
+    userAgent?: string,
+  ) {
+    const user = await User.findById(userId);
+
+    if (!user) {
+      throw new AppError('User not found', 404);
+    }
+
+    if (await user.isPasswordInHistory(newPassword)) {
+      throw new AppError('Cannot reuse any of your last 5 passwords. Please choose a different password.', 400);
+    }
+
+    const settings = await CompanySettings.findOne().lean() as any;
+    const passwordHistoryCount = settings?.authConfig?.passwordHistoryCount || 5;
+
+    const previousPasswords = user.passwordHistory || [];
+    previousPasswords.unshift(user.password);
+    if (previousPasswords.length > passwordHistoryCount) {
+      previousPasswords.pop();
+    }
+
+    user.password = newPassword;
+    user.passwordHistory = previousPasswords;
+    user.mustChangePassword = false;
+    await user.save();
+
+    await AuditService.log({
+      action: 'update',
+      module: 'auth',
+      userId,
+      targetId: userId,
+      details: { action: 'force password change (first login)' },
+      ipAddress,
+      userAgent,
+    });
+
+    return { message: 'Password changed successfully. You can now use your new password.' };
   }
 
   static async refreshToken(refreshToken: string) {

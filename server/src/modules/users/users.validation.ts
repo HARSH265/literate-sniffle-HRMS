@@ -13,7 +13,7 @@ export const createUserSchema = z.object({
   email: z.string().email('Invalid email address'),
   // Password is optional — auto-generated if not provided
   password: passwordComplexity.optional(),
-  role: z.enum(['super-admin', 'hr-admin', 'hr-staff', 'accounts', 'manager', 'api']),
+  role: z.enum(['super-admin', 'hr-admin', 'hr-staff', 'accounts', 'manager', 'worker', 'api']),
   isActive: z.boolean().optional().default(true),
   // Optional: link to existing employee
   employeeId: z.string().optional(),
@@ -22,13 +22,13 @@ export const createUserSchema = z.object({
 export const updateUserSchema = z.object({
   name: z.string().min(2).optional(),
   email: z.string().email().optional(),
-  role: z.enum(['super-admin', 'hr-admin', 'hr-staff', 'accounts', 'manager']).optional(),
+  role: z.enum(['super-admin', 'hr-admin', 'hr-staff', 'accounts', 'manager', 'worker']).optional(),
   isActive: z.boolean().optional(),
 });
 
 export const generateCredentialsSchema = z.object({
   userId: z.string().min(1, 'User ID is required'),
-  role: z.enum(['super-admin', 'hr-admin', 'hr-staff', 'accounts', 'manager', 'api']),
+  role: z.enum(['super-admin', 'hr-admin', 'hr-staff', 'accounts', 'manager', 'worker', 'api']),
   name: z.string().min(2, 'Name is required'),
   email: z.string().email('Email is required'),
 });

@@ -17,6 +17,7 @@ export interface IUser extends Document {
   passwordHistory?: string[];
   employeeId?: mongoose.Types.ObjectId;
   preferredLanguage?: string;
+  mustChangePassword?: boolean;
   comparePassword(candidatePassword: string): Promise<boolean>;
   isPasswordInHistory(candidatePassword: string): Promise<boolean>;
 }
@@ -44,6 +45,7 @@ const UserSchema = new Schema<IUser>(
     passwordHistory: { type: [String], default: [] },
     employeeId: { type: Schema.Types.ObjectId, ref: 'Employee' },
     preferredLanguage: { type: String, default: 'en' },
+    mustChangePassword: { type: Boolean, default: false },
   },
   { timestamps: true },
 );
