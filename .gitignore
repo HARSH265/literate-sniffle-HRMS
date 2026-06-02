@@ -12,3 +12,7 @@ server/vault-config.hcl
 *.log
 .DS_Store
 Thumbs.db
+
+# Dev docs — not tracked in git
+*.md
+!README.md
