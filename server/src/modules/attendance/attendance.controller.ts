@@ -18,7 +18,7 @@ const getByEmployee = asyncHandler(async (req: Request, res: Response) => {
 
 const monthlyView = asyncHandler(async (req: Request, res: Response) => {
   const result = await AttendanceService.monthlyView(req.query as Record<string, unknown>);
-  ResponseHandler.success(res, result, 'Monthly view fetched successfully');
+  ResponseHandler.paginated(res, result.data, result.meta as PaginationMeta, 'Monthly view fetched successfully');
 });
 
 const bulkCreate = asyncHandler(async (req: Request, res: Response) => {

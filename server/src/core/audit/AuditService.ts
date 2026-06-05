@@ -1,4 +1,5 @@
 import AuditLog from '../../models/AuditLog.model.js';
+import mongoose from 'mongoose';
 import { logger } from '../logger/logger.js';
 
 export type AuditAction =
@@ -36,20 +37,26 @@ export interface AuditData {
 export class AuditService {
   static async log(data: AuditData): Promise<void> {
     try {
-      await AuditLog.create({
-        action: data.action,
-        module: data.module,
-        userId: data.userId,
-        targetId: data.targetId,
-        targetName: data.targetName,
-        details: data.details,
-        ipAddress: data.ipAddress,
-        userAgent: data.userAgent,
-        method: data.method,
-        path: data.path,
-        statusCode: data.statusCode,
-        responseTime: data.responseTime,
-      });
+let auditUserId = data.userId;
+    // If the audit is triggered by a system process, assign a placeholder ObjectId
+    if (auditUserId === 'system') {
+      // Using a fixed ObjectId ensures consistency; ensure a corresponding system user exists if needed
+      auditUserId = mongoose.Types.ObjectId('000000000000000000000000').toString();
+    }
+    await AuditLog.create({
+      action: data.action,
+      module: data.module,
+      userId: auditUserId,
+      targetId: data.targetId,
+      targetName: data.targetName,
+      details: data.details,
+      ipAddress: data.ipAddress,
+      userAgent: data.userAgent,
+      method: data.method,
+      path: data.path,
+      statusCode: data.statusCode,
+      responseTime: data.responseTime,
+    });
     } catch (error) {
       logger.error('Audit log failed:', error);
     }

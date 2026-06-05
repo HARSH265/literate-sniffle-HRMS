@@ -250,7 +250,7 @@ describe('EmployeesService', () => {
         shift: shiftId,
       });
 
-      await EmployeesService.delete(emp._id.toString(), new mongoose.Types.ObjectId().toString());
+      await EmployeesService.delete(emp._id.toString(), new mongoose.Types.ObjectId().toString(), 'super-admin');
 
       const found = await Employee.findById(emp._id);
       expect(found!.status).toBe('archived');

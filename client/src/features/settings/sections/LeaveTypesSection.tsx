@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, Tag, Modal, Form, Input, InputNumber, Select, Switch, Space, ColorPicker, Popconfirm, message, Tooltip, Row, Col } from 'antd';
+import { Button, Tag, Modal, Form, Input, InputNumber, Select, Switch, Space, ColorPicker, Popconfirm, message, Tooltip, Row, Col, Alert } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { DataTable } from '../../../core/components/DataTable';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -135,7 +135,16 @@ export function LeaveTypesSection() {
         <h3 style={{ margin: 0 }}>Leave Types</h3>
         <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>Add Leave Type</Button>
       </div>
+
+      <Alert
+          message="Leave Types configure entitlement policies, accrual methods and deduction rules for employee leaves. These settings feed into payroll calculations for leave pay and balances."
+          type="info"
+          showIcon
+          style={{ marginBottom: 16, marginTop:16 }}
+        /> 
+        
       <DataTable dataSource={data?.data || []} columns={columns} rowKey="id" loading={isLoading} hidePagination noCard disableRowClick />
+        
 
       <Modal
         title={editingType ? 'Edit Leave Type' : 'Create Leave Type'}

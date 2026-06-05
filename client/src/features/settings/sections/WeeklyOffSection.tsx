@@ -1,4 +1,4 @@
-import { Button, Popconfirm, Tag, message } from 'antd';
+import { Button, Popconfirm, Tag, message, Alert } from 'antd';
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import { DataTable } from '../../../core/components/DataTable';
 import { weeklyOffRuleService, WeeklyOffRule } from '../../weekly-off-rules/services/weeklyOffRuleService';
@@ -43,7 +43,13 @@ export function WeeklyOffSection({ onAdd }: { onAdd: () => void }) {
             </Popconfirm>
           )},
         ]}
-      />
+       />
+        <Alert
+          message="Weekly Off Rules define recurring non‑working days for employee categories, affecting attendance and payroll calculations."
+          type="info"
+          showIcon
+          style={{ marginBottom: 16 }}
+        />
     </div>
   );
 }

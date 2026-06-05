@@ -26,8 +26,24 @@ export interface LeanPayrollRun {
   status: 'draft' | 'submitted' | 'approved' | 'finalized';
   totalEmployees: number;
   totalNetPay: number;
-  createdAt: Date;
+  totalGrossPay: number;
+  totalDeductions: number;
+  totalEmployerContributions?: number;
+  processedBy?: mongoose.Types.ObjectId;
+  submittedBy?: mongoose.Types.ObjectId;
+  submittedAt?: Date;
+  approvedBy?: mongoose.Types.ObjectId;
+  approvedAt?: Date;
+  finalizedBy?: mongoose.Types.ObjectId;
   finalizedAt?: Date;
+  isSupplementary?: boolean;
+  complianceStatus?: 'pass' | 'warning' | 'fail' | 'pending';
+  complianceReport?: Record<string, unknown>;
+  remarks?: string;
+  revisions?: Array<{ action: string; userId: mongoose.Types.ObjectId; userName: string; changes?: Record<string, unknown>; timestamp: Date }>;
+  approvalHistory?: Array<{ action: 'submitted' | 'approved' | 'rejected' | 'finalized' | 'unfinalized'; userId: mongoose.Types.ObjectId; userName: string; role: string; comments?: string; ipAddress?: string; timestamp: Date }>;
+  createdAt: Date;
+  updatedAt?: Date;
 }
 
 export interface LeanPayrollItem {
@@ -41,6 +57,30 @@ export interface LeanPayrollItem {
   allowances?: { name: string; type: string; value: number; calculatedValue: number }[];
   deductions?: { name: string; type: string; value: number; calculatedValue: number }[];
   loanRepayment?: mongoose.Types.ObjectId;
+  status?: 'draft' | 'submitted' | 'approved' | 'finalized';
+  bankSplitPercent?: number;
+  primaryBankAmount?: number;
+  secondaryBankAmount?: number;
+  paidDaysBreakdown?: { calendarDays: number; payableDaysBase: number; paidDays: number; lopDays: number; calculationMethod: '30' | 'actual' | '26'; proRataFactor: number };
+  lopDetails?: { lopDays: number; lopAmount: number; calculationMethod: '30' | 'actual' | '26'; perDayRate: number; componentsAffected: string[] };
+  proRataDetails?: { isJoiner: boolean; isLeaver: boolean; joinDate?: Date; leaveDate?: Date; daysWorked: number; totalDays: number; proRataFactor: number };
+  complianceFlags?: Array<{ check: string; status: 'pass' | 'warning' | 'fail'; actualValue: number; requiredValue: number; gap: number; notes?: string }>;
+  taxComputation?: {
+    regime: 'old' | 'new';
+    projectedAnnualGross: number;
+    projectedAnnualExemptions: number;
+    projectedTaxableIncome: number;
+    annualTaxAmount: number;
+    surcharge: number;
+    educationCess: number;
+    totalTaxLiability: number;
+    monthlyTds: number;
+    rebate87a: number;
+  };
+  arrears?: Array<{ component: { code: string; name: string; id: string }; month: string; previousAmount: number; currentAmount: number; difference: number; isPositive: boolean; applicableArrearDays: number; effectiveArrearAmount: number }>;
+  componentWiseEarnings?: Array<any>;
+  componentWiseDeductions?: Array<any>;
+  previousMonthComparison?: { previousMonth: string; previousGrossPay: number; previousNetPay: number; previousTotalDeductions: number; grossEarningsVariance: number; netPayVariance: number; variancePercent: number };
 }
 
 export interface LeanAttendanceEntry {

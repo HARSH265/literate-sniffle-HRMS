@@ -48,7 +48,7 @@ export function UserActivityPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(20);
+  const [limit, setLimit] = useState(10);
 
   const { data: userData, isLoading: userLoading } = useQuery({
     queryKey: ['user', id],

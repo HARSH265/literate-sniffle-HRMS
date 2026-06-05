@@ -55,6 +55,11 @@ import performanceRoutes from './modules/performance/performance.routes.js';
 import trainingRoutes from './modules/training/training.routes.js';
 import apiKeyRoutes from './modules/api-keys/api-keys.routes.js';
 import permissionsRoutes from './modules/permissions/permissions.routes.js';
+import componentMasterRoutes from './modules/component-master/componentMaster.routes.js';
+import salaryStructureRoutes from './modules/salary-structures/salaryStructure.routes.js';
+import salaryStructureTemplateRoutes from './modules/salary-structure-templates/salaryStructureTemplate.routes.js';
+import complianceRoutes from './modules/compliance/compliance.routes.js';
+import payrollReportsRoutes from './modules/payroll-reports/payroll-reports.routes.js';
 
 const app = express();
 
@@ -197,6 +202,11 @@ app.use('/api/v1/performance', auditMiddleware, performanceRoutes);
 app.use('/api/v1/training', auditMiddleware, trainingRoutes);
 app.use('/api/v1/audit-logs', auditRoutes);
 app.use('/api/v1/permissions', auditMiddleware, permissionsRoutes);
+app.use('/api/v1/component-master', auditMiddleware, componentMasterRoutes);
+app.use('/api/v1/salary-structures', auditMiddleware, salaryStructureRoutes);
+app.use('/api/v1/salary-structure-templates', auditMiddleware, salaryStructureTemplateRoutes);
+app.use('/api/v1/compliance', auditMiddleware, complianceRoutes);
+app.use('/api/v1/payroll-reports', auditMiddleware, payrollReportsRoutes);
 
 app.use(errorHandler);
 

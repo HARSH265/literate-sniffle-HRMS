@@ -6,10 +6,13 @@ import Shift from '../../../models/Shift.model.js';
 import { AttendanceService } from '../attendance.service.js';
 import { AppError } from '../../../core/errors/AppError.js';
 import User from '../../../models/User.model.js';
+import CompanySettings from '../../../models/CompanySettings.model.js';
 
 let userId: string;
 let empId: string;
 let shiftId: string;
+let nightShiftId: string;
+let nightEmpId: string;
 
 const yesterday = new Date();
 yesterday.setDate(yesterday.getDate() - 1);
@@ -39,6 +42,24 @@ beforeAll(async () => {
     baseSalary: 25000,
   });
   empId = emp._id.toString();
+
+  const nightShift = await Shift.create({ name: 'Night', startTime: '22:00', endTime: '06:00', workingHours: 8 });
+  nightShiftId = nightShift._id.toString();
+
+  const nightEmp = await Employee.create({
+    employeeCode: 'EMP002',
+    fullName: 'Jane Night',
+    fatherName: 'John Night',
+    category: 'worker',
+    employmentType: 'permanent',
+    department: new mongoose.Types.ObjectId(),
+    designation: new mongoose.Types.ObjectId(),
+    shift: nightShift._id,
+    joiningDate: new Date('2025-01-01'),
+    salaryType: 'monthly',
+    baseSalary: 25000,
+  });
+  nightEmpId = nightEmp._id.toString();
 });
 
 beforeEach(async () => {
@@ -85,6 +106,27 @@ describe('AttendanceService', () => {
         ),
       ).rejects.toThrow(AppError);
     });
+
+    it('accepts overnight shift times for night shift employee', async () => {
+      const result = await AttendanceService.create(
+        { employee: nightEmpId, date: todayStr, status: 'present', inTime: '22:00', outTime: '06:00' },
+        userId,
+      ) as any;
+
+      expect(result).toHaveProperty('id');
+      expect(result.status).toBe('present');
+      expect(result.inTime).toBe('22:00');
+      expect(result.outTime).toBe('06:00');
+    });
+
+    it('rejects zero-duration times for night shift employee', async () => {
+      await expect(
+        AttendanceService.create(
+          { employee: nightEmpId, date: todayStr, status: 'present', inTime: '22:00', outTime: '22:00' },
+          userId,
+        ),
+      ).rejects.toThrow(AppError);
+    });
   });
 
   describe('update', () => {
@@ -110,6 +152,21 @@ describe('AttendanceService', () => {
       await expect(
         AttendanceService.update(entry._id.toString(), { inTime: '18:00', outTime: '09:00' }, userId),
       ).rejects.toThrow(AppError);
+    });
+
+    it('accepts overnight times on update for night shift employee', async () => {
+      const entry = await AttendanceEntry.create({
+        employee: nightEmpId, date: new Date(), shift: nightShiftId, status: 'present', enteredBy: userId,
+      });
+
+      const result = await AttendanceService.update(
+        entry._id.toString(),
+        { inTime: '22:00', outTime: '06:00' },
+        userId,
+      ) as any;
+
+      expect(result.inTime).toBe('22:00');
+      expect(result.outTime).toBe('06:00');
     });
   });
 
@@ -196,6 +253,21 @@ describe('AttendanceService', () => {
       expect((result[0] as any).status).toBe('updated');
     });
 
+    it('accepts overnight shift times in bulk', async () => {
+      const result = await AttendanceService.bulkCreate(
+        {
+          date: todayStr,
+          entries: [
+            { employee: nightEmpId, status: 'present', inTime: '22:00', outTime: '06:00' },
+          ],
+        },
+        userId,
+      );
+
+      expect(result).toHaveLength(1);
+      expect((result[0] as any).status).toBe('created');
+    });
+
     it('rejects future dates in bulk', async () => {
       const futureDate = new Date();
       futureDate.setDate(futureDate.getDate() + 10);
@@ -252,6 +324,156 @@ describe('AttendanceService', () => {
       await expect(
         AttendanceService.delete(new mongoose.Types.ObjectId().toString(), userId),
       ).rejects.toThrow(AppError);
+    });
+  });
+
+  describe('calculateOTHours', () => {
+    const defaultConfig = {
+      pastEntryLimitDays: 7,
+      lateMarkEnabled: true,
+      lateMarkThresholdMinutes: 15,
+      lateToHalfDayAfterOccurrences: 3,
+      shiftStartTime: '09:00',
+      shiftEndTime: '18:00',
+      gracePeriodMinutes: 5,
+      lateMarkAsAbsent: true,
+      lateTreatWorkAsOT: false,
+      autoCheckoutEnabled: true,
+      autoCheckoutGraceMinutes: 30,
+      breakMinutes: 30,
+      breakDeductionThresholdMinutes: 360,
+    };
+
+    it('deducts break when work exceeds threshold', () => {
+      // workMinutes = 600 (10h), shiftDuration = 540 (9h), threshold = 360
+      // OT = 600 - 540 - 30 = 30
+      const result = AttendanceService.calculateOTHours('08:00', '18:00', false, defaultConfig, 12);
+      expect(result.totalHours).toBe(10);
+      expect(result.otHours).toBe(0.5);
+    });
+
+    it('skips break deduction when work is below threshold', () => {
+      // workMinutes = 300 (5h), shiftDuration = 540 (9h), threshold = 360
+      // workMinutes < shiftDuration, so regular = 300, OT = max(0, 300 - 300 - 0) = 0
+      const config = { ...defaultConfig, breakDeductionThresholdMinutes: 360 };
+      const result = AttendanceService.calculateOTHours('09:00', '14:00', false, config, 12);
+      expect(result.totalHours).toBe(5);
+      expect(result.otHours).toBe(0);
+    });
+
+    it('deducts break only when above configurable threshold', () => {
+      // workMinutes = 540 (9h), shiftDuration = 480 (8h), threshold = 600 (10h)
+      // workMinutes (540) <= threshold (600) -> no break deducted
+      // OT = max(0, 540 - 480 - 0) = 60
+      const config = { ...defaultConfig, shiftStartTime: '09:00', shiftEndTime: '17:00', breakDeductionThresholdMinutes: 600 };
+      const result = AttendanceService.calculateOTHours('08:00', '17:00', false, config, 12);
+      expect(result.totalHours).toBe(9);
+      expect(result.otHours).toBe(1);
+    });
+
+    it('deducts break when work is above configurable threshold', () => {
+      // workMinutes = 600 (10h), shiftDuration = 480 (8h), threshold = 480 (8h)
+      // workMinutes (600) > threshold (480) -> break deducted
+      // OT = max(0, 600 - 480 - 30) = 90
+      const config = { ...defaultConfig, shiftStartTime: '09:00', shiftEndTime: '17:00', breakDeductionThresholdMinutes: 480 };
+      const result = AttendanceService.calculateOTHours('08:00', '18:00', false, config, 12);
+      expect(result.totalHours).toBe(10);
+      expect(result.otHours).toBe(1.5);
+    });
+  });
+
+  describe('late to half-day conversion', () => {
+    beforeAll(async () => {
+      await CompanySettings.deleteMany({});
+      await CompanySettings.create({
+        companyInfo: { name: 'Test Corp', financialYearStart: 4 },
+        attendanceConfig: {
+          pastEntryLimitDays: 7,
+          lateMarkEnabled: true,
+          lateMarkThresholdMinutes: 0,
+          lateToHalfDayAfterOccurrences: 2,
+          shiftStartTime: '09:00',
+          shiftEndTime: '18:00',
+          gracePeriodMinutes: 5,
+          lateMarkAsAbsent: false,
+          lateTreatWorkAsOT: true,
+          autoCheckoutEnabled: true,
+          autoCheckoutGraceMinutes: 30,
+          breakMinutes: 30,
+        },
+      });
+    });
+
+    afterAll(async () => {
+      await CompanySettings.deleteMany({});
+    });
+
+    it('marks first late as present', async () => {
+      const result = await AttendanceService.create(
+        { employee: empId, date: todayStr, status: 'present', inTime: '09:05', outTime: '18:00' },
+        userId,
+      ) as any;
+
+      expect(result.status).toBe('present');
+      expect(result.isLate).toBe(true);
+    });
+
+    it('converts to half-day on threshold', async () => {
+      const twoDaysAgo = new Date();
+      twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
+
+      await AttendanceEntry.create({
+        employee: empId, date: twoDaysAgo, shift: shiftId, status: 'present', isLate: true, enteredBy: userId,
+      });
+
+      const result = await AttendanceService.create(
+        { employee: empId, date: todayStr, status: 'present', inTime: '09:05', outTime: '18:00' },
+        userId,
+      ) as any;
+
+      expect(result.status).toBe('half-day');
+      expect(result.isLate).toBe(true);
+    });
+
+    it('converts to half-day in bulkCreate on threshold', async () => {
+      const bulkEmp = await Employee.create({
+        employeeCode: 'EMP003',
+        fullName: 'Bulk Late',
+        fatherName: 'Test',
+        category: 'worker',
+        employmentType: 'permanent',
+        department: new mongoose.Types.ObjectId(),
+        designation: new mongoose.Types.ObjectId(),
+        shift: shiftId,
+        joiningDate: new Date('2025-01-01'),
+        salaryType: 'monthly',
+        baseSalary: 25000,
+      });
+      const bulkEmpId = bulkEmp._id.toString();
+
+      const twoDaysAgo = new Date();
+      twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
+      await AttendanceEntry.create({
+        employee: bulkEmpId, date: twoDaysAgo, shift: shiftId, status: 'present', isLate: true, enteredBy: userId,
+      });
+
+      const result = await AttendanceService.bulkCreate(
+        {
+          date: todayStr,
+          entries: [
+            { employee: bulkEmpId, status: 'present', inTime: '09:10', outTime: '18:00' },
+          ],
+        },
+        userId,
+      );
+
+      expect(result).toHaveLength(1);
+      expect((result[0] as any).status).toBe('created');
+
+      const saved = await AttendanceEntry.findOne({ employee: bulkEmpId, date: { $gte: new Date(todayStr), $lte: new Date(todayStr + 'T23:59:59.999Z') } });
+      expect(saved).not.toBeNull();
+      expect(saved!.status).toBe('half-day');
+      expect(saved!.isLate).toBe(true);
     });
   });
 });

@@ -10,6 +10,8 @@ import {
 } from './training.validation.js';
 import { authenticate } from '../../core/permissions/authenticate.middleware.js';
 import { authorize } from '../../core/permissions/authorize.middleware.js';
+import { authorizeOwnership } from '../../core/permissions/authorizeOwnership.middleware.js';
+import Employee from '../../models/Employee.model.js';
 
 const router = Router();
 
@@ -31,10 +33,10 @@ router.post('/enrollments/:id/attendance', authorize('manage-training'), trainin
 
 router.get('/skills', authorize('view-training'), trainingController.listSkills);
 router.get('/skills/my', authorize('view-own-training'), trainingController.getSkills);
-router.get('/skills/employee/:employeeId', authorize('view-training'), trainingController.getSkills);
+router.get('/skills/employee/:employeeId', authorize('view-training'), authorizeOwnership({ model: Employee, ownerField: '_id' }), trainingController.getSkills);
 router.get('/skills/gap/:designationId', authorize('manage-training'), trainingController.getSkillGapAnalysis);
 router.post('/skills', authorize('manage-training'), validate(createSkillSchema), trainingController.createSkill);
-router.patch('/skills/employee/:employeeId/:skillId', authorize('manage-training'), trainingController.updateSkill);
+router.patch('/skills/employee/:employeeId/:skillId', authorize('manage-training'), authorizeOwnership({ model: Employee, ownerField: '_id' }), trainingController.updateSkill);
 
 router.get('/stats', authorize('manage-training'), trainingController.getStats);
 router.get('/certifications/expiring', authorize('manage-training'), trainingController.getExpiringCertifications);

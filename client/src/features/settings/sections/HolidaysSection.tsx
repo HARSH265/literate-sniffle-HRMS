@@ -1,4 +1,4 @@
-import { Button, Popconfirm, Tag, message } from 'antd';
+import { Button, Popconfirm, Tag, message, Alert } from 'antd';
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import { DataTable } from '../../../core/components/DataTable';
 import { holidayService, Holiday } from '../../holidays/services/holidayService';
@@ -25,6 +25,14 @@ export function HolidaysSection({ onAdd }: { onAdd: () => void }) {
           Add Holiday
         </Button>
       </div>
+
+         <Alert
+          message="Holidays define public or festival days, marking them as paid or unpaid. These days impact attendance and payroll calculations."
+          type="info"
+          showIcon
+          style={{ marginBottom: 16, marginTop: 16 }}
+        />
+        
       <DataTable
         dataSource={data?.data}
         loading={isLoading}
@@ -44,7 +52,8 @@ export function HolidaysSection({ onAdd }: { onAdd: () => void }) {
             </Popconfirm>
           )},
         ]}
-      />
+       />
+     
     </div>
   );
 }

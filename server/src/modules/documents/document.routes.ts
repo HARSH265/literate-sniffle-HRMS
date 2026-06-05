@@ -5,6 +5,8 @@ import { validate } from '../../core/validation/validate.middleware.js';
 import { createDocumentSchema, updateDocumentSchema } from './document.validation.js';
 import { authenticate } from '../../core/permissions/authenticate.middleware.js';
 import { authorize } from '../../core/permissions/authorize.middleware.js';
+import { authorizeOwnership } from '../../core/permissions/authorizeOwnership.middleware.js';
+import Employee from '../../models/Employee.model.js';
 
 const memoryStorage = multer.memoryStorage();
 const documentUpload = multer({
@@ -29,7 +31,7 @@ router.use(authenticate);
 
 router.get('/', authorize('view-documents'), documentController.list);
 router.get('/company', authorize('view-documents'), documentController.getCompanyDocuments);
-router.get('/employee/:employeeId', authorize('view-documents'), documentController.getEmployeeDocuments);
+router.get('/employee/:employeeId', authorize('view-documents'), authorizeOwnership({ model: Employee, ownerField: '_id' }), documentController.getEmployeeDocuments);
 router.get('/expiring', authorize('view-documents'), documentController.getExpiringDocuments);
 router.get('/stats', authorize('view-documents'), documentController.getStats);
 router.get('/:id', authorize('view-documents'), documentController.getById);

@@ -1,7 +1,9 @@
-import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
 import CompanySettings from '../../../models/CompanySettings.model.js';
 import User from '../../../models/User.model.js';
 import { SettingsService } from '../settings.service.js';
+import { RedisCacheService } from '../../../core/cache/RedisCacheService.js';
+import { CACHE_KEYS } from '../../../core/cache/cache.keys.js';
 
 let userId: string;
 
@@ -12,6 +14,11 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   await CompanySettings.deleteMany({});
+  await RedisCacheService.invalidate(CACHE_KEYS.SETTINGS);
+});
+
+afterAll(async () => {
+  await RedisCacheService.invalidate(CACHE_KEYS.SETTINGS);
 });
 
 describe('SettingsService', () => {

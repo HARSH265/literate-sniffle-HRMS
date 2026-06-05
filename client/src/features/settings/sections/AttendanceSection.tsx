@@ -76,6 +76,14 @@ export function AttendanceSection({ form, onSave }: { form: any; onSave: (values
             <InputNumber style={{ width: '100%', height: 40 }} min={0} max={120} />
           </Form.Item>
         </Col>
+        <Col span={6}>
+          <Form.Item name={['attendanceConfig', 'breakDeductionThresholdMinutes']} label="Break Deduction After (Min)">
+            <InputNumber style={{ width: '100%', height: 40 }} min={0} step={30} />
+          </Form.Item>
+          <span style={{ fontSize: 12, color: 'var(--hrms-text-muted)', display: 'block', marginTop: -12 }}>
+            Break deducted only when work exceeds this threshold (default: 360 min)
+          </span>
+        </Col>
       </Row>
 
       <div style={{ marginTop: 24, padding: 16, background: '#f0f5ff', borderRadius: 8, border: '1px solid #d9e6ff' }}>

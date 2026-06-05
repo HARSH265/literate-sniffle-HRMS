@@ -12,7 +12,7 @@ export function DesignationsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(20);
+  const [limit, setLimit] = useState(10);
   const [search, setSearch] = useState('');
   const [deptFilter, setDeptFilter] = useState('');
   const queryClient = useQueryClient();

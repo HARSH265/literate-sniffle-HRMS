@@ -1,0 +1,150 @@
+import { Request, Response, NextFunction } from 'express';
+import { generatePayslipPdf } from './payslip.service.js';
+import { generateBankFile } from './bankfile.service.js';
+import { generateSalaryRegister, generateStatutoryReportDownload } from './salary-register.service.js';
+import {
+  getHeadcountCostReport, getMoMVarianceReport, getYtdCostAnalysis,
+  getOtLopAnalysis, getLoanOutstandingReport, getBudgetVsActual,
+} from './mis-reports.service.js';
+
+export const downloadPayslip = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { itemId } = req.params;
+    const userId = (req as any).user?._id?.toString();
+    await generatePayslipPdf(itemId, res, userId);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const downloadBankFile = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { runId } = req.params;
+    const format = (req.query.format as 'neft' | 'rtgs' | 'nach') || 'neft';
+    const userId = (req as any).user?._id?.toString();
+    await generateBankFile(runId, format, res, userId);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const downloadSalaryRegister = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { runId } = req.params;
+    const department = req.query.department as string | undefined;
+    const userId = (req as any).user?._id?.toString();
+    await generateSalaryRegister(runId, res, userId, { department });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const downloadSalaryRegisterCsv = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { runId } = req.params;
+    const department = req.query.department as string | undefined;
+    const userId = (req as any).user?._id?.toString();
+    await generateSalaryRegister(runId, res, userId, { department }, 'csv');
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const downloadRunPdf = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { runId } = req.params;
+    const userId = (req as any).user?._id?.toString();
+    const run = await PayrollRun.findById(runId).lean();
+    if (!run) {
+      res.status(404).json({ success: false, message: 'Payroll run not found' });
+      return;
+    }
+    const items = await PayrollItem.find({ payrollRun: new mongoose.Types.ObjectId(runId) })
+      .populate('employee', 'fullName employeeCode department')
+      .lean();
+    const employees = items.map(item => {
+      const emp = item.employee as any;
+      return {
+        name: emp.fullName,
+        employeeCode: emp.employeeCode,
+        department: emp.department,
+        presentDays: item.presentDays,
+        workingDays: item.effectiveWorkingDays,
+        basicSalary: item.basicEarnings,
+        allowances: (item.allowances || []).map((a: any) => ({ name: a.name, calculatedValue: a.calculatedValue })),
+        deductions: (item.deductions || []).map((d: any) => ({ name: d.name, calculatedValue: d.calculatedValue })),
+        totalEarnings: item.grossEarnings,
+        totalDeductions: item.totalDeductions,
+        netPay: item.netPay,
+      } as any;
+    });
+    const pdfData = {
+      companyName: process.env.COMPANY_NAME || 'Company',
+      month: run.month,
+      generatedDate: new Date().toISOString(),
+      employees,
+    } as any;
+    await PDFGeneratorService.generateFromData(pdfData, res, `payroll_${run.month}.pdf`);
+  } catch (error) {
+    next(error);
+  }
+};
+
+
+export const getHeadcountCost = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const year = parseInt(req.query.year as string, 10) || new Date().getFullYear();
+    const data = await getHeadcountCostReport(year);
+    res.status(200).json({ success: true, data });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getMoMVariance = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const data = await getMoMVarianceReport();
+    res.status(200).json({ success: true, data });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getYtdCost = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const year = parseInt(req.query.year as string, 10) || new Date().getFullYear();
+    const data = await getYtdCostAnalysis(year);
+    res.status(200).json({ success: true, data });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getOtLop = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { runId } = req.params;
+    const data = await getOtLopAnalysis(runId);
+    res.status(200).json({ success: true, data });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getLoanOutstanding = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const data = await getLoanOutstandingReport();
+    res.status(200).json({ success: true, data });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getBudgetVsActualReport = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { runId } = req.params;
+    const data = await getBudgetVsActual(runId);
+    res.status(200).json({ success: true, data });
+  } catch (error) {
+    next(error);
+  }
+};

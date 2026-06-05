@@ -20,6 +20,7 @@ interface AttendanceConfig {
   autoCheckoutEnabled: boolean;
   autoCheckoutGraceMinutes: number;
   breakMinutes: number;
+  breakDeductionThresholdMinutes: number;
 }
 
 interface AttendanceAggDay {
@@ -59,7 +60,8 @@ function parseTimeToMinutes(time: string): number {
 }
 
 function getMinutesDiff(inTime: string, outTime: string): number {
-  return parseTimeToMinutes(outTime) - parseTimeToMinutes(inTime);
+  const diff = parseTimeToMinutes(outTime) - parseTimeToMinutes(inTime);
+  return diff < 0 ? diff + 24 * 60 : diff;
 }
 
 async function getAttendanceSettings(): Promise<AttendanceConfig> {
@@ -78,6 +80,7 @@ async function getAttendanceSettings(): Promise<AttendanceConfig> {
     autoCheckoutEnabled: (raw?.autoCheckoutEnabled as boolean) ?? true,
     autoCheckoutGraceMinutes: (raw?.autoCheckoutGraceMinutes as number) ?? 30,
     breakMinutes: (raw?.breakMinutes as number) ?? 30,
+    breakDeductionThresholdMinutes: (raw?.breakDeductionThresholdMinutes as number) ?? 360,
   };
 }
 
@@ -86,6 +89,22 @@ function calculateLateStatus(inTime: string, shiftStartTime: string, thresholdMi
   const inMinutes = parseTimeToMinutes(inTime);
   const shiftStartMinutes = parseTimeToMinutes(shiftStartTime);
   return (inMinutes - shiftStartMinutes) > thresholdMinutes;
+}
+
+async function checkHalfDayConversion(employeeId: string, date: Date, isLate: boolean, threshold: number): Promise<boolean> {
+  if (!isLate || threshold <= 0) return false;
+
+  const startOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
+  const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59, 999);
+
+  const existingLateCount = await AttendanceEntry.countDocuments({
+    employee: employeeId,
+    date: { $gte: startOfMonth, $lte: endOfMonth },
+    isLate: true,
+    status: { $in: ['present', 'half-day'] },
+  });
+
+  return existingLateCount >= threshold - 1;
 }
 
 export class AttendanceService {
@@ -194,7 +213,7 @@ export class AttendanceService {
     });
   }
 
-  static async monthlyView(queryParams: Record<string, unknown>): Promise<Record<string, unknown>[]> {
+  static async monthlyView(queryParams: Record<string, unknown>): Promise<{ data: Record<string, unknown>[]; meta: { page: number; limit: number; total: number } }> {
     const { month, year, department } = queryParams;
     // Parse pagination parameters (defaults handled by PaginationUtil)
     const { page, limit } = PaginationUtil.parseFromObject(queryParams);
@@ -261,11 +280,24 @@ export class AttendanceService {
           },
         },
       },
+      {
+        $facet: {
+          data: [
+            { $skip: (page - 1) * limit },
+            { $limit: limit },
+          ],
+          total: [
+            { $count: 'count' },
+          ],
+        },
+      },
     ];
 
-    const aggResult = await AttendanceEntry.aggregate(pipeline).exec() as unknown as AttendanceAggGroup[];
+    const facetResult = await AttendanceEntry.aggregate(pipeline).exec() as unknown as [{ data: AttendanceAggGroup[]; total: { count: number }[] }];
+    const { data: groupedData, total: totalArr } = facetResult[0] ?? { data: [], total: [] };
+    const total = totalArr[0]?.count ?? 0;
 
-    const fullResult = aggResult.map((group) => {
+    const data = groupedData.map((group) => {
       const daysMap: Record<string, unknown> = {};
       // Initialise every day of the month as null
       for (let d = 1; d <= endDate.getDate(); d++) {
@@ -287,10 +319,7 @@ export class AttendanceService {
       };
     });
 
-    // Apply pagination to the aggregated results
-    const skip = (page - 1) * limit;
-    const paginated = fullResult.slice(skip, skip + limit);
-    return paginated;
+    return { data, meta: { page, limit, total } };
   }
 
   static async bulkCreate(data: { date: string; entries: Array<Record<string, unknown>> }, userId: string) {
@@ -348,9 +377,13 @@ export class AttendanceService {
         const shiftStartTime = shift.startTime as string;
 
         if (entry.inTime && entry.outTime) {
-          const inMinutes = parseTimeToMinutes(entry.inTime);
-          const outMinutes = parseTimeToMinutes(entry.outTime);
-          if (outMinutes <= inMinutes) {
+          const sStart = parseTimeToMinutes(shift.startTime as string);
+          const sEnd = parseTimeToMinutes(shift.endTime as string);
+          const isNightShift = sStart > sEnd;
+          const isValid = isNightShift
+            ? getMinutesDiff(entry.inTime, entry.outTime) > 0
+            : parseTimeToMinutes(entry.outTime) > parseTimeToMinutes(entry.inTime);
+          if (!isValid) {
             results.push({ employee: entry.employee, status: 'failed', error: 'Out time must be greater than in time' });
             continue;
           }
@@ -360,6 +393,15 @@ export class AttendanceService {
         if (settings.lateMarkEnabled && entry.status === 'present' && entry.inTime && shiftStartTime) {
           isLate = calculateLateStatus(entry.inTime, shiftStartTime, settings.lateMarkThresholdMinutes);
           entry.isLate = isLate;
+          if (isLate && settings.lateToHalfDayAfterOccurrences > 0) {
+            const shouldConvert = await checkHalfDayConversion(
+              String(entry.employee),
+              date,
+              true,
+              settings.lateToHalfDayAfterOccurrences,
+            );
+            if (shouldConvert) entry.status = 'half-day';
+          }
         }
 
         const existing = existingMap[String(entry.employee)];
@@ -442,22 +484,38 @@ export class AttendanceService {
     }
 
     if (data.inTime && data.outTime) {
-      const inMinutes = parseTimeToMinutes(data.inTime as string);
-      const outMinutes = parseTimeToMinutes(data.outTime as string);
-      if (outMinutes <= inMinutes) {
-        throw new AppError('Out time must be greater than in time', 400);
+      const empShift = employee.shift as unknown as Record<string, unknown> | null;
+      if (empShift && typeof empShift.startTime === 'string' && typeof empShift.endTime === 'string') {
+        const isNightShift = parseTimeToMinutes(empShift.startTime) > parseTimeToMinutes(empShift.endTime);
+        const isValid = isNightShift
+          ? getMinutesDiff(data.inTime as string, data.outTime as string) > 0
+          : parseTimeToMinutes(data.outTime as string) > parseTimeToMinutes(data.inTime as string);
+        if (!isValid) {
+          throw new AppError('Out time must be greater than in time', 400);
+        }
       }
     }
 
     let isLate = undefined;
+    let effectiveStatus = data.status as string;
     const empShift = employee.shift as unknown as Record<string, unknown> | null;
     if (settings.lateMarkEnabled && data.status === 'present' && data.inTime && empShift) {
       const shiftStartTime = empShift.startTime as string;
       isLate = calculateLateStatus(data.inTime as string, shiftStartTime, settings.lateMarkThresholdMinutes);
+      if (isLate && settings.lateToHalfDayAfterOccurrences > 0) {
+        const shouldConvert = await checkHalfDayConversion(
+          String(employee._id),
+          attendanceDate,
+          true,
+          settings.lateToHalfDayAfterOccurrences,
+        );
+        if (shouldConvert) effectiveStatus = 'half-day';
+      }
     }
 
     const entry = await AttendanceEntry.create({
       ...data,
+      status: effectiveStatus,
       date: new Date(data.date as string),
       shift: empShift?._id,
       overtimeHours: undefined,
@@ -479,16 +537,22 @@ export class AttendanceService {
 
   static async update(id: string, data: Record<string, unknown>, userId: string) {
     const settings = await getAttendanceSettings();
-    const entry = await AttendanceEntry.findById(id).populate('employee', 'shift');
+    const entry = await AttendanceEntry.findById(id).populate({ path: 'employee', select: 'shift', populate: { path: 'shift', select: 'startTime endTime' } });
     if (!entry) {
       throw new AppError('Attendance entry not found or already deleted', 404);
     }
 
     if (data.inTime && data.outTime) {
-      const inMinutes = parseTimeToMinutes(data.inTime as string);
-      const outMinutes = parseTimeToMinutes(data.outTime as string);
-      if (outMinutes <= inMinutes) {
-        throw new AppError('Out time must be greater than in time', 400);
+      const emp = entry.employee as unknown as Record<string, unknown> | null;
+      const empShift = emp?.shift as unknown as Record<string, unknown> | null;
+      if (empShift && typeof empShift.startTime === 'string' && typeof empShift.endTime === 'string') {
+        const isNightShift = parseTimeToMinutes(empShift.startTime) > parseTimeToMinutes(empShift.endTime);
+        const isValid = isNightShift
+          ? getMinutesDiff(data.inTime as string, data.outTime as string) > 0
+          : parseTimeToMinutes(data.outTime as string) > parseTimeToMinutes(data.inTime as string);
+        if (!isValid) {
+          throw new AppError('Out time must be greater than in time', 400);
+        }
       }
     }
 
@@ -509,6 +573,52 @@ export class AttendanceService {
     Object.assign(entry, updateData);
     await entry.save();
 
+    if (entry.inTime && entry.outTime) {
+      const OvertimeRule = (await import('../../models/OvertimeRule.model.js')).default;
+      const overtimeRule = await OvertimeRule.findOne({ isActive: true, applicableTo: 'all' }).lean();
+      const maxOTHours = (overtimeRule as Record<string, unknown>)?.maxHoursPerDay as number || 4;
+
+      const employeeIsLate = entry.isLate || false;
+
+      const { totalHours, otHours } = this.calculateOTHours(
+        entry.inTime,
+        entry.outTime,
+        employeeIsLate,
+        settings,
+        maxOTHours,
+      );
+
+      entry.totalHours = totalHours;
+      await entry.save();
+
+      const dayStart = new Date(entry.date.getFullYear(), entry.date.getMonth(), entry.date.getDate());
+      const dayEnd = new Date(entry.date.getFullYear(), entry.date.getMonth(), entry.date.getDate(), 23, 59, 59, 999);
+
+      const OvertimeEntry = (await import('../../models/OvertimeEntry.model.js')).default;
+      const existingOT = await OvertimeEntry.findOne({
+        employee: entry.employee,
+        date: { $gte: dayStart, $lte: dayEnd },
+      });
+
+      if (otHours > 0) {
+        if (existingOT) {
+          existingOT.hours = otHours;
+          existingOT.remarks = 'Updated via attendance update';
+          await existingOT.save();
+        } else {
+          await OvertimeEntry.create({
+            employee: entry.employee,
+            date: entry.date,
+            hours: otHours,
+            remarks: 'Auto-calculated from attendance update',
+            enteredBy: userId,
+          });
+        }
+      } else if (existingOT) {
+        await existingOT.deleteOne();
+      }
+    }
+
     await AuditService.log({
       action: 'update',
       module: 'attendance',
@@ -524,12 +634,47 @@ export class AttendanceService {
   static async bulkUpdateEntries(entries: Array<{ id: string; status?: string; inTime?: string; outTime?: string; remarks?: string }>, userId: string) {
     if (!entries.length) throw new AppError('No entries provided', 400);
 
+    const settings = await getAttendanceSettings();
+    const entryIds = entries.map((e) => e.id);
+
+    const existingDocs = await AttendanceEntry.find({ _id: { $in: entryIds } })
+      .populate({ path: 'employee', select: 'shift', populate: { path: 'shift', select: 'startTime endTime' } })
+      .lean();
+
+    const entriesMap = new Map(existingDocs.map((e) => [String(e._id), e]));
+
     const bulkOps = entries.map((entry) => {
+      const existing = entriesMap.get(entry.id);
       const update: Record<string, unknown> = { updatedBy: userId };
       if (entry.status) update.status = entry.status;
       if (entry.inTime !== undefined) update.inTime = entry.inTime;
       if (entry.outTime !== undefined) update.outTime = entry.outTime;
       if (entry.remarks !== undefined) update.remarks = entry.remarks;
+
+      if (entry.inTime && entry.outTime) {
+        const emp = existing ? existing.employee as unknown as Record<string, unknown> | null : null;
+        const empShift = emp?.shift as unknown as Record<string, unknown> | null;
+        if (empShift && typeof empShift.startTime === 'string' && typeof empShift.endTime === 'string') {
+          const isNightShift = parseTimeToMinutes(empShift.startTime) > parseTimeToMinutes(empShift.endTime);
+          const isValid = isNightShift
+            ? getMinutesDiff(entry.inTime, entry.outTime) > 0
+            : parseTimeToMinutes(entry.outTime) > parseTimeToMinutes(entry.inTime);
+          if (!isValid) throw new AppError(`Entry ${entry.id}: out time must be greater than in time`, 400);
+        } else if (getMinutesDiff(entry.inTime, entry.outTime) <= 0) {
+          throw new AppError(`Entry ${entry.id}: out time must be greater than in time`, 400);
+        }
+      }
+
+      if (settings.lateMarkEnabled && entry.inTime !== undefined && existing) {
+        const effectiveStatus = entry.status ?? (existing.status as string | undefined);
+        const emp = existing.employee as unknown as Record<string, unknown> | null;
+        const empShift = emp?.shift as unknown as Record<string, unknown> | null;
+        if (effectiveStatus === 'present' && empShift?.startTime) {
+          update.isLate = calculateLateStatus(entry.inTime, empShift.startTime as string, settings.lateMarkThresholdMinutes);
+        } else if (entry.status && entry.status !== 'present') {
+          update.isLate = false;
+        }
+      }
 
       return {
         updateOne: {
@@ -566,12 +711,11 @@ export class AttendanceService {
       return { totalHours, otHours: Math.max(0, otHours) };
     }
 
-    const shiftStartMinutes = parseTimeToMinutes(config.shiftStartTime);
-    const shiftEndMinutes = parseTimeToMinutes(config.shiftEndTime);
-    const shiftDurationMinutes = shiftEndMinutes - shiftStartMinutes;
+    const shiftDurationMinutes = getMinutesDiff(config.shiftStartTime, config.shiftEndTime);
 
     const regularMinutes = Math.min(workMinutes, shiftDurationMinutes);
-    const otMinutes = Math.max(0, workMinutes - regularMinutes - config.breakMinutes);
+    const breakToDeduct = workMinutes > config.breakDeductionThresholdMinutes ? config.breakMinutes : 0;
+    const otMinutes = Math.max(0, workMinutes - regularMinutes - breakToDeduct);
     const otHours = Math.min(otMinutes / 60, maxOTHours);
 
     return { totalHours, otHours: Math.max(0, otHours) };
@@ -697,13 +841,17 @@ export class AttendanceService {
     for (const entry of stuckEntries) {
       const entryDate = dayjs(entry.date);
       const shiftData = entry.shift as unknown as { startTime?: string; endTime?: string } | null;
-      const entryDayShiftEnd = parseTimeToMinutes(shiftData?.endTime || defaultShiftEndTime);
+      const shiftStart = shiftData?.startTime ? parseTimeToMinutes(shiftData.startTime) : null;
+      const shiftEnd = shiftData?.endTime ? parseTimeToMinutes(shiftData.endTime) : null;
+      const isNightShift = shiftStart !== null && shiftEnd !== null && shiftStart > shiftEnd;
+      const entryDayShiftEnd = shiftEnd ?? parseTimeToMinutes(defaultShiftEndTime);
       const entryDayAutoCheckout = entryDayShiftEnd + (maxOTHours * 60) + settings.autoCheckoutGraceMinutes;
 
-      const autoCheckoutHour = Math.floor(entryDayAutoCheckout / 60);
+      const autoCheckoutHour = Math.floor(entryDayAutoCheckout / 60) % 24;
       const autoCheckoutMinute = entryDayAutoCheckout % 60;
 
-      const autoCheckoutTime = entryDate.hour(autoCheckoutHour).minute(autoCheckoutMinute).second(0);
+      const autoCheckoutDay = isNightShift ? entryDate.add(1, 'day') : entryDate;
+      const autoCheckoutTime = autoCheckoutDay.hour(autoCheckoutHour).minute(autoCheckoutMinute).second(0);
 
       if (dayjs().isBefore(autoCheckoutTime)) {
         continue;

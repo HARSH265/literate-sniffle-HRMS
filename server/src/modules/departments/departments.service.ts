@@ -137,11 +137,11 @@ for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
       action: 'create',
       module: 'departments',
       userId: createdById,
-      targetId: dept._id.toString(),
+      targetId: (dept!._id).toString(),
       details: { name: data.name, code },
     });
 
-    return { ...dept.toObject(), id: dept._id.toString(), _id: undefined };
+    return { ...dept!.toObject(), id: dept!._id.toString(), _id: undefined };
   }
 
   static async update(id: string, data: Record<string, unknown>, updatedById: string) {

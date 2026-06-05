@@ -234,4 +234,20 @@ export const API_ENDPOINTS = {
     role: (role: string) => `/permissions/roles/${role}`,
     resetRole: (role: string) => `/permissions/roles/${role}/reset`,
   },
+  // Component Master endpoints
+  componentMaster: {
+    list: '/component-master',
+    create: '/component-master',
+    get: (id: string) => `/component-master/${id}`,
+    update: (id: string) => `/component-master/${id}`,
+    delete: (id: string) => `/component-master/${id}`,
+  },
+  // Salary Structure endpoints
+  salaryStructures: {
+    list: '/salary-structures',
+    create: '/salary-structures',
+    get: (id: string) => `/salary-structures/${id}`,
+    update: (id: string) => `/salary-structures/${id}`,
+    delete: (id: string) => `/salary-structures/${id}`,
+  },
 } as const;

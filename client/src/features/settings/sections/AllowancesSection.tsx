@@ -1,4 +1,4 @@
-import { Button, Popconfirm, Tag } from 'antd';
+import { Button, Popconfirm, Tag, Alert } from 'antd';
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import { DataTable } from '../../../core/components/DataTable';
 
@@ -19,6 +19,13 @@ export function AllowancesSection({ form, onAdd }: { form: any; onAdd: () => voi
         </Button>
       </div>
 
+      <Alert
+          message="Allowances represent earning items added to an employee's gross salary, such as bonuses or special allowances. Define name, type, and value to be applied in payroll calculations."
+          type="info"
+          showIcon
+          style={{ marginBottom: 16, marginTop: 16 }}
+        />
+
       <DataTable
         dataSource={allowances}
         rowKey="key"
@@ -37,7 +44,8 @@ export function AllowancesSection({ form, onAdd }: { form: any; onAdd: () => voi
             </Popconfirm>
           )},
         ]}
-      />
+       />
+        
     </div>
   );
 }

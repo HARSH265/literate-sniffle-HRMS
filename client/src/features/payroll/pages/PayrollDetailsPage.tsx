@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { PageHeader } from '../../../core/components/PageHeader';
 import { DataTable } from '../../../core/components/DataTable';
@@ -28,6 +28,7 @@ export function PayrollDetailsPage() {
   const [itemsPage, setItemsPage] = useState(1);
   const [itemsPageSize, setItemsPageSize] = useState(10);
   const [editForm] = Form.useForm();
+  const batchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [unfinalizeForm] = Form.useForm();
 
   const { data: runData, isLoading } = useQuery({
@@ -93,22 +94,44 @@ export function PayrollDetailsPage() {
   const handleSaveEdit = () => {
     if (!id || !editingItem) return;
     editForm.validateFields().then((values) => {
+      const basic = Number(values.basicEarnings);
+      const net = Number(values.netPay);
+      if (basic < 0) { message.error('Basic Earnings cannot be negative'); return; }
+      if (net < 0) { message.error('Net Pay cannot be negative'); return; }
+      if (net < basic) {
+        message.warning('Net Pay is less than Basic Earnings. Please verify.');
+      }
       updateItemMutation.mutate({ runId: id, itemId: editingItem.id, payload: values });
     });
   };
 
-  const handleBatchChange = (itemId: string, field: string, value: number) => {
-    setBatchChanges(prev => ({
-      ...prev,
-      [itemId]: { ...(prev[itemId] || {}), [field]: value },
-    }));
-  };
+  const handleBatchChange = useCallback((itemId: string, field: string, value: number | null) => {
+    const safeValue = value === null || value === undefined ? 0 : Math.max(0, Number(value));
+    // Debounce state updates to reduce re-renders
+    if (batchTimeoutRef.current) {
+      clearTimeout(batchTimeoutRef.current);
+    }
+    batchTimeoutRef.current = setTimeout(() => {
+      setBatchChanges(prev => ({
+        ...prev,
+        [itemId]: { ...(prev[itemId] || {}), [field]: safeValue },
+      }));
+    }, 150);
+  }, []);
 
   const handleBatchSave = () => {
     const items = Object.entries(batchChanges)
       .filter(([_, changes]) => Object.keys(changes).length > 0)
-      .map(([itemId, data]) => ({ itemId, data }));
+      .map(([itemId, data]) => ({ itemId, data: { ...data, netPay: data.netPay !== undefined ? Math.max(0, Number(data.netPay)) : undefined, basicEarnings: data.basicEarnings !== undefined ? Math.max(0, Number(data.basicEarnings)) : undefined } }));
     if (items.length === 0) { message.warning('No changes to save'); return; }
+    // Validate: no negative values
+    for (const item of items) {
+      for (const [key, val] of Object.entries(item.data)) {
+        if (typeof val === 'number' && val < 0) {
+          message.error(`Negative value not allowed for ${key}`); return;
+        }
+      }
+    }
     batchMutation.mutate(items);
   };
 
@@ -139,7 +162,7 @@ export function PayrollDetailsPage() {
   const run = runData?.data;
   const canEdit = run?.status === 'draft';
 
-  const detailColumns = [
+  const detailColumns = useMemo(() => [
     { title: 'Employee', key: 'employee', width: 180, render: (_: any, r: PayrollItem) => <div><div style={{ fontWeight: 500 }}>{r.employee.name}</div><div style={{ fontSize: 11, color: '#888' }}>{r.employee.code}</div></div> },
     { title: 'Present', dataIndex: 'presentDays', key: 'presentDays', width: 68, render: (v: number, r: PayrollItem) => batchEditMode && canEdit ? <InputNumber size="small" style={{ width: 60 }} value={batchChanges[r.id]?.presentDays ?? v} onChange={(val) => handleBatchChange(r.id, 'presentDays', val ?? v)} /> : v },
     { title: 'Absent', dataIndex: 'absentDays', key: 'absentDays', width: 60, render: (v: number, r: PayrollItem) => batchEditMode && canEdit ? <InputNumber size="small" style={{ width: 60 }} value={batchChanges[r.id]?.absentDays ?? v} onChange={(val) => handleBatchChange(r.id, 'absentDays', val ?? v)} /> : v },
@@ -161,7 +184,7 @@ export function PayrollDetailsPage() {
         </Space>
       ),
     },
-  ];
+  ], [batchEditMode, canEdit, batchChanges]);
 
   if (!run && !isLoading) {
     return (
@@ -257,10 +280,10 @@ export function PayrollDetailsPage() {
             <p><strong>Employee:</strong> {editingItem.employee.name} ({editingItem.employee.code})</p>
             <Form form={editForm} layout="vertical">
               <Form.Item name="basicEarnings" label="Basic Earnings" rules={[{ required: true }]}>
-                <Input type="number" prefix="₹" />
+                <InputNumber min={0} max={99999999} precision={2} prefix="₹" style={{ width: '100%' }} />
               </Form.Item>
               <Form.Item name="netPay" label="Net Pay" rules={[{ required: true }]}>
-                <Input type="number" prefix="₹" />
+                <InputNumber min={0} max={99999999} precision={2} prefix="₹" style={{ width: '100%' }} />
               </Form.Item>
             </Form>
           </div>

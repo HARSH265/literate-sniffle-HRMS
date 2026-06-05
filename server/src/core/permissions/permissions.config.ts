@@ -41,6 +41,7 @@ export const ALL_PERMISSIONS = [
   // ── Payroll ──
   'view-payroll',
   'process-payroll',
+  'manage-payroll-config',
 
   // ── Loans ──
   'view-loans',
@@ -120,7 +121,7 @@ export const permissions: Record<string, Permission[]> = {
     'view-shifts', 'manage-shifts', 'view-own-shifts', 'view-shift-swaps', 'request-shift-swap', 'manage-shift-swaps',
     'view-attendance', 'manage-attendance', 'manage-overtime', 'check-in-out',
     'view-leave', 'manage-leave-types', 'manage-leave-applications', 'approve-leave',
-    'view-payroll', 'process-payroll',
+    'view-payroll', 'process-payroll', 'manage-payroll-config',
     'view-loans', 'manage-loans', 'apply-loan',
     'view-statutory', 'manage-statutory',
     'view-performance', 'manage-performance', 'view-own-performance', 'manage-own-performance', 'request-feedback',
@@ -152,7 +153,7 @@ export const permissions: Record<string, Permission[]> = {
     'view-leave', 'manage-leave-types', 'manage-leave-applications', 'approve-leave',
 
     // Payroll
-    'view-payroll', 'process-payroll',
+    'view-payroll', 'process-payroll', 'manage-payroll-config',
 
     // Loans
     'view-loans', 'manage-loans', 'apply-loan',
@@ -253,7 +254,7 @@ export const permissions: Record<string, Permission[]> = {
     'view-leave',
 
     // Payroll — full processing
-    'view-payroll', 'process-payroll',
+    'view-payroll', 'process-payroll', 'manage-payroll-config',
 
     // Loans — full management
     'view-loans', 'manage-loans',
@@ -381,7 +382,7 @@ export const PERMISSION_GROUPS = {
   'Shift Management': ['view-shifts', 'manage-shifts', 'view-own-shifts', 'view-shift-swaps', 'request-shift-swap', 'manage-shift-swaps'],
   'Attendance': ['view-attendance', 'manage-attendance', 'manage-overtime', 'check-in-out'],
   'Leave': ['view-leave', 'manage-leave-types', 'manage-leave-applications', 'approve-leave'],
-  'Payroll': ['view-payroll', 'process-payroll'],
+  'Payroll': ['view-payroll', 'process-payroll', 'manage-payroll-config'],
   'Loans': ['view-loans', 'manage-loans', 'apply-loan'],
   'Statutory': ['view-statutory', 'manage-statutory'],
   'Performance': ['view-performance', 'manage-performance', 'view-own-performance', 'manage-own-performance', 'request-feedback'],

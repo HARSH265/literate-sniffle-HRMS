@@ -22,7 +22,7 @@ import {
   AttendanceSection, AllowancesSection, OvertimeSection, WeeklyOffSection,
   HolidaysSection, CodeConfigSection, LeaveSection, ReportsSection,
   LoanConfigSection, StatutoryConfigSection, EssSection, AnnouncementSection,
-  ShiftSwapSection, AssetSection, DocumentSection, PermissionsSection,
+  ShiftSwapSection, AssetSection, DocumentSection,  ComponentMasterSection,SalaryStructureSection, PermissionsSection,
 } from '../sections';
 import { TotpSection } from '../sections/TotpSection';
 import { SettingsModals } from '../components/SettingsModals';
@@ -39,9 +39,11 @@ const SETTINGS_MENU = [
   { key: 'weeklyoff', label: 'Weekly Off', icon: <CalendarOutlined />, group: 'hr' },
   { key: 'holidays', label: 'Holidays', icon: <GiftOutlined />, group: 'hr' },
   { key: 'codeConfig', label: 'Code Configuration', icon: <CodeOutlined />, group: 'system' },
+  { key: 'componentMaster', label: 'Component Master', icon: <CodeOutlined />, group: 'system' },
   { key: 'leave', label: 'Leave Config', icon: <CalendarOutlined />, group: 'system' },
   { key: 'reports', label: 'Reports', icon: <BarChartOutlined />, group: 'system' },
   { key: 'loans', label: 'Loans', icon: <DollarOutlined />, group: 'system' },
+  { key: 'salaryStructure', label: 'Salary Structures', icon: <CodeOutlined />, group: 'system' },
   { key: 'statutory', label: 'Statutory', icon: <SafetyCertificateOutlined />, group: 'system' },
   { key: 'ess', label: 'Employee Self-Service', icon: <UserOutlined />, group: 'features' },
   { key: 'announcements', label: 'Announcements', icon: <BellOutlined />, group: 'features' },
@@ -168,10 +170,12 @@ export function SettingsPage() {
         return <WeeklyOffSection onAdd={() => setWoModalOpen(true)} />;
       case 'holidays':
         return <HolidaysSection onAdd={() => setHolidayModalOpen(true)} />;
-      case 'codeConfig':
-        return <CodeConfigSection form={companyForm} onSave={handleSaveCompany} />;
-      case 'leave':
-        return <LeaveSection form={companyForm} onSave={handleSaveCompany} />;
+case 'codeConfig':
+  return <CodeConfigSection form={companyForm} onSave={handleSaveCompany} />;
+case 'componentMaster':
+  return <ComponentMasterSection />;
+case 'leave':
+  return <LeaveSection form={companyForm} onSave={handleSaveCompany} />;
       case 'reports':
         return <ReportsSection form={companyForm} />;
       case 'loans':
@@ -184,10 +188,12 @@ export function SettingsPage() {
         return <ShiftSwapSection form={companyForm} onSave={handleSaveCompany} />;
       case 'assets':
         return <AssetSection form={companyForm} onSave={handleSaveCompany} />;
-      case 'documents':
-        return <DocumentSection form={companyForm} onSave={handleSaveCompany} />;
-      case 'statutory':
-        return <StatutoryConfigSection form={companyForm} onSave={handleSaveCompany} />;
+case 'documents':
+  return <DocumentSection form={companyForm} onSave={handleSaveCompany} />;
+case 'salaryStructure':
+  return <SalaryStructureSection />;
+case 'statutory':
+  return <StatutoryConfigSection form={companyForm} onSave={handleSaveCompany} />;
       case 'totp':
         return <TotpSection employees={employees?.data || []} />;
       case 'permissions':

@@ -9,6 +9,16 @@ export interface IOvertimeRule extends Document {
   isActive: boolean;
   createdBy?: mongoose.Types.ObjectId;
   updatedBy?: mongoose.Types.ObjectId;
+  otEligibleEmpTypes?: string[];
+  otEligibleGrades?: string[];
+  otApprovalRequired: boolean;
+  otPerHourDivisor?: string;
+  normalDayMultiplier: number;
+  weeklyOffMultiplier: number;
+  holidayMultiplier: number;
+  nightShiftMultiplier: number;
+  minThresholdMinutes: number;
+  maxPerWeekHours: number;
 }
 
 type OvertimeRuleModel = Model<IOvertimeRule>;
@@ -27,6 +37,16 @@ const OvertimeRuleSchema = new Schema<IOvertimeRule>(
     isActive: { type: Boolean, default: true },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    otEligibleEmpTypes: { type: [String], default: ['worker'] },
+    otEligibleGrades: { type: [String], default: [] },
+    otApprovalRequired: { type: Boolean, default: true },
+    otPerHourDivisor: { type: String, default: '26x8' },
+    normalDayMultiplier: { type: Number, default: 2.0, min: 1 },
+    weeklyOffMultiplier: { type: Number, default: 2.0, min: 1 },
+    holidayMultiplier: { type: Number, default: 2.0, min: 1 },
+    nightShiftMultiplier: { type: Number, default: 1.5, min: 1 },
+    minThresholdMinutes: { type: Number, default: 30, min: 0 },
+    maxPerWeekHours: { type: Number, default: 12, min: 0 },
   },
   { timestamps: true },
 );

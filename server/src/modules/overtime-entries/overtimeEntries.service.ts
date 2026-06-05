@@ -158,6 +158,56 @@ export class OvertimeEntriesService {
       if (hours <= 0 || hours > 24) {
         throw new AppError('Overtime hours must be between 0 and 24', 400);
       }
+
+      const ruleId = data.overtimeRule as string | undefined;
+      let rule = null;
+      if (ruleId) {
+        rule = await OvertimeRule.findById(ruleId).lean();
+      } else {
+        rule = await OvertimeRule.findOne({ isActive: true, applicableTo: 'all' }).lean();
+        if (!rule) {
+          rule = await OvertimeRule.findOne({ isActive: true }).sort({ createdAt: -1 }).lean();
+        }
+      }
+
+      if (rule) {
+        const entryDate = data.date ? new Date(data.date as string) : entry.date;
+        const startOfMonth = new Date(entryDate.getFullYear(), entryDate.getMonth(), 1);
+        const endOfMonth = new Date(entryDate.getFullYear(), entryDate.getMonth() + 1, 0);
+
+        const existingHoursResult = await OvertimeEntry.aggregate([
+          {
+            $match: {
+              employee: entry.employee,
+              _id: { $ne: entry._id },
+              date: { $gte: startOfMonth, $lte: endOfMonth },
+            },
+          },
+          {
+            $group: {
+              _id: null,
+              totalHours: { $sum: '$hours' },
+            },
+          },
+        ]);
+
+        const existingHours = existingHoursResult[0]?.totalHours || 0;
+        const newTotal = existingHours + hours;
+
+        if (rule.maxHoursPerMonth && newTotal > rule.maxHoursPerMonth) {
+          throw new AppError(
+            `Cannot update to ${hours} hours. Employee has ${existingHours} hours this month. Maximum allowed is ${rule.maxHoursPerMonth} hours/month as per "${rule.name}" rule.`,
+            400
+          );
+        }
+
+        if (rule.maxHoursPerDay && hours > rule.maxHoursPerDay) {
+          throw new AppError(
+            `Cannot update to ${hours} hours. Maximum ${rule.maxHoursPerDay} hours per day allowed as per "${rule.name}" rule.`,
+            400
+          );
+        }
+      }
     }
 
     Object.assign(entry, data, { updatedBy: userId });

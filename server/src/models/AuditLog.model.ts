@@ -12,6 +12,7 @@ export type AuditAction =
   | 'add-holiday' | 'edit-holiday' | 'delete-holiday'
   | 'add-rule' | 'edit-rule' | 'delete-rule'
   | 'approve' | 'reject' | 'download' | 'view'
+  | 'generate-report' | 'generate-challan' | 'generate-statutory'
   | 'attendance-checkin' | 'attendance-checkout'
   | 'kiosk-register'
   | 'totp-enroll' | 'totp-disable';

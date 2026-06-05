@@ -1,9 +1,11 @@
 import { Router } from 'express';
 import { shiftSwapController } from './shiftSwap.controller.js';
 import { validate } from '../../core/validation/validate.middleware.js';
-import { requestSwapSchema, updateSwapSchema, approveSwapSchema, setPreferenceSchema } from './shiftSwap.validation.js';
+import { requestSwapSchema, approveSwapSchema, setPreferenceSchema } from './shiftSwap.validation.js';
 import { authenticate } from '../../core/permissions/authenticate.middleware.js';
 import { authorize } from '../../core/permissions/authorize.middleware.js';
+import { authorizeOwnership } from '../../core/permissions/authorizeOwnership.middleware.js';
+import ShiftSwap from '../../models/ShiftSwap.model.js';
 
 const router = Router();
 
@@ -19,7 +21,7 @@ router.get('/:id', authorize('view-shift-swaps'), shiftSwapController.getById);
 router.post('/', authorize('request-shift-swap'), validate(requestSwapSchema), shiftSwapController.requestSwap);
 router.post('/:id/approve', authorize('manage-shift-swaps'), shiftSwapController.approveSwap);
 router.post('/:id/reject', authorize('manage-shift-swaps'), validate(approveSwapSchema), shiftSwapController.rejectSwap);
-router.post('/:id/cancel', authorize('request-shift-swap'), shiftSwapController.cancelSwap);
-router.put('/:id', authorize('request-shift-swap'), validate(updateSwapSchema), shiftSwapController.updateSwap);
+router.post('/:id/cancel', authorize('request-shift-swap'), authorizeOwnership({ model: ShiftSwap, ownerField: 'requestor' }), shiftSwapController.cancelSwap);
+router.put('/:id', authorize('request-shift-swap'), authorizeOwnership({ model: ShiftSwap, ownerField: 'requestor' }), shiftSwapController.updateSwap);
 
 export default router;

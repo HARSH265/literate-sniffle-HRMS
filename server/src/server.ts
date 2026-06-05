@@ -18,7 +18,7 @@ async function startServer() {
   try {
     await RedisService.getClient();
     logger.info('Redis connected');
-  } catch (err) {
+  } catch {
     logger.warn('Redis unavailable – caching and rate limiting will use in-memory fallback');
   }
 

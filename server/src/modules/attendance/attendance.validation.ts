@@ -16,6 +16,19 @@ export const createAttendanceEntrySchema = z.object({
   remarks: z.string().max(500, 'Remarks must be at most 500 characters').optional(),
 });
 
+export const bulkUpdateAttendanceSchema = z.object({
+  entries: z
+    .array(z.object({
+      id: z.string().min(1, 'Entry ID is required'),
+      status: z.enum(['present', 'absent', 'half-day', 'leave', 'weekly-off', 'holiday']).optional(),
+      inTime: z.string().regex(timeRegex, 'Time must be in HH:MM format').optional(),
+      outTime: z.string().regex(timeRegex, 'Time must be in HH:MM format').optional(),
+      remarks: z.string().max(500, 'Remarks must be at most 500 characters').optional(),
+    }))
+    .min(1, 'At least one entry required')
+    .max(100, 'Cannot process more than 100 entries at once'),
+});
+
 export const bulkAttendanceSchema = z.object({
   date: z
     .string()

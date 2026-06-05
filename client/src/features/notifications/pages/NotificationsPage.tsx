@@ -19,7 +19,7 @@ const moduleIcons: Record<string, string> = {
 
 export function NotificationsPage() {
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(20);
+  const [limit, setLimit] = useState(10);
   const [moduleFilter, setModuleFilter] = useState('');
   const [readFilter, setReadFilter] = useState('');
   const queryClient = useQueryClient();

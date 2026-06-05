@@ -24,6 +24,22 @@ export interface ICompanySettings extends Document {
     email?: string;
     logo?: string;
     financialYearStart: number;
+    cin?: string;
+    gstin?: string;
+    tan?: string;
+    pan?: string;
+    pfEstablishmentCode?: string;
+    esiCode?: string;
+    ptRegistrationNumber?: string;
+    lwfRegistration?: string;
+    shopsLicenseNumber?: string;
+    factoryLicenseNumber?: string;
+    payCycle?: 'monthly' | 'weekly' | 'bi-weekly';
+    payPeriod?: 'calendar' | '26th-25th' | 'custom';
+    salaryCreditDate?: number;
+    currency?: string;
+    multiLocation?: boolean;
+    multiState?: boolean;
   };
   payrollConfig: {
     overtimeBase: 'basic' | 'basicPlusAllowances';
@@ -40,6 +56,22 @@ export interface ICompanySettings extends Document {
     otRoundingMinutes: number;
     otRoundingMethod: 'floor' | 'ceil' | 'round';
     otMultiplierBasicOnly: boolean;
+    perDayCalcMethod: '30' | 'actual' | '26';
+    lopCalcMethod: '30' | 'actual' | '26';
+    roundingFinalSalary: 'floor' | 'ceil' | 'nearest';
+    roundingPrecision: number;
+    negativeNetPayAllow: boolean;
+    arrearsAutoCalculate: boolean;
+    multiBankSplit: boolean;
+    makerCheckerEnabled: boolean;
+    lopPerDayBase: '30' | 'actual' | '26';
+    lopComponentsAffected: string[];
+    lopImpactsPf: boolean;
+    lopImpactsEsi: boolean;
+    lopImpactsBonus: boolean;
+    lopAutoFromAttendance: boolean;
+    lopReversalAllowed: boolean;
+    lopReversalDeadline: 'next-month' | '2-months';
   };
   attendanceConfig: {
     pastEntryLimitDays: number;
@@ -62,6 +94,11 @@ export interface ICompanySettings extends Document {
     supervisorOverrideEnabled: boolean;
     deviceBindingEnabled: boolean;
     maxDevicesPerEmployee: number;
+    sandwichRuleEnabled: boolean;
+    compOffEarnRule: 'holiday-work' | 'overtime' | 'both';
+    compOffValidityDays: number;
+    regularizationAllowed: boolean;
+    regularizationDeadlineDays: number;
   };
   allowanceConfig: AllowanceConfig[];
   deductionConfig: DeductionConfig[];
@@ -301,6 +338,22 @@ const CompanySettingsSchema = new Schema<ICompanySettings>(
       email: { type: String },
       logo: { type: String },
       financialYearStart: { type: Number, default: 4 },
+      cin: { type: String },
+      gstin: { type: String },
+      tan: { type: String },
+      pan: { type: String },
+      pfEstablishmentCode: { type: String },
+      esiCode: { type: String },
+      ptRegistrationNumber: { type: String },
+      lwfRegistration: { type: String },
+      shopsLicenseNumber: { type: String },
+      factoryLicenseNumber: { type: String },
+      payCycle: { type: String, enum: ['monthly', 'weekly', 'bi-weekly'] },
+      payPeriod: { type: String, enum: ['calendar', '26th-25th', 'custom'] },
+      salaryCreditDate: { type: Number, min: 1, max: 31 },
+      currency: { type: String, default: 'INR' },
+      multiLocation: { type: Boolean, default: false },
+      multiState: { type: Boolean, default: false },
     },
     payrollConfig: {
       overtimeBase: { type: String, enum: ['basic', 'basicPlusAllowances'], default: 'basic' },
@@ -317,6 +370,29 @@ const CompanySettingsSchema = new Schema<ICompanySettings>(
       otRoundingMinutes: { type: Number, default: 60 },
       otRoundingMethod: { type: String, enum: ['floor', 'ceil', 'round'], default: 'floor' },
       otMultiplierBasicOnly: { type: Boolean, default: false },
+      perDayCalcMethod: { type: String, enum: ['30', 'actual', '26'], default: '30' },
+      lopCalcMethod: { type: String, enum: ['30', 'actual', '26'], default: '30' },
+      roundingFinalSalary: { type: String, enum: ['floor', 'ceil', 'nearest'], default: 'nearest' },
+      roundingPrecision: { type: Number, default: 0, min: 0, max: 2 },
+      negativeNetPayAllow: { type: Boolean, default: false },
+      arrearsAutoCalculate: { type: Boolean, default: true },
+      multiBankSplit: { type: Boolean, default: false },
+      makerCheckerEnabled: { type: Boolean, default: true },
+      lopPerDayBase: { type: String, enum: ['30', 'actual', '26'], default: '30' },
+      lopComponentsAffected: {
+        type: [String],
+        default: ['basic', 'hra', 'da', 'special'],
+      },
+      lopImpactsPf: { type: Boolean, default: true },
+      lopImpactsEsi: { type: Boolean, default: true },
+      lopImpactsBonus: { type: Boolean, default: true },
+      lopAutoFromAttendance: { type: Boolean, default: true },
+      lopReversalAllowed: { type: Boolean, default: true },
+      lopReversalDeadline: {
+        type: String,
+        enum: ['next-month', '2-months'],
+        default: 'next-month',
+      },
     },
     attendanceConfig: {
       pastEntryLimitDays: { type: Number, default: 7 },
@@ -342,6 +418,12 @@ const CompanySettingsSchema = new Schema<ICompanySettings>(
       supervisorOverrideEnabled: { type: Boolean, default: true },
       deviceBindingEnabled: { type: Boolean, default: false },
       maxDevicesPerEmployee: { type: Number, default: 1 },
+      breakDeductionThresholdMinutes: { type: Number, default: 360 },
+      sandwichRuleEnabled: { type: Boolean, default: false },
+      compOffEarnRule: { type: String, enum: ['holiday-work', 'overtime', 'both'], default: 'both' },
+      compOffValidityDays: { type: Number, default: 30 },
+      regularizationAllowed: { type: Boolean, default: true },
+      regularizationDeadlineDays: { type: Number, default: 3 },
     },
     allowanceConfig: { type: [allowanceConfigSchema], default: [
       { name: 'HRA', type: 'percentage', value: 20, applicableTo: 'all', isActive: true },

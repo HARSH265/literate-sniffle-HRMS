@@ -37,7 +37,7 @@ export function AttendancePage() {
   const [checkoutReason, setCheckoutReason] = useState('');
   const [selectedDate, setSelectedDate] = useState(dayjs());
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(20);
+  const [limit, setLimit] = useState(10);
   const [departmentFilter, setDepartmentFilter] = useState<string>('');
   const [selectedMonth, setSelectedMonth] = useState(dayjs());
   const queryClient = useQueryClient();

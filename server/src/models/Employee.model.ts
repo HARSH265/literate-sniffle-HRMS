@@ -1,5 +1,37 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 
+export interface BankDetails {
+  bankName?: string;
+  accountNumber?: string;
+  ifscCode?: string;
+  accountType?: 'savings' | 'current';
+  accountHolderName?: string;
+}
+
+export interface SecondaryBankDetails {
+  bankName?: string;
+  accountNumber?: string;
+  ifscCode?: string;
+  accountType?: 'savings' | 'current';
+  accountHolderName?: string;
+}
+
+export interface ExitInfo {
+  resignationDate?: Date;
+  lastWorkingDay?: Date;
+  exitType?: 'resignation' | 'termination' | 'absconding' | 'retirement' | 'death';
+  noticeServed?: 'full' | 'partial' | 'buyout';
+  fnfStatus?: 'pending' | 'processed' | 'paid';
+}
+
+export interface EmployeeOverrides {
+  pfOnActualBasic: boolean;
+  salaryHold: boolean;
+  bonusEligible: boolean;
+  leaveEligible: boolean;
+  nightShiftAllowance: boolean;
+}
+
 export interface IEmployee extends Document {
   employeeCode: string;
   fullName: string;
@@ -17,12 +49,10 @@ export interface IEmployee extends Document {
   status: 'active' | 'inactive' | 'terminated' | 'archived';
   contactNumber?: string;
   address?: string;
-  bankDetails?: {
-    bankName?: string;
-    accountNumber?: string;
-    ifscCode?: string;
-    accountType?: 'savings' | 'current';
-  };
+  bankDetails?: BankDetails;
+  secondaryBank?: SecondaryBankDetails;
+  bankSplitPercent?: number;
+  paymentMode?: 'bank-transfer' | 'cheque' | 'cash';
   photo?: string;
   documents?: Array<{
     type: 'aadhar' | 'pan' | 'voter' | 'driver_license' | 'passport' | 'other';
@@ -36,15 +66,56 @@ export interface IEmployee extends Document {
   totpEnabled: boolean;
   registeredDeviceId?: string;
   pfUAN?: string;
+  pfNumber?: string;
   esiNumber?: string;
   pfJoiningDate?: Date;
   pfExempted: boolean;
   esiExempted: boolean;
   ptExempted: boolean;
   ptState?: string;
+  panNumber?: string;
+  aadhaarNumber?: string;
+  taxRegime?: 'old' | 'new';
+  gratuityEligible?: boolean;
+  npsAccount?: string;
+  lwfApplicable: boolean;
+  exitInfo?: ExitInfo;
+  overrides?: EmployeeOverrides;
 }
 
 type EmployeeModel = Model<IEmployee>;
+
+const secondaryBankSchema = new Schema(
+  {
+    bankName: { type: String },
+    accountNumber: { type: String },
+    ifscCode: { type: String },
+    accountType: { type: String, enum: ['savings', 'current'] },
+  },
+  { _id: false },
+);
+
+const exitInfoSchema = new Schema(
+  {
+    resignationDate: { type: Date },
+    lastWorkingDay: { type: Date },
+    exitType: { type: String, enum: ['resignation', 'termination', 'absconding', 'retirement', 'death'] },
+    noticeServed: { type: String, enum: ['full', 'partial', 'buyout'] },
+    fnfStatus: { type: String, enum: ['pending', 'processed', 'paid'] },
+  },
+  { _id: false },
+);
+
+const overridesSchema = new Schema(
+  {
+    pfOnActualBasic: { type: Boolean, default: false },
+    salaryHold: { type: Boolean, default: false },
+    bonusEligible: { type: Boolean, default: true },
+    leaveEligible: { type: Boolean, default: true },
+    nightShiftAllowance: { type: Boolean, default: false },
+  },
+  { _id: false },
+);
 
 const EmployeeSchema = new Schema<IEmployee>(
   {
@@ -85,7 +156,11 @@ const EmployeeSchema = new Schema<IEmployee>(
       accountNumber: { type: String },
       ifscCode: { type: String },
       accountType: { type: String, enum: ['savings', 'current'] },
+      accountHolderName: { type: String },
     },
+    secondaryBank: { type: secondaryBankSchema },
+    bankSplitPercent: { type: Number, min: 0, max: 100 },
+    paymentMode: { type: String, enum: ['bank-transfer', 'cheque', 'cash'], default: 'bank-transfer' },
     photo: { type: String },
     documents: [{
       type: { type: String, enum: ['aadhar', 'pan', 'voter', 'driver_license', 'passport', 'other'] },
@@ -99,12 +174,27 @@ const EmployeeSchema = new Schema<IEmployee>(
     totpEnabled: { type: Boolean, default: false },
     registeredDeviceId: { type: String },
     pfUAN: { type: String },
+    pfNumber: { type: String },
     esiNumber: { type: String },
     pfJoiningDate: { type: Date },
     pfExempted: { type: Boolean, default: false },
     esiExempted: { type: Boolean, default: false },
     ptExempted: { type: Boolean, default: false },
     ptState: { type: String },
+    panNumber: { type: String },
+    aadhaarNumber: { type: String },
+    taxRegime: { type: String, enum: ['old', 'new'] },
+    gratuityEligible: { type: Boolean },
+    npsAccount: { type: String },
+    lwfApplicable: { type: Boolean, default: false },
+    exitInfo: { type: exitInfoSchema },
+    overrides: { type: overridesSchema, default: () => ({
+      pfOnActualBasic: false,
+      salaryHold: false,
+      bonusEligible: true,
+      leaveEligible: true,
+      nightShiftAllowance: false,
+    })},
   },
   { timestamps: true },
 );

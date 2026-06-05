@@ -1,4 +1,4 @@
-import { Button, Popconfirm, Tag, message } from 'antd';
+import { Button, Popconfirm, Tag, message, Alert } from 'antd';
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import { DataTable } from '../../../core/components/DataTable';
 import { overtimeRuleService, OvertimeRule } from '../../overtime-rules/services/overtimeRuleService';
@@ -44,7 +44,13 @@ export function OvertimeSection({ onAdd }: { onAdd: () => void }) {
             </Popconfirm>
           )},
         ]}
-      />
+       />
+        <Alert
+          message="Overtime Rules define how overtime hours are compensated based on employee category. These rules are applied during payroll to calculate overtime earnings."
+          type="info"
+          showIcon
+          style={{ marginBottom: 16 }}
+        />
     </div>
   );
 }

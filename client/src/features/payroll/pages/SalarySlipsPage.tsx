@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '../../../core/components/PageHeader';
 import { DataTable } from '../../../core/components/DataTable';
@@ -8,6 +8,7 @@ import { salarySlipService } from '../services/salarySlipService';
 import { useQuery } from '@tanstack/react-query';
 import { ROUTES } from '../../../core/constants/routes';
 import apiClient from '../../../core/api/apiClient';
+import dayjs from 'dayjs';
 
 const STATUS_COLORS: Record<string, string> = {
   draft: 'orange',
@@ -17,6 +18,16 @@ const STATUS_COLORS: Record<string, string> = {
 export function SalarySlipsPage() {
   const [monthFilter, setMonthFilter] = useState<string | undefined>(undefined);
   const navigate = useNavigate();
+
+  const monthOptions = useMemo(() => {
+    const options = [];
+    const now = dayjs();
+    for (let i = 0; i < 12; i++) {
+      const d = now.subtract(i, 'month');
+      options.push({ value: d.format('YYYY-MM'), label: d.format('MMMM YYYY') });
+    }
+    return options;
+  }, []);
 
   const { data, isLoading } = useQuery({
     queryKey: ['salary-slips', monthFilter],
@@ -129,12 +140,7 @@ export function SalarySlipsPage() {
             style={{ width: 200 }}
             value={monthFilter}
             onChange={setMonthFilter}
-            options={[
-              { value: '2026-01', label: 'January 2026' },
-              { value: '2025-12', label: 'December 2025' },
-              { value: '2025-11', label: 'November 2025' },
-              { value: '2025-10', label: 'October 2025' },
-            ]}
+            options={monthOptions}
           />
         }
       />

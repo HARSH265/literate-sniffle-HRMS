@@ -8,7 +8,42 @@ import { TOTPService } from '../totp/totp.service.js';
 import { AppError } from '../../core/errors/AppError.js';
 import { AuditService } from '../../core/audit/AuditService.js';
 import { AttendanceService } from '../attendance/attendance.service.js';
+import { RedisService } from '../../core/redis/redis.service.js';
 import dayjs from 'dayjs';
+
+const TOTP_LOCKOUT_THRESHOLD = 5;
+const TOTP_LOCKOUT_DURATION_MS = 30 * 60 * 1000;
+const TOTP_ATTEMPT_WINDOW_MS = 30 * 60 * 1000;
+
+async function checkTOTPLockout(employeeId: string): Promise<void> {
+  const redis = await RedisService.getClient();
+  const lockKey = `totp:lockout:${employeeId}`;
+  const locked = await redis.get(lockKey);
+  if (locked) {
+    const ttl = await redis.ttl(lockKey);
+    throw new AppError(`Account locked due to too many failed TOTP attempts. Try again in ${Math.ceil(ttl / 60)} minutes.`, 429);
+  }
+}
+
+async function recordFailedTOTPAttempt(employeeId: string): Promise<void> {
+  const redis = await RedisService.getClient();
+  const attemptKey = `totp:attempts:${employeeId}`;
+  const current = await redis.incr(attemptKey);
+  if (current === 1) {
+    await redis.pExpire(attemptKey, TOTP_ATTEMPT_WINDOW_MS);
+  }
+  if (current >= TOTP_LOCKOUT_THRESHOLD) {
+    const lockKey = `totp:lockout:${employeeId}`;
+    await redis.set(lockKey, '1', { PX: TOTP_LOCKOUT_DURATION_MS });
+    await redis.del(attemptKey);
+  }
+}
+
+async function clearTOTPAttempts(employeeId: string): Promise<void> {
+  const redis = await RedisService.getClient();
+  await redis.del(`totp:attempts:${employeeId}`);
+  await redis.del(`totp:lockout:${employeeId}`);
+}
 
 export class AttendanceQRService {
   static async checkIn(data: {
@@ -32,8 +67,14 @@ export class AttendanceQRService {
     if (!employee) throw new AppError('Employee not found', 400);
     if (!employee.totpSecret || !employee.totpEnabled) throw new AppError('TOTP not enrolled for this employee', 400);
 
+    await checkTOTPLockout(data.employeeId);
+
     const totpValid = TOTPService.verifyCode(employee.totpSecret, data.totpCode);
-    if (!totpValid) throw new AppError('Invalid TOTP code', 401);
+    if (!totpValid) {
+      await recordFailedTOTPAttempt(data.employeeId);
+      throw new AppError('Invalid TOTP code', 401);
+    }
+    await clearTOTPAttempts(data.employeeId);
 
     if (config.deviceBindingEnabled && data.deviceId) {
       if (employee.registeredDeviceId && employee.registeredDeviceId !== data.deviceId) {
@@ -128,8 +169,14 @@ export class AttendanceQRService {
     const employee = await Employee.findById(data.employeeId).select('+totpSecret');
     if (!employee || !employee.totpSecret || !employee.totpEnabled) throw new AppError('TOTP not enrolled', 400);
 
+    await checkTOTPLockout(data.employeeId);
+
     const totpValid = TOTPService.verifyCode(employee.totpSecret, data.totpCode);
-    if (!totpValid) throw new AppError('Invalid TOTP code', 401);
+    if (!totpValid) {
+      await recordFailedTOTPAttempt(data.employeeId);
+      throw new AppError('Invalid TOTP code', 401);
+    }
+    await clearTOTPAttempts(data.employeeId);
 
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);

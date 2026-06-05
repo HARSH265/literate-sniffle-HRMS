@@ -39,7 +39,7 @@ export function KioskDevicesPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(20);
+  const [limit, setLimit] = useState(10);
   const [search, setSearch] = useState('');
   const [qrModalOpen, setQrModalOpen] = useState(false);
   const [qrDevice, setQrDevice] = useState<KioskDevice | null>(null);

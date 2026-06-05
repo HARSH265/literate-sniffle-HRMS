@@ -63,7 +63,7 @@ export class AuthService {
     const { tokenExpiry, refreshTokenExpiry } = await getAuthConfig();
 
     const token = jwt.sign(
-      { id: user._id.toString(), email: user.email, name: user.name, role: user.role },
+      { id: user._id.toString(), email: user.email, name: user.name, role: user.role, employeeId: user.employeeId?.toString() || null },
       env.JWT_SECRET,
       { expiresIn: tokenExpiry as jwt.SignOptions['expiresIn'], algorithm: 'HS256' },
     );

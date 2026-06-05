@@ -24,7 +24,7 @@ const SESSION_TIMEOUT_MS = 30 * 60 * 1000;
 
 let activityTimer: ReturnType<typeof setTimeout> | null = null;
 
-function startSessionTimer(logoutFn: () => void) {
+function startSessionTimer() {
   if (activityTimer) clearTimeout(activityTimer);
   activityTimer = setTimeout(() => {
     useAuthStore.getState().logout();
@@ -41,7 +41,7 @@ export const useAuthStore = create<AuthState>()(
       lastActivity: Date.now(),
       login: (user, token) => {
         set({ user, token, isAuthenticated: true, lastActivity: Date.now() });
-        startSessionTimer(() => get().logout());
+        startSessionTimer();
       },
       logout: () => {
         if (activityTimer) clearTimeout(activityTimer);
@@ -53,7 +53,7 @@ export const useAuthStore = create<AuthState>()(
         const state = get();
         if (state.isAuthenticated) {
           set({ lastActivity: Date.now() });
-          startSessionTimer(() => get().logout());
+startSessionTimer();
         }
       },
     }),

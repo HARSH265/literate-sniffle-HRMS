@@ -9,9 +9,19 @@ const listRuns = asyncHandler(async (req: Request, res: Response) => {
   ResponseHandler.paginated(res, result.data, result.meta as any, 'Payroll runs fetched successfully');
 });
 
+function validateMonthYear(month: number, year: number): void {
+  if (!Number.isInteger(month) || month < 1 || month > 12) {
+    throw new AppError('Month must be an integer between 1 and 12', 400);
+  }
+  if (!Number.isInteger(year) || year < 2000 || year > 2100) {
+    throw new AppError('Year must be an integer between 2000 and 2100', 400);
+  }
+}
+
 const runPayroll = asyncHandler(async (req: Request, res: Response) => {
   const { month, year } = req.body;
   if (!month || !year) throw new AppError('Month and year are required', 400);
+  validateMonthYear(Number(month), Number(year));
   const result = await PayrollService.runPayroll(month, year, req.user!.id);
   ResponseHandler.created(res, result, 'Payroll processed successfully');
 });
@@ -19,6 +29,7 @@ const runPayroll = asyncHandler(async (req: Request, res: Response) => {
 const previewRun = asyncHandler(async (req: Request, res: Response) => {
   const { month, year } = req.body;
   if (!month || !year) throw new AppError('Month and year are required', 400);
+  validateMonthYear(Number(month), Number(year));
   const result = await PayrollService.previewRun(month, year);
   ResponseHandler.success(res, result, 'Payroll preview generated');
 });
@@ -29,13 +40,19 @@ const submitRun = asyncHandler(async (req: Request, res: Response) => {
 });
 
 const approveRun = asyncHandler(async (req: Request, res: Response) => {
-  const result = await PayrollService.approveRun(req.params.id, req.user!.id);
-  ResponseHandler.success(res, result, 'Payroll approved');
+  const result = await PayrollService.approveRun(req.params.id, req.user!.id, req.body.comments);
+  ResponseHandler.success(res, result, 'Payroll run approved successfully');
 });
 
 const rejectRun = asyncHandler(async (req: Request, res: Response) => {
   const result = await PayrollService.rejectRun(req.params.id, req.user!.id, req.body.reason);
-  ResponseHandler.success(res, result, 'Payroll rejected');
+  ResponseHandler.success(res, result, 'Payroll run rejected successfully');
+});
+
+const supplementaryPayroll = asyncHandler(async (req: Request, res: Response) => {
+  const { month, year, employeeIds, reason } = req.body;
+  const result = await PayrollService.supplementaryRun(month, year, req.user!.id, employeeIds, reason);
+  ResponseHandler.created(res, result, 'Supplementary payroll created successfully');
 });
 
 const finalizeRun = asyncHandler(async (req: Request, res: Response) => {
@@ -82,7 +99,7 @@ const getByEmployee = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const payrollController = {
-  listRuns, runPayroll, previewRun, submitRun, approveRun, rejectRun,
+  listRuns, runPayroll, previewRun, submitRun, approveRun, rejectRun, supplementaryPayroll,
   finalizeRun, getRunDetails, unfinalizeRun,
   updatePayrollItem, batchUpdateItems, deleteRun, getByEmployee,
 };

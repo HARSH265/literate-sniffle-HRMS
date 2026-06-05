@@ -20,7 +20,7 @@ export function AnnouncementsPage() {
   const navigate = useNavigate();
   const [form] = Form.useForm();
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(20);
+  const [limit, setLimit] = useState(10);
   const [priority, setPriority] = useState<string | undefined>();
   const [status, setStatus] = useState<string | undefined>();
   const [search, setSearch] = useState('');

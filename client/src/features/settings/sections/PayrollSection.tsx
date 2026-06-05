@@ -92,6 +92,65 @@ export function PayrollSection({ form, onSave }: { form: any; onSave: (values: a
         </Row>
       </div>
 
+       {/* Advanced Payroll Settings */}
+       <div style={{ marginTop: 24, padding: 16, background: '#f0f5ff', borderRadius: 8, border: '1px solid #91d5ff' }}>
+         <h4 style={{ marginBottom: 12 }}>Advanced Payroll Settings</h4>
+         <Row gutter={16}>
+           <Col span={8}>
+             <Form.Item name={['payrollConfig', 'perDayCalcMethod']} label="Per Day Calc Method">
+               <Select style={{ width: '100%', height: 40 }} options={[
+                 { label: '30', value: '30' },
+                 { label: 'Actual', value: 'actual' },
+                 { label: '26', value: '26' },
+               ]} />
+             </Form.Item>
+           </Col>
+           <Col span={8}>
+             <Form.Item name={['payrollConfig', 'lopCalcMethod']} label="LOP Calc Method">
+               <Select style={{ width: '100%', height: 40 }} options={[
+                 { label: '30', value: '30' },
+                 { label: 'Actual', value: 'actual' },
+                 { label: '26', value: '26' },
+               ]} />
+             </Form.Item>
+           </Col>
+           <Col span={8}>
+             <Form.Item name={['payrollConfig', 'roundingFinalSalary']} label="Final Salary Rounding">
+               <Select style={{ width: '100%', height: 40 }} options={[
+                 { label: 'Floor', value: 'floor' },
+                 { label: 'Ceil', value: 'ceil' },
+                 { label: 'Nearest', value: 'nearest' },
+               ]} />
+             </Form.Item>
+           </Col>
+           <Col span={8}>
+             <Form.Item name={['payrollConfig', 'roundingPrecision']} label="Rounding Precision">
+               <InputNumber style={{ width: '100%', height: 40 }} min={0} max={2} />
+             </Form.Item>
+           </Col>
+           <Col span={8}>
+             <Form.Item name={['payrollConfig', 'negativeNetPayAllow']} label="Allow Negative Net Pay" valuePropName="checked">
+               <Switch />
+             </Form.Item>
+           </Col>
+           <Col span={8}>
+             <Form.Item name={['payrollConfig', 'arrearsAutoCalculate']} label="Arrears Auto‑Calculate" valuePropName="checked">
+               <Switch />
+             </Form.Item>
+           </Col>
+           <Col span={8}>
+             <Form.Item name={['payrollConfig', 'multiBankSplit']} label="Multi‑Bank Split" valuePropName="checked">
+               <Switch />
+             </Form.Item>
+           </Col>
+           <Col span={8}>
+             <Form.Item name={['payrollConfig', 'makerCheckerEnabled']} label="Maker‑Checker" valuePropName="checked">
+               <Switch />
+             </Form.Item>
+           </Col>
+         </Row>
+       </div>
+
       <Button type="primary" icon={<SaveOutlined />} htmlType="submit" style={{ marginTop: 16 }}>
         Save Payroll Settings
       </Button>

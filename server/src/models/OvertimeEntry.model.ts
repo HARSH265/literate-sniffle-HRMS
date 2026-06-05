@@ -8,6 +8,12 @@ export interface IOvertimeEntry extends Document {
   remarks?: string;
   enteredBy: mongoose.Types.ObjectId;
   updatedBy?: mongoose.Types.ObjectId;
+  status: 'pending' | 'approved' | 'rejected';
+  approvedHours?: number;
+  approvedBy?: mongoose.Types.ObjectId;
+  approvedAt?: Date;
+  shiftType: 'day' | 'night';
+  otCategory: 'normal' | 'weekly-off' | 'holiday';
 }
 
 type OvertimeEntryModel = Model<IOvertimeEntry>;
@@ -21,6 +27,20 @@ const OvertimeEntrySchema = new Schema<IOvertimeEntry>(
     remarks: { type: String },
     enteredBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    status: {
+      type: String,
+      enum: ['pending', 'approved', 'rejected'],
+      default: 'pending',
+    },
+    approvedHours: { type: Number, min: 0 },
+    approvedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    approvedAt: { type: Date },
+    shiftType: { type: String, enum: ['day', 'night'], default: 'day' },
+    otCategory: {
+      type: String,
+      enum: ['normal', 'weekly-off', 'holiday'],
+      default: 'normal',
+    },
   },
   { timestamps: true },
 );

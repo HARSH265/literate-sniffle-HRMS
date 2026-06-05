@@ -2,9 +2,11 @@ import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import { attendanceController } from './attendance.controller.js';
 import { validate } from '../../core/validation/validate.middleware.js';
-import { createAttendanceEntrySchema, bulkAttendanceSchema } from './attendance.validation.js';
+import { createAttendanceEntrySchema, bulkAttendanceSchema, bulkUpdateAttendanceSchema } from './attendance.validation.js';
 import { authenticate } from '../../core/permissions/authenticate.middleware.js';
 import { authorize } from '../../core/permissions/authorize.middleware.js';
+import { authorizeOwnership } from '../../core/permissions/authorizeOwnership.middleware.js';
+import Employee from '../../models/Employee.model.js';
 
 const router = Router();
 
@@ -17,11 +19,11 @@ const bulkLimiter = rateLimit({
 router.use(authenticate);
 
 router.get('/', authorize('view-employees'), attendanceController.list);
-router.get('/employee/:employeeId', authorize('view-employees'), attendanceController.getByEmployee);
+router.get('/employee/:employeeId', authorize('view-employees'), authorizeOwnership({ model: Employee, ownerField: '_id' }), attendanceController.getByEmployee);
 router.get('/monthly-view', authorize('view-employees'), attendanceController.monthlyView);
 router.post('/bulk', bulkLimiter, authorize('manage-attendance'), validate(bulkAttendanceSchema), attendanceController.bulkCreate);
-router.patch('/bulk-update', bulkLimiter, authorize('manage-attendance'), attendanceController.bulkUpdateEntries);
-router.post('/admin-checkout/:employeeId', authorize('manage-attendance'), attendanceController.adminCheckout);
+router.patch('/bulk-update', bulkLimiter, authorize('manage-attendance'), validate(bulkUpdateAttendanceSchema), attendanceController.bulkUpdateEntries);
+router.post('/admin-checkout/:employeeId', authorize('manage-attendance'), authorizeOwnership({ model: Employee, ownerField: '_id' }), attendanceController.adminCheckout);
 router.post('/', authorize('manage-attendance'), validate(createAttendanceEntrySchema), attendanceController.create);
 router.patch('/:id', authorize('manage-attendance'), attendanceController.update);
 router.delete('/:id', authorize('manage-attendance'), attendanceController.remove);

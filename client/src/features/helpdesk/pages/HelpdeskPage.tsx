@@ -37,7 +37,7 @@ export function HelpdeskPage() {
   const navigate = useNavigate();
   const [form] = Form.useForm();
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(20);
+  const [limit, setLimit] = useState(10);
   const [status, setStatus] = useState<string | undefined>();
   const [priority, setPriority] = useState<string | undefined>();
   const [category, setCategory] = useState<string | undefined>();

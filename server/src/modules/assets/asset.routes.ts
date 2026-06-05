@@ -11,6 +11,8 @@ import {
 } from './asset.validation.js';
 import { authenticate } from '../../core/permissions/authenticate.middleware.js';
 import { authorize } from '../../core/permissions/authorize.middleware.js';
+import { authorizeOwnership } from '../../core/permissions/authorizeOwnership.middleware.js';
+import Employee from '../../models/Employee.model.js';
 
 const router = Router();
 
@@ -18,7 +20,7 @@ router.use(authenticate);
 
 router.get('/', authorize('view-assets'), assetController.list);
 router.get('/stats', authorize('view-assets'), assetController.getStats);
-router.get('/employee/:employeeId', authorize('view-assets'), assetController.getEmployeeAssets);
+router.get('/employee/:employeeId', authorize('view-assets'), authorizeOwnership({ model: Employee, ownerField: '_id' }), assetController.getEmployeeAssets);
 router.get('/:id', authorize('view-assets'), assetController.getById);
 router.get('/:id/history', authorize('view-assets'), assetController.getHistory);
 router.post('/', authorize('manage-assets'), validate(createAssetSchema), assetController.create);

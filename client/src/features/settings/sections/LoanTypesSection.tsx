@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, Modal, Form, Input, InputNumber, Select, Switch, Space, Tag, message, Popconfirm, Row, Col } from 'antd';
+import { Button, Modal, Form, Input, InputNumber, Select, Switch, Space, Tag, message, Popconfirm, Row, Col, Alert } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { DataTable } from '../../../core/components/DataTable';
 import { loanService, LoanType } from '../../loans/services/loanService';
@@ -72,6 +72,12 @@ export function LoanTypesSection() {
         <Button type="primary" icon={<PlusOutlined />} onClick={() => setModalOpen(true)}>Add Loan Type</Button>
       </div>
       <DataTable dataSource={data?.data?.loanTypes || []} columns={columns} rowKey="id" loading={isLoading} hidePagination noCard disableRowClick />
+        <Alert
+          message="Loan Types define the different loan products available to employees, including limits, interest rates, and applicability. These settings are used when processing loan applications and repayments."
+          type="info"
+          showIcon
+          style={{ marginBottom: 16 }}
+        />
 
       <Modal title={editingId ? 'Edit Loan Type' : 'Create Loan Type'} open={modalOpen} onCancel={closeModal} onOk={form.submit} okText={editingId ? 'Update' : 'Create'} width={640}>
         <Form form={form} layout="vertical" onFinish={handleSubmit}>
