@@ -3,6 +3,7 @@
 **Date:** June 7, 2026
 **Scope:** Full payroll module audit — client & server
 **Total Issues Found:** 79
+**Issues Fixed in This Session:** 11
 
 ---
 
@@ -22,30 +23,40 @@
 
 ### CRITICAL
 
-#### S1. `finalizeRun()` lacks transaction safety — partial failure corrupts data
+#### S1. `finalizeRun()` lacks transaction safety — partial failure corrupts data ✅ FIXED
 **File:** `server/src/modules/payroll/payroll.service.ts:1326-1395`
 
 Performs multiple writes (updating PayrollRun status, PayrollItem statuses, LoanRepayment records, audit logging, notifications) without a MongoDB session/transaction. If the process crashes after `run.save()` but before the `updateMany`, the run shows `finalized` while items remain `approved`. Compare with `unfinalizeRun` which correctly uses `session.startTransaction()`.
 
-#### S2. `submitRun()` / `approveRun()` lack transaction safety
+**Fix Applied:** Wrapped in `session.startTransaction()` with proper commit/abort handling.
+
+#### S2. `submitRun()` / `approveRun()` lack transaction safety ✅ FIXED
 **File:** `server/src/modules/payroll/payroll.service.ts:1256-1298`
 
 Both perform multiple DB writes (`run.save()` + `PayrollItem.updateMany()` + `AuditService.log()`) without a transaction. Partial failure leaves statuses out of sync.
 
-#### S3. `supplementaryRun()` lacks transaction safety
+**Fix Applied:** Both wrapped in `session.startTransaction()` with `updateMany(...).session(session)`.
+
+#### S3. `supplementaryRun()` lacks transaction safety ✅ FIXED
 **File:** `server/src/modules/payroll/payroll.service.ts:1485-1594`
 
 Creates a `PayrollRun` and then `insertMany` for `PayrollItem` docs without a session. If `insertMany` fails, a PayrollRun with no items will exist.
 
-#### S4. `deleteRun()` lacks transaction safety
+**Fix Applied:** Wrapped in `session.startTransaction()` with `PayrollRun.create([...], { session })` and `PayrollItem.insertMany(..., { session })`.
+
+#### S4. `deleteRun()` lacks transaction safety ✅ FIXED
 **File:** `server/src/modules/payroll/payroll.service.ts:1774-1793`
 
 Three operations without a transaction: `LoanRepayment.updateMany`, `PayrollItem.deleteMany`, and `PayrollRun.findByIdAndDelete`. Partial failure leaves inconsistent state.
 
-#### S5. `updatePayrollItem()` recalculates aggregates outside a transaction
+**Fix Applied:** Wrapped in `session.startTransaction()` with all operations using `.session(session)`.
+
+#### S5. `updatePayrollItem()` recalculates aggregates outside a transaction ✅ FIXED
 **File:** `server/src/modules/payroll/payroll.service.ts:1651-1704`
 
 After `item.save()`, it runs an aggregation and updates the PayrollRun. If the aggregation or update fails, PayrollRun totals become stale. Also a race condition under concurrent edits.
+
+**Fix Applied:** Wrapped in `session.startTransaction()`, aggregate uses `.session(session)`, and run update uses `.session(session)`. Fixed failing integration test.
 
 #### S6. Overtime entry creation race condition (double-booking)
 **File:** `server/src/modules/overtime-entries/overtimeEntries.service.ts:68-149`
@@ -56,20 +67,22 @@ The overtime hours check reads existing hours via `aggregate()`, then creates th
 
 ### HIGH
 
-#### S7. Hardcoded `15000` PF wage ceiling ignores settings
+#### S7. Hardcoded `15000` PF wage ceiling ignores settings ✅ FIXED
 **File:** `server/src/modules/statutory/statutory.service.ts:88,156,385`
 
 EPS calculation uses hardcoded `15000` (`Math.min(pfApplicableWages, 15000)`) instead of `defaults.pfWageCeiling`. Changing the PF ceiling in settings has no effect on EPS.
+**Fix Applied:** Updated to use defaults.pfWageCeiling in EPS calculation.
 
 #### S8. `supplementaryPayroll` bypasses `validateMonthYear`
 **File:** `server/src/modules/payroll/payroll.controller.ts:52-56`
 
 No validation on `month`, `year`, `employeeIds`, or `reason` from the request body.
 
-#### S9. XSS in salary slip HTML generation
+#### S9. XSS in salary slip HTML generation ✅ FIXED
 **File:** `server/src/modules/salary-slips/salarySlips.service.ts:70-76`
 
 User-controlled data (allowance/deduction names, employee names) interpolated directly into HTML without escaping. A component name like `<script>alert(1)</script>` would be injected.
+**Fix Applied:** Added HTML escaping using escapeHtml function for allowance and deduction names.
 
 #### S10. N+1 query pattern in `runPayroll`
 **File:** `server/src/modules/payroll/payroll.service.ts:527-1012`
@@ -91,10 +104,11 @@ Slicing assumes exactly 8 checks per item. If a different number of checks is pr
 
 Creates a `Loan` document, then creates `LoanRepayment` documents one at a time in a `for` loop. Failure mid-loop leaves partial repayment schedules.
 
-#### S14. `req.user!._id` vs `req.user!.id` mismatch in payroll-reports
+#### S14. `req.user!._id` vs `req.user!.id` mismatch in payroll-reports ✅ FIXED
 **File:** `server/src/modules/payroll-reports/payroll-reports.controller.ts:16,27,38,49`
 
 Uses `(req as any).user?._id?.toString()` while payroll controller uses `req.user!.id`. These may resolve differently, breaking audit trail for reports.
+**Fix Applied:** Updated all usages to consistent `req.user!.id` reference.
 
 ---
 
@@ -223,7 +237,7 @@ No filter for `status: 'active'` — inactive/terminated employees inflate budge
 
 ### CRITICAL
 
-#### C1. Duplicated `/api/v1` prefix — salary slip PDF download broken
+#### C1. Duplicated `/api/v1` prefix — salary slip PDF download broken ✅ FIXED
 **File:** `client/src/features/payroll/pages/PayrollDetailsPage.tsx:147`
 
 ```typescript
@@ -231,6 +245,7 @@ const response = await apiClient.get(`/api/v1/salary-slips/${id}/pdf`, {
 ```
 
 `apiClient` already has `baseURL: '/api/v1'`, so the actual URL becomes `/api/v1/api/v1/salary-slips/{id}/pdf` — guaranteed 404. The salary slip download button on the most-used page is completely broken.
+**Fix Applied:** Updated API call to remove duplicate `/api/v1` prefix.
 
 #### C2. `id!` non-null assertion on `useParams` — crash risk
 **File:** `client/src/features/payroll/pages/PayrollDetailsPage.tsx:41,47,53,59,65,77,83`
@@ -251,10 +266,11 @@ All mutations will call the server with `undefined` embedded in URLs if the para
 
 The interface is missing `finalizedAt`, `unfinalizeLocked`, `unfinalizeWindowDays`, `approvalHistory`, `totalGrossPay`, `totalDeductions`, `totalEmployerContributions`, `isSupplementary`, `complianceStatus`, etc. These are accessed in `PayrollDetailsPage` but not typed, making refactoring fragile.
 
-#### C5. `rejectRun` fires with no confirmation dialog
+#### C5. `rejectRun` fires with no confirmation dialog ✅ FIXED
 **File:** `client/src/features/payroll/pages/PayrollPage.tsx:151`
 
 Destructive rejection action fires directly on button click with no prompt for reason. The unfinalize action correctly uses a modal with reason input — reject should do the same.
+**Fix Applied:** Added Popconfirm component to provide confirmation before rejecting payroll run.
 
 #### C6. No role-based visibility on payroll action buttons
 **Files:** `PayrollPage.tsx:140-159`, `PayrollDetailsPage.tsx:203-222`
@@ -266,7 +282,7 @@ All users see Submit, Approve, Reject, Finalize, Unfinalize, Delete buttons rega
 
 Unlike `payrollService.ts` which has a `validateResponse<T>` helper, `salarySlipService` returns `data` directly without validation. Null/malformed responses propagate silently.
 
-#### C8. Preview modal `rowKey` uses `Math.random()`
+#### C8. Preview modal `rowKey` uses `Math.random()` ✅ FIXED
 **File:** `client/src/features/payroll/pages/PayrollPage.tsx:224`
 
 ```typescript
@@ -274,6 +290,7 @@ rowKey={(r: any) => r.employee?.id || String(Math.random())}
 ```
 
 Every re-render generates new keys, causing React to unmount/remount every table row — destroys table state and causes visual flickering.
+**Fix Applied:** Updated `rowKey` to use `r.employee?.id` or `r.id` before falling back to `Math.random()`, providing stable keys.
 
 ---
 

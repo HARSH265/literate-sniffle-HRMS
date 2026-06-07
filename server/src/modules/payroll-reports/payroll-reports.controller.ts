@@ -13,7 +13,7 @@ import {
 export const downloadPayslip = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { itemId } = req.params;
-    const userId = (req as any).user?._id?.toString();
+    const userId = req.user!.id;
     await generatePayslipPdf(itemId, res, userId);
   } catch (error) {
     next(error);
@@ -24,7 +24,7 @@ export const downloadBankFile = async (req: Request, res: Response, next: NextFu
   try {
     const { runId } = req.params;
     const format = (req.query.format as 'neft' | 'rtgs' | 'nach') || 'neft';
-    const userId = (req as any).user?._id?.toString();
+    const userId = req.user!.id;
     await generateBankFile(runId, format, res, userId);
   } catch (error) {
     next(error);
@@ -35,7 +35,7 @@ export const downloadSalaryRegister = async (req: Request, res: Response, next: 
   try {
     const { runId } = req.params;
     const department = req.query.department as string | undefined;
-    const userId = (req as any).user?._id?.toString();
+    const userId = req.user!.id;
     await generateSalaryRegister(runId, res, userId, { department });
   } catch (error) {
     next(error);
@@ -46,7 +46,7 @@ export const downloadSalaryRegisterCsv = async (req: Request, res: Response, nex
   try {
     const { runId } = req.params;
     const department = req.query.department as string | undefined;
-    const userId = (req as any).user?._id?.toString();
+    const userId = req.user!.id;
     await generateSalaryRegister(runId, res, userId, { department }, 'csv');
   } catch (error) {
     next(error);

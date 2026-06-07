@@ -148,7 +148,9 @@ export function PayrollPage() {
           {record.status === 'submitted' && (
             <>
               <Button size="small" type="primary" icon={<CheckCircleOutlined />} onClick={() => approveMutation.mutate(record.id)}>Approve</Button>
-              <Button size="small" danger icon={<StopOutlined />} onClick={() => rejectMutation.mutate(record.id)}>Reject</Button>
+              <Popconfirm title="Reject this payroll run? It will return to draft status." onConfirm={() => rejectMutation.mutate(record.id)} okText="Reject" okButtonProps={{ danger: true }}>
+                <Button size="small" danger icon={<StopOutlined />} />
+              </Popconfirm>
             </>
           )}
           {record.status === 'approved' && (
@@ -221,7 +223,7 @@ export function PayrollPage() {
                 { title: 'Deductions', dataIndex: 'totalDeductions', key: 'ded', render: (v: number) => `₹${v.toLocaleString()}` },
                 { title: 'Net Pay', dataIndex: 'netPay', key: 'net', render: (v: number) => <strong>₹{v.toLocaleString()}</strong> },
               ]}
-              rowKey={(r: any) => r.employee?.id || String(Math.random())}
+              rowKey={(r: any) => r.employee?.id || r.id || String(Math.random())}
               hidePagination
               disableRowClick
               noCard

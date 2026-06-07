@@ -85,7 +85,7 @@ export async function calculateStatutoryForEmployee(
 
   if (defaults.pfEnabled && !employee.pfExempted && pfApplicableWages > 0) {
     result.employeePf = Math.round(pfApplicableWages * (defaults.pfEmployeeRate / 100));
-    const epsAmount = Math.round(Math.min(pfApplicableWages, 15000) * (defaults.epsRate / 100));
+    const epsAmount = Math.round(Math.min(pfApplicableWages, defaults.pfWageCeiling) * (defaults.epsRate / 100));
     result.eps = epsAmount;
     result.employerPf = Math.round(pfApplicableWages * (defaults.pfEmployerRate / 100)) - epsAmount;
     result.edli = Math.round(pfApplicableWages * (defaults.edliRate / 100));
@@ -153,7 +153,7 @@ export async function generatePFChallan(month: string, userId: string) {
     totalWages += pfWages;
     employeeCount++;
     totalEmployeePf += Math.round(pfWages * (defaults.pfEmployeeRate / 100));
-    const epsAmt = Math.round(Math.min(pfWages, 15000) * (defaults.epsRate / 100));
+    const epsAmt = Math.round(Math.min(pfWages, defaults.pfWageCeiling) * (defaults.epsRate / 100));
     totalEps += epsAmt;
     totalEmployerPf += Math.round(pfWages * (defaults.pfEmployerRate / 100)) - epsAmt;
     totalEdli += Math.round(pfWages * (defaults.edliRate / 100));
@@ -382,7 +382,7 @@ export async function getStatutorySummary(month: string) {
       totalPfWages += pfWages;
       pfCount++;
       totalEmployeePf += Math.round(pfWages * (defaults.pfEmployeeRate / 100));
-      const epsAmt = Math.round(Math.min(pfWages, 15000) * (defaults.epsRate / 100));
+      const epsAmt = Math.round(Math.min(pfWages, defaults.pfWageCeiling) * (defaults.epsRate / 100));
       totalEps += epsAmt;
       totalEmployerPf += Math.round(pfWages * (defaults.pfEmployerRate / 100)) - epsAmt;
       totalEdli += Math.round(pfWages * (defaults.edliRate / 100));

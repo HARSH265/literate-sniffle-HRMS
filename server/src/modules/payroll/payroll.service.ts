@@ -219,10 +219,9 @@ interface ArrearItem {
 
 async function calculateArrears(
   empId: string, _month: number, year: number, _basicEarnings: number,
-  _payableDaysBase: number, totalDays: number,
+  _payableDaysBase: number, totalDays: number, arrearsAutoCalculate: boolean,
 ): Promise<ArrearItem[]> {
-  const _config = (await CompanySettings.findOne().lean())?.payrollConfig as any;
-  if (!_config?.arrearsAutoCalculate) return [];
+  if (!arrearsAutoCalculate) return [];
 
   // Find current month structure
   const monthStart = new Date(year, _month - 1, 1);
@@ -527,6 +526,7 @@ async function calculateFromSalaryStructure(
 async function calculatePayrollForEmployee(
   emp: LeanEmployee, _month: number, _year: number, config: PayrollConfig, allowances: AllowanceConfig[], deductions: DeductionConfig[],
   startDate: Date, endDate: Date, totalDays: number, _workingDays: number, standardHours: number,
+  minimumWageThreshold: number,
 ): Promise<PayrollCalcResult> {
   const category = emp.category || 'worker';
   const employmentType = emp.employmentType || 'permanent';
@@ -896,7 +896,6 @@ async function calculatePayrollForEmployee(
   }
 
   // Minimum wage compliance flag (configurable)
-  const minimumWageThreshold = (await CompanySettings.findOne().lean())?.payrollConfig?.minimumWage || 10000;
   if (basicEarnings < minimumWageThreshold) {
     complianceFlags.push({
       check: 'minimum-wage',
@@ -913,6 +912,7 @@ async function calculatePayrollForEmployee(
   try {
     arrears = await calculateArrears(
       String(emp._id), _month, _year, basicEarnings, payableDaysBase, totalDays,
+      config.arrearsAutoCalculate ?? true,
     );
     if (arrears.length > 0) {
       for (const arrear of arrears) {
@@ -1078,6 +1078,8 @@ export class PayrollService {
       
       const employees = await Employee.find({ status: 'active' }).lean().session(session);
       
+      const minimumWageThreshold = settings?.payrollConfig?.minimumWage || 10000;
+      
       let totalNetPay = 0, totalGrossPay = 0, totalDeductions = 0;
       const payrollItems = [];
       
@@ -1087,7 +1089,7 @@ export class PayrollService {
         const batch = employees.slice(i, i + BATCH_SIZE);
         const batchResults = await Promise.all(
           batch.map(emp =>
-            calculatePayrollForEmployee(emp, month, year, config, allowances, deductions, startDate, endDate, totalDays, totalDays, standardHours)
+            calculatePayrollForEmployee(emp, month, year, config, allowances, deductions, startDate, endDate, totalDays, totalDays, standardHours, minimumWageThreshold)
               .catch(err => {
                 throw new AppError(
                   `Payroll calculation failed for ${emp.employeeCode || emp.fullName || emp._id}: ${err instanceof Error ? err.message : 'Unknown error'}`,
@@ -1224,6 +1226,8 @@ export class PayrollService {
 
     const employees = await Employee.find({ status: 'active' }).lean();
 
+    const minimumWageThreshold = settings?.payrollConfig?.minimumWage || 10000;
+
     let totalNetPay = 0, totalGrossPay = 0, totalDeductions = 0;
     const payrollItems = [];
 
@@ -1232,7 +1236,7 @@ export class PayrollService {
       const batch = employees.slice(i, i + BATCH_SIZE);
       const batchResults = await Promise.all(
         batch.map(emp =>
-          calculatePayrollForEmployee(emp, month, year, config, allowances, deductions, startDate, endDate, totalDays, totalDays, standardHours)
+          calculatePayrollForEmployee(emp, month, year, config, allowances, deductions, startDate, endDate, totalDays, totalDays, standardHours, minimumWageThreshold)
         ),
       );
       for (const result of batchResults) {
@@ -1254,144 +1258,195 @@ export class PayrollService {
   }
 
   static async submitRun(id: string, userId: string): Promise<Record<string, unknown>> {
-    const run = await PayrollRun.findById(id);
-    if (!run) throw new AppError('Payroll run not found', 404);
-    if (run.status !== 'draft') throw new AppError('Only draft payroll can be submitted', 400);
+    const session = await mongoose.startSession();
+    session.startTransaction();
 
-    run.status = 'submitted';
-    run.submittedBy = new mongoose.Types.ObjectId(userId);
-    run.submittedAt = new Date();
-    await addRevision(run, 'Submitted for approval', userId);
-    await addApprovalHistory(run, 'submitted', userId);
-    await run.save();
+    try {
+      const run = await PayrollRun.findById(id).session(session);
+      if (!run) throw new AppError('Payroll run not found', 404);
+      if (run.status !== 'draft') throw new AppError('Only draft payroll can be submitted', 400);
 
-    await PayrollItem.updateMany({ payrollRun: id }, { status: 'submitted' });
-    await AuditService.log({ action: 'update', module: 'payroll', userId, targetId: id, details: { status: 'submitted' } });
+      run.status = 'submitted';
+      run.submittedBy = new mongoose.Types.ObjectId(userId);
+      run.submittedAt = new Date();
+      await addRevision(run, 'Submitted for approval', userId);
+      await addApprovalHistory(run, 'submitted', userId);
+      await run.save();
 
-    return { id: String(run._id), status: run.status };
+      await PayrollItem.updateMany({ payrollRun: id }, { status: 'submitted' }).session(session);
+
+      await session.commitTransaction();
+
+      await AuditService.log({ action: 'update', module: 'payroll', userId, targetId: id, details: { status: 'submitted' } });
+
+      return { id: String(run._id), status: run.status };
+    } catch (err) {
+      await session.abortTransaction();
+      throw err;
+    } finally {
+      session.endSession();
+    }
   }
 
   static async approveRun(id: string, userId: string, comments?: string): Promise<Record<string, unknown>> {
-    const run = await PayrollRun.findById(id);
-    if (!run) throw new AppError('Payroll run not found', 404);
-    if (run.status !== 'submitted') throw new AppError('Only submitted payroll can be approved', 400);
+    const session = await mongoose.startSession();
+    session.startTransaction();
 
-    // Maker-checker enforcement (5A)
-    const settings = await CompanySettings.findOne().lean();
-    const makerCheckerEnabled = (settings?.payrollConfig as any)?.makerCheckerEnabled ?? false;
-    if (makerCheckerEnabled && run.submittedBy?.toString() === userId) {
-      throw new AppError('Cannot approve your own submission (maker-checker)', 400);
+    try {
+      const run = await PayrollRun.findById(id).session(session);
+      if (!run) throw new AppError('Payroll run not found', 404);
+      if (run.status !== 'submitted') throw new AppError('Only submitted payroll can be approved', 400);
+
+      // Maker-checker enforcement (5A)
+      const settings = await CompanySettings.findOne().lean();
+      const makerCheckerEnabled = (settings?.payrollConfig as any)?.makerCheckerEnabled ?? false;
+      if (makerCheckerEnabled && run.submittedBy?.toString() === userId) {
+        throw new AppError('Cannot approve your own submission (maker-checker)', 400);
+      }
+
+      run.status = 'approved';
+      run.approvedBy = new mongoose.Types.ObjectId(userId);
+      run.approvedAt = new Date();
+      run.remarks = comments || run.remarks;
+      await addRevision(run, 'Approved', userId);
+      await addApprovalHistory(run, 'approved', userId, comments);
+      await run.save();
+
+      await PayrollItem.updateMany({ payrollRun: id }, { status: 'approved' }).session(session);
+
+      await session.commitTransaction();
+
+      await AuditService.log({ action: 'approve', module: 'payroll', userId, targetId: id, details: { status: 'approved' } });
+
+      return { id: String(run._id), status: run.status };
+    } catch (err) {
+      await session.abortTransaction();
+      throw err;
+    } finally {
+      session.endSession();
     }
-
-    run.status = 'approved';
-    run.approvedBy = new mongoose.Types.ObjectId(userId);
-    run.approvedAt = new Date();
-    run.remarks = comments || run.remarks;
-    await addRevision(run, 'Approved', userId);
-    await addApprovalHistory(run, 'approved', userId, comments);
-    await run.save();
-
-    await PayrollItem.updateMany({ payrollRun: id }, { status: 'approved' });
-    await AuditService.log({ action: 'approve', module: 'payroll', userId, targetId: id, details: { status: 'approved' } });
-
-    return { id: String(run._id), status: run.status };
   }
 
   static async rejectRun(id: string, userId: string, reason?: string): Promise<Record<string, unknown>> {
-    const run = await PayrollRun.findById(id);
-    if (!run) throw new AppError('Payroll run not found', 404);
-    if (run.status !== 'submitted') throw new AppError('Only submitted payroll can be rejected', 400);
+    const session = await mongoose.startSession();
+    session.startTransaction();
 
-    // Maker-checker enforcement (5A)
-    const settings = await CompanySettings.findOne().lean();
-    const makerCheckerEnabled = (settings?.payrollConfig as any)?.makerCheckerEnabled ?? false;
-    if (makerCheckerEnabled && run.submittedBy?.toString() === userId) {
-      throw new AppError('Cannot reject your own submission (maker-checker)', 400);
+    try {
+      const run = await PayrollRun.findById(id).session(session);
+      if (!run) throw new AppError('Payroll run not found', 404);
+      if (run.status !== 'submitted') throw new AppError('Only submitted payroll can be rejected', 400);
+
+      // Maker-checker enforcement (5A)
+      const settings = await CompanySettings.findOne().lean();
+      const makerCheckerEnabled = (settings?.payrollConfig as any)?.makerCheckerEnabled ?? false;
+      if (makerCheckerEnabled && run.submittedBy?.toString() === userId) {
+        throw new AppError('Cannot reject your own submission (maker-checker)', 400);
+      }
+
+      run.status = 'draft';
+      run.submittedBy = undefined;
+      run.submittedAt = undefined;
+      if (reason) run.remarks = `Rejected: ${reason}`;
+      await addRevision(run, 'Rejected, returned to draft', userId, { reason });
+      await addApprovalHistory(run, 'rejected', userId, reason);
+      await run.save();
+
+      await PayrollItem.updateMany({ payrollRun: id }, { status: 'draft' }).session(session);
+
+      await session.commitTransaction();
+
+      await AuditService.log({ action: 'reject', module: 'payroll', userId, targetId: id, details: { reason } });
+
+      return { id: String(run._id), status: run.status };
+    } catch (err) {
+      await session.abortTransaction();
+      throw err;
+    } finally {
+      session.endSession();
     }
-
-    run.status = 'draft';
-    run.submittedBy = undefined;
-    run.submittedAt = undefined;
-    if (reason) run.remarks = `Rejected: ${reason}`;
-    await addRevision(run, 'Rejected, returned to draft', userId, { reason });
-    await addApprovalHistory(run, 'rejected', userId, reason);
-    await run.save();
-
-    await PayrollItem.updateMany({ payrollRun: id }, { status: 'draft' });
-    await AuditService.log({ action: 'reject', module: 'payroll', userId, targetId: id, details: { reason } });
-
-    return { id: String(run._id), status: run.status };
   }
 
   static async finalizeRun(id: string, userId: string, remarks?: string): Promise<Record<string, unknown>> {
-    const run = await PayrollRun.findById(id);
-    if (!run) throw new AppError('Payroll run not found', 404);
-    if (run.status === 'finalized') throw new AppError('Already finalized', 400);
-    if (run.status !== 'approved') throw new AppError('Only approved payroll can be finalized', 400);
+    const session = await mongoose.startSession();
+    session.startTransaction();
 
-    // Maker-checker: finalizer cannot be the submitter or approver
-    const settings = await CompanySettings.findOne().lean();
-    const makerCheckerEnabled = (settings?.payrollConfig as any)?.makerCheckerEnabled ?? false;
-    if (makerCheckerEnabled) {
-      if (run.submittedBy?.toString() === userId) {
-        throw new AppError('Cannot finalize your own submission (maker-checker)', 400);
+    try {
+      const run = await PayrollRun.findById(id).session(session);
+      if (!run) throw new AppError('Payroll run not found', 404);
+      if (run.status === 'finalized') throw new AppError('Already finalized', 400);
+      if (run.status !== 'approved') throw new AppError('Only approved payroll can be finalized', 400);
+
+      // Maker-checker: finalizer cannot be the submitter or approver
+      const settings = await CompanySettings.findOne().lean();
+      const makerCheckerEnabled = (settings?.payrollConfig as any)?.makerCheckerEnabled ?? false;
+      if (makerCheckerEnabled) {
+        if (run.submittedBy?.toString() === userId) {
+          throw new AppError('Cannot finalize your own submission (maker-checker)', 400);
+        }
+        if (run.approvedBy?.toString() === userId) {
+          throw new AppError('Cannot finalize your own approval (maker-checker)', 400);
+        }
       }
-      if (run.approvedBy?.toString() === userId) {
-        throw new AppError('Cannot finalize your own approval (maker-checker)', 400);
+
+      run.status = 'finalized';
+      run.finalizedBy = new mongoose.Types.ObjectId(userId);
+      run.finalizedAt = new Date();
+      if (remarks) run.remarks = remarks;
+      await addRevision(run, 'Finalized', userId);
+      await addApprovalHistory(run, 'finalized', userId, remarks);
+      await run.save();
+
+      await PayrollItem.updateMany(
+        { payrollRun: id },
+        { status: 'finalized' },
+      ).session(session);
+
+      const loanLinkedItems = await PayrollItem.find({
+        payrollRun: id,
+        loanRepayment: { $exists: true, $ne: null },
+      }).select('loanRepayment').lean().session(session);
+      const loanRepaymentIds = loanLinkedItems.map((item) => item.loanRepayment).filter(Boolean);
+      if (loanRepaymentIds.length > 0) {
+        await LoanRepayment.updateMany(
+          { _id: { $in: loanRepaymentIds }, status: 'pending' },
+          { status: 'deducted', payrollRun: run._id, repaidAt: new Date() },
+        ).session(session);
       }
-    }
 
-    run.status = 'finalized';
-    run.finalizedBy = new mongoose.Types.ObjectId(userId);
-    run.finalizedAt = new Date();
-    if (remarks) run.remarks = remarks;
-    await addRevision(run, 'Finalized', userId);
-    await addApprovalHistory(run, 'finalized', userId, remarks);
-    await run.save();
+      await session.commitTransaction();
 
-    await PayrollItem.updateMany(
-      { payrollRun: id },
-      { status: 'finalized' }
-    );
-
-    const loanLinkedItems = await PayrollItem.find({
-      payrollRun: id,
-      loanRepayment: { $exists: true, $ne: null },
-    }).select('loanRepayment').lean();
-    const loanRepaymentIds = loanLinkedItems.map((item) => item.loanRepayment).filter(Boolean);
-    if (loanRepaymentIds.length > 0) {
-      await LoanRepayment.updateMany(
-        { _id: { $in: loanRepaymentIds }, status: 'pending' },
-        { status: 'deducted', payrollRun: run._id, repaidAt: new Date() },
-      );
-    }
-
-    await AuditService.log({
-      action: 'finalize',
-      module: 'payroll',
-      userId,
-      targetId: id,
-      details: { month: run.month },
-    });
-
-    // Run compliance check asynchronously after finalization
-    runComplianceCheck(id).catch((err) => {
-      console.error(`Compliance check failed for run ${id}:`, err);
-    });
-
-    const hrAdmins = await User.find({ role: { $in: ['super-admin', 'hr-admin', 'accounts'] } }).lean();
-    for (const admin of hrAdmins) {
-      await NotificationService.send({
-        title: 'Payroll Finalized',
-        message: `Payroll for ${run.month} has been finalized.`,
-        type: 'success',
-        recipient: admin._id.toString(),
+      await AuditService.log({
+        action: 'finalize',
         module: 'payroll',
-        link: `/payroll/${id}`,
+        userId,
+        targetId: id,
+        details: { month: run.month },
       });
-    }
 
-    return { id: String(run._id), status: run.status };
+      // Run compliance check asynchronously after finalization
+      runComplianceCheck(id).catch((err) => {
+        console.error(`Compliance check failed for run ${id}:`, err);
+      });
+
+      const hrAdmins = await User.find({ role: { $in: ['super-admin', 'hr-admin', 'accounts'] } }).lean();
+      for (const admin of hrAdmins) {
+        await NotificationService.send({
+          title: 'Payroll Finalized',
+          message: `Payroll for ${run.month} has been finalized.`,
+          type: 'success',
+          recipient: admin._id.toString(),
+          module: 'payroll',
+          link: `/payroll/${id}`,
+        });
+      }
+
+      return { id: String(run._id), status: run.status };
+    } catch (err) {
+      await session.abortTransaction();
+      throw err;
+    } finally {
+      session.endSession();
+    }
   }
 
   static async unfinalizeRun(id: string, userId: string, reason?: string): Promise<Record<string, unknown>> {
@@ -1512,12 +1567,14 @@ export class PayrollService {
     const employees = await Employee.find({ _id: { $in: employeeIds }, status: 'active' }).lean();
     if (employees.length === 0) throw new AppError('No active employees found for the given IDs', 404);
 
+    const minimumWageThreshold = settings?.payrollConfig?.minimumWage || 10000;
+
     const payrollItemDocs = [];
     let totalNetPay = 0, totalGrossPay = 0, totalDeductions = 0;
 
     for (const emp of employees) {
       const result = await calculatePayrollForEmployee(
-        emp, month, year, config, allowances, deductions, startDate, endDate, totalDays, totalDays, standardHours,
+        emp, month, year, config, allowances, deductions, startDate, endDate, totalDays, totalDays, standardHours, minimumWageThreshold,
       );
       totalNetPay += result.netPay;
       totalGrossPay += result.grossEarnings;
@@ -1560,37 +1617,49 @@ export class PayrollService {
       });
     }
 
-    const run = await PayrollRun.create({
-      month: monthStr,
-      status: 'draft',
-      totalEmployees: employees.length,
-      totalNetPay,
-      totalGrossPay,
-      totalDeductions,
-      processedBy: new mongoose.Types.ObjectId(userId),
-      isSupplementary: true,
-      remarks: `Supplementary: ${reason}`,
-    });
+    const session = await mongoose.startSession();
+    session.startTransaction();
 
-    await PayrollItem.insertMany(payrollItemDocs.map(doc => ({ ...doc, payrollRun: run._id })));
+    try {
+      const run = await PayrollRun.create([{
+        month: monthStr,
+        status: 'draft',
+        totalEmployees: employees.length,
+        totalNetPay,
+        totalGrossPay,
+        totalDeductions,
+        processedBy: new mongoose.Types.ObjectId(userId),
+        isSupplementary: true,
+        remarks: `Supplementary: ${reason}`,
+      }], { session });
 
-    await AuditService.log({
-      action: 'create',
-      module: 'payroll',
-      userId,
-      targetId: run._id.toString(),
-      details: { month: monthStr, type: 'supplementary', employees: employees.length, reason },
-    });
+      await PayrollItem.insertMany(payrollItemDocs.map(doc => ({ ...doc, payrollRun: run[0]._id })), { session });
 
-    return {
-      id: String(run._id),
-      month: monthStr,
-      type: 'supplementary',
-      reason,
-      status: 'draft',
-      totalEmployees: employees.length,
-      totalNetPay,
-    };
+      await session.commitTransaction();
+
+      await AuditService.log({
+        action: 'create',
+        module: 'payroll',
+        userId,
+        targetId: run[0]._id.toString(),
+        details: { month: monthStr, type: 'supplementary', employees: employees.length, reason },
+      });
+
+      return {
+        id: String(run[0]._id),
+        month: monthStr,
+        type: 'supplementary',
+        reason,
+        status: 'draft',
+        totalEmployees: employees.length,
+        totalNetPay,
+      };
+    } catch (err) {
+      await session.abortTransaction();
+      throw err;
+    } finally {
+      session.endSession();
+    }
   }
 
   static async getRunDetails(id: string): Promise<Record<string, unknown>> {
@@ -1649,58 +1718,70 @@ export class PayrollService {
   }
 
   static async updatePayrollItem(runId: string, id: string, data: Record<string, unknown>, userId: string): Promise<Record<string, unknown>> {
-    const item = await PayrollItem.findOne({ _id: id, payrollRun: runId });
-    if (!item) throw new AppError('Payroll item not found', 404);
+    const session = await mongoose.startSession();
+    session.startTransaction();
 
-    const run = await PayrollRun.findById(runId);
-    if (!run) throw new AppError('Payroll run not found', 404);
-    if (run.status !== 'draft') throw new AppError('Can only edit draft payroll', 400);
+    try {
+      const item = await PayrollItem.findOne({ _id: id, payrollRun: runId }).session(session);
+      if (!item) throw new AppError('Payroll item not found', 404);
 
-    const changes: Record<string, unknown> = {};
-    if (data.basicEarnings !== undefined && item.basicEarnings !== data.basicEarnings) {
-      changes.basicEarnings = { from: item.basicEarnings, to: data.basicEarnings };
-      item.basicEarnings = data.basicEarnings as number;
-    }
-    if (data.allowances !== undefined) {
-      changes.allowances = { updated: true };
-      item.allowances = data.allowances as IPayrollItem['allowances'];
-    }
-    if (data.deductions !== undefined) {
-      changes.deductions = { updated: true };
-      item.deductions = data.deductions as IPayrollItem['deductions'];
-    }
-    if (data.netPay !== undefined && item.netPay !== data.netPay) {
-      changes.netPay = { from: item.netPay, to: data.netPay };
-      item.netPay = data.netPay as number;
-    }
+      const run = await PayrollRun.findById(runId).session(session);
+      if (!run) throw new AppError('Payroll run not found', 404);
+      if (run.status !== 'draft') throw new AppError('Can only edit draft payroll', 400);
 
-    await item.save();
+      const changes: Record<string, unknown> = {};
+      if (data.basicEarnings !== undefined && item.basicEarnings !== data.basicEarnings) {
+        changes.basicEarnings = { from: item.basicEarnings, to: data.basicEarnings };
+        item.basicEarnings = data.basicEarnings as number;
+      }
+      if (data.allowances !== undefined) {
+        changes.allowances = { updated: true };
+        item.allowances = data.allowances as IPayrollItem['allowances'];
+      }
+      if (data.deductions !== undefined) {
+        changes.deductions = { updated: true };
+        item.deductions = data.deductions as IPayrollItem['deductions'];
+      }
+      if (data.netPay !== undefined && item.netPay !== data.netPay) {
+        changes.netPay = { from: item.netPay, to: data.netPay };
+        item.netPay = data.netPay as number;
+      }
 
-    if (Object.keys(changes).length > 0) {
-      await addRevision(run, 'Payroll item updated', userId, { itemId: id, employee: item.employee.toString(), changes });
+      await item.save({ session });
 
-      const aggregates = await PayrollItem.aggregate([
-        { $match: { payrollRun: run._id } },
-        { $group: { _id: null, totalNetPay: { $sum: '$netPay' }, totalGrossPay: { $sum: '$grossEarnings' }, totalDeductions: { $sum: '$totalDeductions' } } }
-      ]).then(result => result[0]);
+      if (Object.keys(changes).length > 0) {
+        await addRevision(run, 'Payroll item updated', userId, { itemId: id, employee: item.employee.toString(), changes });
 
-      await PayrollRun.findByIdAndUpdate(run._id, {
-        totalNetPay: aggregates?.totalNetPay || 0,
-        totalGrossPay: aggregates?.totalGrossPay || 0,
-        totalDeductions: aggregates?.totalDeductions || 0,
+        const aggregates = await PayrollItem.aggregate([
+          { $match: { payrollRun: run._id } },
+          { $group: { _id: null, totalNetPay: { $sum: '$netPay' }, totalGrossPay: { $sum: '$grossEarnings' }, totalDeductions: { $sum: '$totalDeductions' } } }
+        ]).session(session).then(result => result[0]);
+
+        await PayrollRun.findByIdAndUpdate(run._id, {
+          totalNetPay: aggregates?.totalNetPay || 0,
+          totalGrossPay: aggregates?.totalGrossPay || 0,
+          totalDeductions: aggregates?.totalDeductions || 0,
+        }).session(session);
+      }
+
+      await session.commitTransaction();
+
+      await AuditService.log({
+        action: 'update',
+        module: 'payroll',
+        userId,
+        targetId: id,
+        details: { field: 'payroll_item', changes },
       });
+
+      const { _id, ...rest } = item.toObject();
+      return { ...rest, id: String(_id), _id: undefined };
+    } catch (err) {
+      await session.abortTransaction();
+      throw err;
+    } finally {
+      session.endSession();
     }
-
-    await AuditService.log({
-      action: 'update',
-      module: 'payroll',
-      userId,
-      targetId: id,
-      details: { field: 'payroll_item', changes },
-    });
-
-    const { _id, ...rest } = item.toObject();
-    return { ...rest, id: String(_id), _id: undefined };
   }
 
   static async batchUpdateItems(id: string, items: Array<{ itemId: string; data: Record<string, unknown> }>, userId: string): Promise<Record<string, unknown>> {
@@ -1772,24 +1853,36 @@ export class PayrollService {
   }
 
   static async deleteRun(id: string, userId: string): Promise<void> {
-    const run = await PayrollRun.findById(id);
-    if (!run) throw new AppError('Payroll run not found', 404);
-    if (run.status === 'finalized') throw new AppError('Cannot delete finalized payroll', 400);
+    const session = await mongoose.startSession();
+    session.startTransaction();
 
-    await LoanRepayment.updateMany(
-      { payrollRun: run._id, status: 'deducted' },
-      { $set: { status: 'pending' }, $unset: { payrollRun: '', repaidAt: '' } },
-    );
-    await PayrollItem.deleteMany({ payrollRun: id });
-    await PayrollRun.findByIdAndDelete(id);
+    try {
+      const run = await PayrollRun.findById(id).session(session);
+      if (!run) throw new AppError('Payroll run not found', 404);
+      if (run.status === 'finalized') throw new AppError('Cannot delete finalized payroll', 400);
 
-    await AuditService.log({
-      action: 'delete',
-      module: 'payroll',
-      userId,
-      targetId: id,
-      details: { month: run.month },
-    });
+      await LoanRepayment.updateMany(
+        { payrollRun: run._id, status: 'deducted' },
+        { $set: { status: 'pending' }, $unset: { payrollRun: '', repaidAt: '' } },
+      ).session(session);
+      await PayrollItem.deleteMany({ payrollRun: id }).session(session);
+      await PayrollRun.findByIdAndDelete(id).session(session);
+
+      await session.commitTransaction();
+
+      await AuditService.log({
+        action: 'delete',
+        module: 'payroll',
+        userId,
+        targetId: id,
+        details: { month: run.month },
+      });
+    } catch (err) {
+      await session.abortTransaction();
+      throw err;
+    } finally {
+      session.endSession();
+    }
   }
 
   static async getByEmployee(employeeId: string): Promise<unknown[]> {

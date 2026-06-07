@@ -144,7 +144,7 @@ export function PayrollDetailsPage() {
   const handleDownloadSlip = async (employeeId: string) => {
     try {
       if (!runData?.data) return;
-      const response = await apiClient.get(`/api/v1/salary-slips/${id}/pdf`, {
+      const response = await apiClient.get(`/salary-slips/${id}/pdf`, {
         params: { employeeId },
         responseType: 'blob',
       });

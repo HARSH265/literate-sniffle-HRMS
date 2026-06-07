@@ -4,6 +4,15 @@ import CompanySettings from '../../models/CompanySettings.model.js';
 import { AppError } from '../../core/errors/AppError.js';
 import mongoose from 'mongoose';
 
+function escapeHtml(unsafe: string): string {
+  return unsafe
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 export class SalarySlipsService {
   static async list(queryParams: Record<string, unknown>): Promise<Record<string, unknown>[]> {
     const { month } = queryParams;
@@ -68,11 +77,11 @@ export class SalarySlipsService {
         const deductions = item.deductions || [];
         
         const allowancesHtml = allowances.length > 0 
-          ? allowances.map((a: any) => `<tr><td style="padding: 4px 8px;">${a.name}</td><td style="text-align: right; padding: 4px 8px;">₹${a.calculatedValue?.toLocaleString() || 0}</td></tr>`).join('')
+          ? allowances.map((a: any) => `<tr><td style="padding: 4px 8px;">${escapeHtml(a.name)}</td><td style="text-align: right; padding: 4px 8px;">₹${a.calculatedValue?.toLocaleString() || 0}</td></tr>`).join('')
           : '<tr><td colspan="2" style="padding: 4px 8px; color: #999;">No allowances</td></tr>';
         
         const deductionsHtml = deductions.length > 0
-          ? deductions.map((d: any) => `<tr><td style="padding: 4px 8px;">${d.name}</td><td style="text-align: right; padding: 4px 8px;">₹${d.calculatedValue?.toLocaleString() || 0}</td></tr>`).join('')
+          ? deductions.map((d: any) => `<tr><td style="padding: 4px 8px;">${escapeHtml(d.name)}</td><td style="text-align: right; padding: 4px 8px;">₹${d.calculatedValue?.toLocaleString() || 0}</td></tr>`).join('')
           : '<tr><td colspan="2" style="padding: 4px 8px; color: #999;">No deductions</td></tr>';
 
         const emp = item.employee || {};
