@@ -16,3 +16,8 @@ Thumbs.db
 # Dev docs — not tracked in git
 *.md
 !README.md
+# Development docs — not tracked in git
+docs/
+*.md
+!README.md
+notes.md

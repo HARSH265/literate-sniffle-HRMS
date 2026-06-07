@@ -113,7 +113,9 @@ HRMS is a comprehensive platform for managing all aspects of human resources —
 
 ---
 
-## Project Structure
+---
+
+## 📂 Project Structure
 
 ```
 HRMS/
