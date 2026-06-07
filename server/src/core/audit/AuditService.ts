@@ -32,6 +32,7 @@ export interface AuditData {
   path?: string;
   statusCode?: number;
   responseTime?: number;
+  session?: mongoose.ClientSession;
 }
 
 export class AuditService {
@@ -41,9 +42,9 @@ let auditUserId = data.userId;
     // If the audit is triggered by a system process, assign a placeholder ObjectId
     if (auditUserId === 'system') {
       // Using a fixed ObjectId ensures consistency; ensure a corresponding system user exists if needed
-      auditUserId = mongoose.Types.ObjectId('000000000000000000000000').toString();
+      auditUserId = new mongoose.Types.ObjectId('000000000000000000000000').toString();
     }
-    await AuditLog.create({
+    await AuditLog.create([{
       action: data.action,
       module: data.module,
       userId: auditUserId,
@@ -56,7 +57,7 @@ let auditUserId = data.userId;
       path: data.path,
       statusCode: data.statusCode,
       responseTime: data.responseTime,
-    });
+    }], data.session ? { session: data.session } : undefined);
     } catch (error) {
       logger.error('Audit log failed:', error);
     }

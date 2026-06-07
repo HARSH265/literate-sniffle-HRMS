@@ -236,6 +236,7 @@ describe('PayrollService integration', () => {
       await PayrollService.submitRun(payrollRunId, userId);
       await PayrollService.approveRun(payrollRunId, userId);
       await PayrollService.finalizeRun(payrollRunId, userId);
+      await new Promise((r) => setTimeout(r, 500));
       const result = await PayrollService.unfinalizeRun(payrollRunId, userId, 'Need changes') as any;
       expect(result.status).toBe('draft');
     });
@@ -257,6 +258,7 @@ describe('PayrollService integration', () => {
       await PayrollService.submitRun(payrollRunId, userId);
       await PayrollService.approveRun(payrollRunId, userId);
       await PayrollService.finalizeRun(payrollRunId, userId);
+      await new Promise((r) => setTimeout(r, 500));
 
       let updatedRepayment = await LoanRepayment.findById(repayment._id).lean();
       expect(updatedRepayment!.status).toBe('deducted');

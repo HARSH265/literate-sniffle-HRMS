@@ -30,6 +30,14 @@ const runPayrollRateLimit = rateLimit({
   legacyHeaders: false,
 });
 
+const mutatingRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 30, // limit each IP to 30 mutating requests per windowMs
+  message: 'Too many requests from this IP, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 router.use(authenticate);
 router.use(payrollRateLimit);
 
@@ -39,13 +47,13 @@ router.post('/run', authorize('process-payroll'), runPayrollRateLimit, validate(
 
 router.post('/preview', authorize('process-payroll'), runPayrollRateLimit, validate(runPayrollSchema), payrollController.previewRun);
 router.get('/run/:id', authorize('process-payroll'), validate(payrollIdParamSchema, 'params'), payrollController.getRunDetails);
-router.post('/run/:id/submit', authorize('process-payroll'), validate(payrollIdParamSchema, 'params'), payrollController.submitRun);
-router.post('/run/:id/approve', authorize('process-payroll'), validate(payrollIdParamSchema, 'params'), payrollController.approveRun);
-router.post('/run/:id/reject', authorize('process-payroll'), validate(payrollIdParamSchema, 'params'), payrollController.rejectRun);
-router.patch('/run/:id/item/:itemId', authorize('process-payroll'), validate(payrollItemParamSchema, 'params'), validate(updatePayrollItemSchema), payrollController.updatePayrollItem);
-router.patch('/run/:id/items/batch', authorize('process-payroll'), validate(payrollIdParamSchema, 'params'), validate(batchUpdateItemsSchema), payrollController.batchUpdateItems);
-router.post('/run/:id/finalize', authorize('process-payroll'), validate(payrollIdParamSchema, 'params'), validate(finalizeRunSchema), payrollController.finalizeRun);
-router.post('/run/:id/unfinalize', authorize('process-payroll'), validate(payrollIdParamSchema, 'params'), validate(unfinalizeRunSchema), payrollController.unfinalizeRun);
-router.delete('/run/:id', authorize('process-payroll'), validate(payrollIdParamSchema, 'params'), payrollController.deleteRun);
+router.post('/run/:id/submit', authorize('process-payroll'), mutatingRateLimit, validate(payrollIdParamSchema, 'params'), payrollController.submitRun);
+router.post('/run/:id/approve', authorize('process-payroll'), mutatingRateLimit, validate(payrollIdParamSchema, 'params'), payrollController.approveRun);
+router.post('/run/:id/reject', authorize('process-payroll'), mutatingRateLimit, validate(payrollIdParamSchema, 'params'), payrollController.rejectRun);
+router.patch('/run/:id/item/:itemId', authorize('process-payroll'), mutatingRateLimit, validate(payrollItemParamSchema, 'params'), validate(updatePayrollItemSchema), payrollController.updatePayrollItem);
+router.patch('/run/:id/items/batch', authorize('process-payroll'), mutatingRateLimit, validate(payrollIdParamSchema, 'params'), validate(batchUpdateItemsSchema), payrollController.batchUpdateItems);
+router.post('/run/:id/finalize', authorize('process-payroll'), mutatingRateLimit, validate(payrollIdParamSchema, 'params'), validate(finalizeRunSchema), payrollController.finalizeRun);
+router.post('/run/:id/unfinalize', authorize('process-payroll'), mutatingRateLimit, validate(payrollIdParamSchema, 'params'), validate(unfinalizeRunSchema), payrollController.unfinalizeRun);
+router.delete('/run/:id', authorize('process-payroll'), mutatingRateLimit, validate(payrollIdParamSchema, 'params'), payrollController.deleteRun);
 
 export default router;

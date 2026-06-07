@@ -79,6 +79,42 @@ export const DEDUCTION_METHODS = {
   GROSS: 'gross',
 } as const;
 
+export const PAYROLL = {
+  BATCH_SIZE: 50,
+  DEFAULT_PAYROLL_LOCK_DAYS: 7,
+  DEFAULT_WORKING_DAYS: 30,
+  DEFAULT_STANDARD_HOURS_PER_DAY: 8,
+  MINIMUM_WAGE_DEFAULT: 10000,
+} as const;
+
+export const RATE_LIMITS = {
+  AUTH_WINDOW_MS: 15 * 60 * 1000,
+  AUTH_MAX_ATTEMPTS: 10,
+  PASSWORD_RESET_WINDOW_MS: 60 * 60 * 1000,
+  PASSWORD_RESET_MAX_ATTEMPTS: 5,
+  PAYROLL_RUN_WINDOW_MS: 60 * 60 * 1000,
+  PAYROLL_RUN_MAX: 5,
+  GENERAL_WINDOW_MS: 15 * 60 * 1000,
+  GENERAL_MAX: 100,
+  MUTATING_WINDOW_MS: 15 * 60 * 1000,
+  MUTATING_MAX: 30,
+} as const;
+
+export const FILE_LIMITS = {
+  LOGO_MAX_SIZE: 2 * 1024 * 1024,
+  PHOTO_MAX_SIZE: 1 * 1024 * 1024,
+  EXCEL_MAX_SIZE: 10 * 1024 * 1024,
+  DOCUMENT_MAX_SIZE: 10 * 1024 * 1024,
+} as const;
+
+export const PASSWORD = {
+  MIN_LENGTH: 8,
+  MAX_HISTORY: 5,
+  BCRYPT_SALT_ROUNDS: 10,
+  LOCK_AFTER_FAILURES: 5,
+  LOCK_DURATION_MINUTES: 15,
+} as const;
+
 export type Role = (typeof ROLES)[keyof typeof ROLES];
 export type Category = (typeof CATEGORIES)[keyof typeof CATEGORIES];
 export type EmploymentType = (typeof EMPLOYMENT_TYPES)[keyof typeof EMPLOYMENT_TYPES];

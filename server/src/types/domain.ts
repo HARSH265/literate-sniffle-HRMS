@@ -139,6 +139,7 @@ export interface PayrollConfig {
   otRoundingMinutes?: number;
   otRoundingMethod?: 'floor' | 'ceil' | 'round';
   otMultiplierBasicOnly?: boolean;
+  minimumWage?: number;
 }
 
 export interface AllowanceItem {

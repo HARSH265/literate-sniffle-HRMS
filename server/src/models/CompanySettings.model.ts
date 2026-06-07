@@ -72,6 +72,7 @@ export interface ICompanySettings extends Document {
     lopAutoFromAttendance: boolean;
     lopReversalAllowed: boolean;
     lopReversalDeadline: 'next-month' | '2-months';
+    minimumWage: number;
   };
   attendanceConfig: {
     pastEntryLimitDays: number;
@@ -393,6 +394,7 @@ const CompanySettingsSchema = new Schema<ICompanySettings>(
         enum: ['next-month', '2-months'],
         default: 'next-month',
       },
+      minimumWage: { type: Number, default: 0 },
     },
     attendanceConfig: {
       pastEntryLimitDays: { type: Number, default: 7 },

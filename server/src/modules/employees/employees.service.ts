@@ -13,14 +13,26 @@ import { CACHE_KEYS } from '../../core/cache/cache.keys.js';
 
 const SALARY_ACCESS_ROLES = ['super-admin', 'hr-admin', 'hr-staff', 'accounts'];
 
+const SENSITIVE_FIELDS = ['pfUAN', 'esiNumber', 'pfNumber', 'panNumber', 'aadhaarNumber'];
+
 const sanitizeEmployee = (emp: Record<string, unknown>, userRole: string): Record<string, unknown> => {
   const sanitized = { ...emp };
   
   const hasSalaryAccess = SALARY_ACCESS_ROLES.includes(userRole) || userRole === 'super-admin';
+  const hasFullAccess = userRole === 'super-admin' || ['hr-admin', 'hr-staff', 'accounts'].includes(userRole);
   
   if (!hasSalaryAccess) {
     delete sanitized.baseSalary;
     delete sanitized.dailyWage;
+  }
+  
+  if (!hasFullAccess) {
+    for (const field of SENSITIVE_FIELDS) {
+      if (sanitized[field]) {
+        const val = String(sanitized[field]);
+        sanitized[field] = val.length > 4 ? '*'.repeat(val.length - 4) + val.slice(-4) : '****';
+      }
+    }
   }
   
   if (emp.bankDetails) {
@@ -156,6 +168,15 @@ export class EmployeesService {
     const settings = await CompanySettings.findOne().lean() as any;
     const isAutoGenerate = settings?.employeeCodeConfig?.isAutoGenerate !== false;
 
+    const minimumWage = settings?.payrollConfig?.minimumWage;
+    if (minimumWage && typeof data.baseSalary === 'number' && data.baseSalary < minimumWage) {
+      throw new AppError(
+        `Base salary (${data.baseSalary}) is below the configured minimum wage (${minimumWage})`,
+        400,
+        'VALIDATION_ERROR',
+      );
+    }
+
     let employeeCode = (data.employeeCode as string) || '';
     const isCustomCode = !!employeeCode;
 
@@ -232,6 +253,18 @@ export class EmployeesService {
     const emp = await Employee.findById(id);
     if (!emp) {
       throw new AppError('Employee not found', 404);
+    }
+
+    if (data.baseSalary !== undefined) {
+      const settings = await CompanySettings.findOne().lean() as any;
+      const minimumWage = settings?.payrollConfig?.minimumWage;
+      if (minimumWage && typeof data.baseSalary === 'number' && data.baseSalary < minimumWage) {
+        throw new AppError(
+          `Base salary (${data.baseSalary}) is below the configured minimum wage (${minimumWage})`,
+          400,
+          'VALIDATION_ERROR',
+        );
+      }
     }
 
     const updateData = {

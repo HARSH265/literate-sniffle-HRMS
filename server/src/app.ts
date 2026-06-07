@@ -10,6 +10,7 @@ import { RedisService } from './core/redis/redis.service.js';
 import { randomUUID } from 'crypto';
 import { requestLogger } from './core/middleware/requestLogger.js';
 import { errorHandler } from './core/errors/errorHandler.js';
+import { csrfProtection } from './core/middleware/csrf.middleware.js';
 import { env } from './config/env.js';
 import { authenticateApiKey } from './core/permissions/apiKeyAuth.middleware.js';
 
@@ -101,6 +102,7 @@ app.use(
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
+app.use(csrfProtection);
 app.use(expressMongoSanitize());
 app.use(compression());
 app.use(morgan('short'));

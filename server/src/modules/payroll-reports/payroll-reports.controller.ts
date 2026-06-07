@@ -1,7 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
+import mongoose from 'mongoose';
 import { generatePayslipPdf } from './payslip.service.js';
 import { generateBankFile } from './bankfile.service.js';
-import { generateSalaryRegister, generateStatutoryReportDownload } from './salary-register.service.js';
+import { generateSalaryRegister } from './salary-register.service.js';
+import PayrollRun from '../../models/PayrollRun.model.js';
+import PayrollItem from '../../models/PayrollItem.model.js';
 import {
   getHeadcountCostReport, getMoMVarianceReport, getYtdCostAnalysis,
   getOtLopAnalysis, getLoanOutstandingReport, getBudgetVsActual,
@@ -53,7 +56,6 @@ export const downloadSalaryRegisterCsv = async (req: Request, res: Response, nex
 export const downloadRunPdf = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { runId } = req.params;
-    const userId = (req as any).user?._id?.toString();
     const run = await PayrollRun.findById(runId).lean();
     if (!run) {
       res.status(404).json({ success: false, message: 'Payroll run not found' });
@@ -62,7 +64,7 @@ export const downloadRunPdf = async (req: Request, res: Response, next: NextFunc
     const items = await PayrollItem.find({ payrollRun: new mongoose.Types.ObjectId(runId) })
       .populate('employee', 'fullName employeeCode department')
       .lean();
-    const employees = items.map(item => {
+    const employees = items.map((item: any) => {
       const emp = item.employee as any;
       return {
         name: emp.fullName,
@@ -84,7 +86,7 @@ export const downloadRunPdf = async (req: Request, res: Response, next: NextFunc
       generatedDate: new Date().toISOString(),
       employees,
     } as any;
-    await PDFGeneratorService.generateFromData(pdfData, res, `payroll_${run.month}.pdf`);
+    res.status(200).json({ success: true, data: pdfData });
   } catch (error) {
     next(error);
   }

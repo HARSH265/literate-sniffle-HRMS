@@ -24,7 +24,7 @@ export async function generateSalaryRegister(
   res: Response,
   userId?: string,
   filters?: { department?: string },
-  format: 'excel' | 'csv' = 'excel',
+  _format: 'excel' | 'csv' = 'excel',
 ): Promise<void> {
 
   const run = await PayrollRun.findById(runId).lean();

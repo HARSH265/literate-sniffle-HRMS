@@ -151,6 +151,12 @@ function formatDate(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
+function populatePayrollItem(query: mongoose.Query<any, any>) {
+  return query
+    .populate('employee', 'fullName employeeCode')
+    .populate('payrollRun', 'month status finalizedBy');
+}
+
 function getPayrollLockDays(config: PayrollConfig): number {
   const value = config.payrollLockDays ?? config.unfinalizeWindowDays ?? 7;
   const parsed = Number(value);
@@ -644,7 +650,7 @@ async function calculatePayrollForEmployee(
   }
 
   if (emp.leavingDate) {
-    const lod = new Date(emp.leavingDate);
+    const lod = new Date(emp.leavingDate as string | number);
     if (lod >= startDate && lod < endDate) {
       isLeaver = true;
       const workingDaysUntilLod = getWorkingDaysInMonth(startDate, lod);
@@ -1389,53 +1395,91 @@ export class PayrollService {
   }
 
   static async unfinalizeRun(id: string, userId: string, reason?: string): Promise<Record<string, unknown>> {
-    const run = await PayrollRun.findById(id);
-    if (!run) throw new AppError('Payroll run not found', 404);
-    if (run.status !== 'finalized') throw new AppError('Can only unfinalize finalized payroll', 400);
+    const session = await mongoose.startSession();
+    session.startTransaction();
 
-    const settings = await CompanySettings.findOne().lean();
-    const config = (settings?.payrollConfig as PayrollConfig) || {} as PayrollConfig;
-    const windowDays = getPayrollLockDays(config);
-    if (windowDays <= 0) {
-      throw new AppError('Cannot unfinalize: payroll is locked immediately by payroll settings', 400);
-    }
-    if (run.finalizedAt) {
-      const elapsed = dayjs().diff(dayjs(run.finalizedAt), 'day');
-      if (elapsed >= windowDays) {
-        throw new AppError(
-          `Cannot unfinalize: the ${windowDays}-day payroll lock window has expired (finalized on ${dayjs(run.finalizedAt).format('DD-MMM-YYYY')})`,
-          400,
-        );
+    try {
+      const run = await PayrollRun.findById(id).session(session);
+      if (!run) throw new AppError('Payroll run not found', 404);
+      if (run.status !== 'finalized') throw new AppError('Can only unfinalize finalized payroll', 400);
+
+      const settings = await CompanySettings.findOne().lean();
+      const config = (settings?.payrollConfig as PayrollConfig) || {} as PayrollConfig;
+      const windowDays = getPayrollLockDays(config);
+      if (windowDays <= 0) {
+        throw new AppError('Cannot unfinalize: payroll is locked immediately by payroll settings', 400);
       }
+      if (run.finalizedAt) {
+        const elapsed = dayjs().diff(dayjs(run.finalizedAt), 'day');
+        if (elapsed >= windowDays) {
+          throw new AppError(
+            `Cannot unfinalize: the ${windowDays}-day payroll lock window has expired (finalized on ${dayjs(run.finalizedAt).format('DD-MMM-YYYY')})`,
+            400,
+          );
+        }
+      }
+
+      const loanRepaymentsReversed = await LoanRepayment.find(
+        { payrollRun: run._id, status: 'deducted' },
+      ).session(session).lean();
+
+      run.status = 'draft';
+      run.finalizedBy = undefined;
+      run.finalizedAt = undefined;
+      if (reason) run.remarks = `Unfinalized: ${reason}`;
+      await addRevision(run, 'Unfinalized (returned to draft)', userId, { reason });
+      await addApprovalHistory(run, 'unfinalized', userId, reason);
+      await run.save({ session });
+
+      await PayrollItem.updateMany(
+        { payrollRun: id },
+        { status: 'draft' }
+      ).session(session);
+
+      await LoanRepayment.updateMany(
+        { payrollRun: run._id, status: 'deducted' },
+        { $set: { status: 'pending' }, $unset: { payrollRun: '', repaidAt: '' } },
+      ).session(session);
+
+      if (loanRepaymentsReversed.length > 0) {
+        await AuditService.log({
+          action: 'update',
+          module: 'payroll',
+          userId,
+          targetId: id,
+          details: {
+            month: run.month,
+            reason,
+            loanRepaymentsReversed: loanRepaymentsReversed.map((lr) => ({
+              id: String(lr._id),
+              employee: String(lr.employee),
+              amount: lr.amount,
+              month: lr.month,
+            })),
+          },
+          session,
+        });
+      }
+
+      await AuditService.log({
+        action: 'unfinalize',
+        module: 'payroll',
+        userId,
+        targetId: id,
+        details: { month: run.month, reason, loanRepaymentsReversedCount: loanRepaymentsReversed.length },
+        session,
+      });
+
+      await session.commitTransaction();
+      session.endSession();
+
+      return { id: String(run._id), status: run.status };
+    } catch (err) {
+      await session.abortTransaction();
+      session.endSession();
+      if (err instanceof AppError) throw err;
+      throw new AppError(err instanceof Error ? err.message : 'Unfinalize failed', 500);
     }
-
-    run.status = 'draft';
-    run.finalizedBy = undefined;
-    run.finalizedAt = undefined;
-    if (reason) run.remarks = `Unfinalized: ${reason}`;
-    await addRevision(run, 'Unfinalized (returned to draft)', userId, { reason });
-    await addApprovalHistory(run, 'unfinalized', userId, reason);
-    await run.save();
-
-    await PayrollItem.updateMany(
-      { payrollRun: id },
-      { status: 'draft' }
-    );
-
-    await LoanRepayment.updateMany(
-      { payrollRun: run._id, status: 'deducted' },
-      { $set: { status: 'pending' }, $unset: { payrollRun: '', repaidAt: '' } },
-    );
-
-    await AuditService.log({
-      action: 'unfinalize',
-      module: 'payroll',
-      userId,
-      targetId: id,
-      details: { month: run.month, reason },
-    });
-
-    return { id: String(run._id), status: run.status };
   }
 
   static async supplementaryRun(
@@ -1558,9 +1602,7 @@ export class PayrollService {
     const unfinalizeWindowDays = getPayrollLockDays(config);
     const unfinalizeLocked = !!(run.finalizedAt && (unfinalizeWindowDays <= 0 || dayjs().diff(dayjs(run.finalizedAt), 'day') >= unfinalizeWindowDays));
 
-    const items = await PayrollItem.find({ payrollRun: new mongoose.Types.ObjectId(id) })
-      .populate('employee', 'fullName employeeCode')
-      .lean();
+    const items = await populatePayrollItem(PayrollItem.find({ payrollRun: new mongoose.Types.ObjectId(id) })).lean() as any[];
 
     const itemsData = items.map((item) => {
       const emp = item.employee as unknown as { _id: mongoose.Types.ObjectId; fullName: string; employeeCode: string };
@@ -1583,7 +1625,7 @@ export class PayrollService {
         overtimeHours: item.overtimeHours,
         basicEarnings: item.basicEarnings,
         allowances: item.allowances,
-        allowancesTotal: item.allowances?.reduce((sum, a) => sum + a.calculatedValue, 0) || 0,
+        allowancesTotal: item.allowances?.reduce((sum: number, a: { calculatedValue: number }) => sum + a.calculatedValue, 0) || 0,
         overtimeAmount: item.overtimeAmount,
         grossEarnings: item.grossEarnings,
         deductions: item.deductions,
@@ -1662,57 +1704,71 @@ export class PayrollService {
   }
 
   static async batchUpdateItems(id: string, items: Array<{ itemId: string; data: Record<string, unknown> }>, userId: string): Promise<Record<string, unknown>> {
-    const run = await PayrollRun.findById(id);
-    if (!run) throw new AppError('Payroll run not found', 404);
-    if (run.status !== 'draft') throw new AppError('Can only edit draft payroll', 400);
+    const session = await mongoose.startSession();
+    session.startTransaction();
 
-    const results = [];
-    for (const entry of items) {
-      try {
-        const item = await PayrollItem.findOne({ _id: entry.itemId, payrollRun: id });
-        if (!item) {
-          results.push({ itemId: entry.itemId, status: 'failed', error: 'Item not found' });
-          continue;
+    try {
+      const run = await PayrollRun.findById(id).session(session);
+      if (!run) throw new AppError('Payroll run not found', 404);
+      if (run.status !== 'draft') throw new AppError('Can only edit draft payroll', 400);
+
+      const results = [];
+      for (const entry of items) {
+        try {
+          const item = await PayrollItem.findOne({ _id: entry.itemId, payrollRun: id }).session(session);
+          if (!item) {
+            results.push({ itemId: entry.itemId, status: 'failed', error: 'Item not found' });
+            continue;
+          }
+          if (entry.data.basicEarnings !== undefined) item.basicEarnings = entry.data.basicEarnings as number;
+          if (entry.data.netPay !== undefined) item.netPay = entry.data.netPay as number;
+          if (entry.data.allowances !== undefined) item.allowances = entry.data.allowances as IPayrollItem['allowances'];
+          if (entry.data.deductions !== undefined) item.deductions = entry.data.deductions as IPayrollItem['deductions'];
+          if (entry.data.presentDays !== undefined) item.presentDays = entry.data.presentDays as number;
+          if (entry.data.absentDays !== undefined) item.absentDays = entry.data.absentDays as number;
+          if (entry.data.halfDays !== undefined) item.halfDays = entry.data.halfDays as number;
+          if (entry.data.paidLeaveDays !== undefined) item.paidLeaveDays = entry.data.paidLeaveDays as number;
+          if (entry.data.unpaidLeaveDays !== undefined) item.unpaidLeaveDays = entry.data.unpaidLeaveDays as number;
+          if (entry.data.overtimeHours !== undefined) item.overtimeHours = entry.data.overtimeHours as number;
+          if (entry.data.overtimeAmount !== undefined) item.overtimeAmount = entry.data.overtimeAmount as number;
+          if (entry.data.totalDeductions !== undefined) item.totalDeductions = entry.data.totalDeductions as number;
+          await item.save({ session });
+          results.push({ itemId: entry.itemId, status: 'updated' });
+        } catch (error) {
+          results.push({ itemId: entry.itemId, status: 'failed', error: (error as Error).message });
         }
-        if (entry.data.basicEarnings !== undefined) item.basicEarnings = entry.data.basicEarnings as number;
-        if (entry.data.netPay !== undefined) item.netPay = entry.data.netPay as number;
-        if (entry.data.allowances !== undefined) item.allowances = entry.data.allowances as IPayrollItem['allowances'];
-        if (entry.data.deductions !== undefined) item.deductions = entry.data.deductions as IPayrollItem['deductions'];
-        if (entry.data.presentDays !== undefined) item.presentDays = entry.data.presentDays as number;
-        if (entry.data.absentDays !== undefined) item.absentDays = entry.data.absentDays as number;
-        if (entry.data.halfDays !== undefined) item.halfDays = entry.data.halfDays as number;
-        if (entry.data.paidLeaveDays !== undefined) item.paidLeaveDays = entry.data.paidLeaveDays as number;
-        if (entry.data.unpaidLeaveDays !== undefined) item.unpaidLeaveDays = entry.data.unpaidLeaveDays as number;
-        if (entry.data.overtimeHours !== undefined) item.overtimeHours = entry.data.overtimeHours as number;
-        if (entry.data.overtimeAmount !== undefined) item.overtimeAmount = entry.data.overtimeAmount as number;
-        if (entry.data.totalDeductions !== undefined) item.totalDeductions = entry.data.totalDeductions as number;
-        await item.save();
-        results.push({ itemId: entry.itemId, status: 'updated' });
-      } catch (error) {
-        results.push({ itemId: entry.itemId, status: 'failed', error: (error as Error).message });
       }
+
+      const aggregates = await PayrollItem.aggregate([
+        { $match: { payrollRun: run._id } },
+        { $group: { _id: null, totalNetPay: { $sum: '$netPay' }, totalGrossPay: { $sum: '$grossEarnings' }, totalDeductions: { $sum: '$totalDeductions' } } }
+      ]).session(session).then(result => result[0]);
+
+      await PayrollRun.findByIdAndUpdate(run._id, {
+        totalNetPay: aggregates?.totalNetPay || 0,
+        totalGrossPay: aggregates?.totalGrossPay || 0,
+        totalDeductions: aggregates?.totalDeductions || 0,
+      }).session(session);
+
+      await addRevision(run, 'Batch update items', userId, { itemsCount: items.length });
+      await run.save({ session });
+
+      await AuditService.log({
+        action: 'bulk-update', module: 'payroll', userId,
+        targetId: id, details: { items: items.length, results },
+        session,
+      });
+
+      await session.commitTransaction();
+      session.endSession();
+
+      return { updated: results.filter((r) => r.status === 'updated').length, failed: results.filter((r) => r.status === 'failed').length, results };
+    } catch (err) {
+      await session.abortTransaction();
+      session.endSession();
+      if (err instanceof AppError) throw err;
+      throw new AppError(err instanceof Error ? err.message : 'Batch update failed', 500);
     }
-
-    const aggregates = await PayrollItem.aggregate([
-      { $match: { payrollRun: run._id } },
-      { $group: { _id: null, totalNetPay: { $sum: '$netPay' }, totalGrossPay: { $sum: '$grossEarnings' }, totalDeductions: { $sum: '$totalDeductions' } } }
-    ]).then(result => result[0]);
-
-    await PayrollRun.findByIdAndUpdate(run._id, {
-      totalNetPay: aggregates?.totalNetPay || 0,
-      totalGrossPay: aggregates?.totalGrossPay || 0,
-      totalDeductions: aggregates?.totalDeductions || 0,
-    });
-
-    await addRevision(run, 'Batch update items', userId, { itemsCount: items.length });
-    await run.save();
-
-    await AuditService.log({
-      action: 'bulk-update', module: 'payroll', userId,
-      targetId: id, details: { items: items.length, results },
-    });
-
-    return { updated: results.filter((r) => r.status === 'updated').length, failed: results.filter((r) => r.status === 'failed').length, results };
   }
 
   static async deleteRun(id: string, userId: string): Promise<void> {
@@ -1737,10 +1793,7 @@ export class PayrollService {
   }
 
   static async getByEmployee(employeeId: string): Promise<unknown[]> {
-const items = await PayrollItem.find({ employee: employeeId })
-      .populate('payrollRun', 'month status finalizedBy')
-      .populate('employee', 'fullName employeeCode')
-      .lean();
+    const items = await populatePayrollItem(PayrollItem.find({ employee: employeeId })).lean() as any[];
 
     return items.map((item) => {
       const pr = item.payrollRun as unknown as { _id: mongoose.Types.ObjectId; month: string; status: string } | null;
@@ -1769,7 +1822,7 @@ const items = await PayrollItem.find({ employee: employeeId })
         overtimeHours: item.overtimeHours,
         basicEarnings: item.basicEarnings,
         allowances: item.allowances,
-        allowancesTotal: item.allowances?.reduce((sum, a) => sum + a.calculatedValue, 0) || 0,
+        allowancesTotal: item.allowances?.reduce((sum: number, a: { calculatedValue: number }) => sum + a.calculatedValue, 0) || 0,
         overtimeAmount: item.overtimeAmount,
         grossEarnings: item.grossEarnings,
         deductions: item.deductions,

@@ -3,6 +3,7 @@ import Employee from '../../models/Employee.model.js';
 import PayrollItem from '../../models/PayrollItem.model.js';
 import StatutoryReport from '../../models/StatutoryReport.model.js';
 import PFChallan from '../../models/PFChallan.model.js';
+import { AppError } from '../../core/errors/AppError.js';
 import mongoose from 'mongoose';
 
 interface StatutoryDeductions {
@@ -63,7 +64,7 @@ export async function calculateStatutoryForEmployee(
     getStatutoryDefaults(),
   ]);
 
-  if (!employee) throw new Error('Employee not found');
+  if (!employee) throw new AppError('Employee not found', 404);
 
   const result: StatutoryDeductions & { pfApplicableWages: number; esiApplicable: boolean } = {
     employeePf: 0,

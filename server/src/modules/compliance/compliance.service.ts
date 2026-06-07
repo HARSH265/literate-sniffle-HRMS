@@ -4,6 +4,7 @@ import PayrollItem from '../../models/PayrollItem.model.js';
 import Employee from '../../models/Employee.model.js';
 import { getStatutoryDefaults } from '../statutory/statutory.service.js';
 import { AuditService } from '../../core/audit/AuditService.js';
+import { AppError } from '../../core/errors/AppError.js';
 import AuditLog from '../../models/AuditLog.model.js';
 import mongoose from 'mongoose';
 
@@ -241,7 +242,7 @@ export async function runItemComplianceChecks(
 
 export async function runComplianceCheck(runId: string): Promise<ComplianceReport> {
   const run = await PayrollRun.findById(runId).lean();
-  if (!run) throw new Error('Payroll run not found');
+  if (!run) throw new AppError('Payroll run not found', 404);
 
   const [settings, defaults] = await Promise.all([
     getCompanySettings(),

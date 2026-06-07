@@ -115,13 +115,14 @@ const openEdit = (record: SalaryStructure) => {
         <h3 style={{ margin: 0 }}>Salary Structures</h3>
         <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>Add Structure</Button>
       </div>
-      <DataTable dataSource={structuresData?.data} rowKey="id" loading={structuresLoading} columns={columns} hidePagination noCard disableRowClick />
-        <Alert
+          <Alert
           message="Salary Structure links employees to Component Master entries, defining which components apply and for which period. These structures drive payroll calculations."
           type="info"
           showIcon
-          style={{ marginBottom: 16 }}
+          style={{ marginBottom: 16, marginTop: 16}}
         />
+      <DataTable dataSource={structuresData?.data} rowKey="id" loading={structuresLoading} columns={columns} hidePagination noCard disableRowClick />
+    
 
       <Modal title={editRecord ? 'Edit Salary Structure' : 'Add Salary Structure'} open={modalOpen} onCancel={() => setModalOpen(false)} footer={null} destroyOnClose>
         <Form form={form} layout="vertical" onFinish={handleFinish}>

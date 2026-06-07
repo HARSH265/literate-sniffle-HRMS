@@ -1,6 +1,7 @@
 import Ticket, { ITicket } from '../../models/Ticket.model.js';
 import CompanySettings from '../../models/CompanySettings.model.js';
 import { AuditService } from '../../core/audit/AuditService.js';
+import { AppError } from '../../core/errors/AppError.js';
 import mongoose from 'mongoose';
 
 interface CreateTicketData {
@@ -59,7 +60,7 @@ export const helpdeskService = {
   async create(data: CreateTicketData, userId: string): Promise<ITicket> {
     const settings = await CompanySettings.findOne();
     if (settings?.helpdeskConfig?.ticketsEnabled === false) {
-      throw new Error('Help desk is disabled');
+      throw new AppError('Help desk is disabled', 400);
     }
 
     const ticketId = await generateTicketId();

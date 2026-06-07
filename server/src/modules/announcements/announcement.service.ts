@@ -3,6 +3,7 @@ import CompanySettings from '../../models/CompanySettings.model.js';
 import User from '../../models/User.model.js';
 import Employee from '../../models/Employee.model.js';
 import { AuditService } from '../../core/audit/AuditService.js';
+import { AppError } from '../../core/errors/AppError.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { RedisCacheService } from '../../core/cache/RedisCacheService.js';
 
@@ -78,7 +79,7 @@ export const announcementService = {
   async create(data: CreateAnnouncementData, userId: string): Promise<IAnnouncement> {
     const settings = await CompanySettings.findOne();
     if (settings?.announcementConfig?.announcementsEnabled === false) {
-      throw new Error('Announcements are disabled');
+      throw new AppError('Announcements are disabled', 400);
     }
 
     const announcement = await Announcement.create({

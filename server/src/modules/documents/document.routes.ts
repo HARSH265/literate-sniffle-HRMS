@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Request } from 'express';
 import multer from 'multer';
 import { documentController } from './document.controller.js';
 import { validate } from '../../core/validation/validate.middleware.js';
@@ -9,9 +9,31 @@ import { authorizeOwnership } from '../../core/permissions/authorizeOwnership.mi
 import Employee from '../../models/Employee.model.js';
 
 const memoryStorage = multer.memoryStorage();
+const DOC_ALLOWED_MIME_TYPES = [
+  'image/jpeg', 'image/png', 'image/webp',
+  'application/pdf', 'application/x-pdf',
+  'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'text/plain',
+];
+const DOC_MAX_SIZE = 10 * 1024 * 1024;
+
+const documentFilter = (_req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+  if (!DOC_ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+    cb(new Error('Invalid file type. Allowed: images, PDFs, Word, Excel, and text files'));
+    return;
+  }
+  if (file.size > DOC_MAX_SIZE) {
+    cb(new Error('File size exceeds 10MB limit'));
+    return;
+  }
+  cb(null, true);
+};
+
 const documentUpload = multer({
   storage: memoryStorage,
-  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: documentFilter,
+  limits: { fileSize: DOC_MAX_SIZE },
 });
 
 function parseJsonFields(fields: string[]) {
