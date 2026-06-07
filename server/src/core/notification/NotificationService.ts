@@ -1,5 +1,9 @@
 import Notification from '../../models/Notification.model.js';
+import User from '../../models/User.model.js';
+import CompanySettings from '../../models/CompanySettings.model.js';
 import { logger } from '../logger/logger.js';
+import { EmailService } from '../email/EmailService.js';
+import { CacheService, CACHE_KEYS } from '../cache/CacheService.js';
 
 export type NotificationType = 'info' | 'success' | 'warning' | 'error';
 
@@ -23,8 +27,58 @@ export class NotificationService {
         module: data.module,
         link: data.link,
       });
+
+      await this.sendEmailIfEnabled(data);
     } catch (error) {
       logger.error('Notification send failed:', error);
+    }
+  }
+
+  private static async sendEmailIfEnabled(data: NotificationData): Promise<void> {
+    try {
+      let settings = CacheService.get<any>(CACHE_KEYS.SETTINGS);
+      if (!settings) {
+        settings = await CompanySettings.findOne().lean();
+        if (settings) CacheService.set(CACHE_KEYS.SETTINGS, settings);
+      }
+      const notifConfig = settings?.notificationConfig;
+
+      if (!notifConfig?.emailEnabled) return;
+
+      const recipientUser = await User.findById(data.recipient).lean();
+      if (!recipientUser?.email) return;
+
+      let shouldEmail = false;
+      switch (data.module) {
+        case 'payroll':
+          shouldEmail = notifConfig.notifyOnPayrollRun !== false;
+          break;
+        case 'employees':
+          shouldEmail = notifConfig.notifyOnEmployeeAdded !== false;
+          break;
+        case 'users':
+          shouldEmail = notifConfig.notifyOnUserCreated !== false;
+          break;
+        case 'attendance':
+          shouldEmail = notifConfig.notifyOnAttendanceEntry === true;
+          break;
+        case 'leave':
+          shouldEmail = notifConfig.notifyOnLeaveApplied === true;
+          break;
+        case 'leave-approval':
+          shouldEmail = notifConfig.notifyOnLeaveApproved === true;
+          break;
+      }
+
+      if (!shouldEmail) return;
+
+      await EmailService.send(
+        recipientUser.email,
+        data.title,
+        `<h2>${data.title}</h2><p>${data.message}</p>`,
+      );
+    } catch (error) {
+      logger.error('Email notification failed:', error);
     }
   }
 

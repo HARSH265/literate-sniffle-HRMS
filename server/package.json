@@ -6,10 +6,17 @@
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    "lint": "eslint src --ext .ts",
-    "seed": "tsx src/seeds/index.ts"
+    "lint": "eslint src",
+    "seed": "tsx src/seeds/index.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "loadtest": "artillery run loadtest.yml",
+    "dev:loadtest": "cross-env RATE_LIMIT_ENABLED=false tsx watch src/server.ts",
+    "check": "npm run lint && npm run build && npm test"
   },
   "dependencies": {
+    "@socket.io/redis-adapter": "^8.3.0",
     "bcrypt": "^5.1.1",
     "cloudinary": "^1.21.0",
     "compression": "^1.7.4",
@@ -28,10 +35,19 @@
     "multer": "^2.0.0",
     "multer-storage-cloudinary": "^4.0.0",
     "node-cache": "^5.1.2",
-    "nodemailer": "^6.9.13",
+    "nodemailer": "^6.10.1",
+    "otplib": "^13.4.0",
+    "pdfkit": "^0.18.0",
     "puppeteer": "^24.15.0",
+    "qrcode": "^1.5.4",
+
+    "socket.io": "^4.8.3",
     "winston": "^3.13.0",
+    "winston-daily-rotate-file": "^4.7.1",
+    "redis": "^4.6.7",
+
     "zod": "^3.23.8"
+
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",
@@ -43,12 +59,19 @@
     "@types/morgan": "^1.9.9",
     "@types/multer": "^1.4.11",
     "@types/node": "^20.12.12",
-    "@types/nodemailer": "^6.4.15",
+    "@types/nodemailer": "^6.4.23",
+    "@types/pdfkit": "^0.17.6",
+    "@types/supertest": "^6.0.3",
     "@typescript-eslint/eslint-plugin": "^8.0.0",
     "@typescript-eslint/parser": "^8.0.0",
     "eslint": "^9.0.0",
+    "mongodb-memory-server": "^10.4.3",
     "prettier": "^3.3.2",
+    "supertest": "^7.2.2",
     "tsx": "^4.11.2",
-    "typescript": "^5.4.5"
+    "typescript": "^5.4.5",
+    "vitest": "^3.2.4",
+    "artillery": "^2.0.0",
+    "cross-env": "^7.0.3"
   }
 }

@@ -10,9 +10,20 @@ dayjs.extend(isSameOrBefore);
 dayjs.extend(isSameOrAfter);
 
 export class DateUtil {
-  static getWorkingDaysInMonth(year: number, month: number): number {
+  static getDaysInMonth(year: number, month: number): number {
+    return dayjs(`${year}-${month}`).daysInMonth();
+  }
+
+  static getWorkingDaysInMonth(year: number, month: number, holidays: string[] = [], offDays: number[] = []): number {
     const daysInMonth = dayjs(`${year}-${month}`).daysInMonth();
-    return daysInMonth;
+    let workingDays = 0;
+    for (let d = 1; d <= daysInMonth; d++) {
+      const date = dayjs(`${year}-${month}-${String(d).padStart(2, '0')}`);
+      if (offDays.includes(date.day())) continue;
+      if (holidays.includes(date.format('YYYY-MM-DD'))) continue;
+      workingDays++;
+    }
+    return workingDays;
   }
 
   static getMonthRange(year: number, month: number) {

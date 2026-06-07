@@ -10,7 +10,7 @@ export interface INotification extends Document {
   link?: string;
 }
 
-interface NotificationModel extends Model<INotification> {}
+type NotificationModel = Model<INotification>;
 
 const NotificationSchema = new Schema<INotification>(
   {

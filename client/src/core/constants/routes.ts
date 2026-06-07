@@ -6,7 +6,7 @@ export const ROUTES = {
   employees: {
     list: '/employees',
     new: '/employees/new',
-    edit: (id: string) => `/employees/${id}`,
+    edit: (id: string) => `/employees/${id}/edit`,
     view: (id: string) => `/employees/${id}`,
   },
 
@@ -32,13 +32,43 @@ export const ROUTES = {
   },
 
   salarySlips: '/salary-slips',
+  salarySlipDetails: (id: string) => `/salary-slips/${id}`,
 
+  leave: {
+    types: '/leave/types',
+    applications: '/leave/applications',
+    myApplications: '/leave/my-applications',
+    approvals: '/leave/approvals',
+    balances: '/leave/balances',
+    calendar: '/leave/calendar',
+  },
+  loans: {
+    list: '/loans',
+    apply: '/loans/apply',
+    detail: (id: string) => `/loans/${id}`,
+  },
   reports: {
     attendance: '/reports/attendance',
     payroll: '/reports/payroll',
+    custom: '/reports/custom',
+    charts: '/reports/charts',
   },
 
+  statutory: '/statutory',
   settings: '/settings',
   users: '/users',
   auditLogs: '/audit-logs',
+
+  training: {
+    index: '/training',
+    enrollments: '/training/enrollments',
+    skills: '/training/skills',
+  },
+
+  performance: {
+    index: '/performance',
+    cycleNew: '/performance/cycles/new',
+    cycleEdit: (id: string) => `/performance/cycles/${id}/edit`,
+    review: (id: string) => `/performance/reviews/${id}`,
+  },
 } as const;

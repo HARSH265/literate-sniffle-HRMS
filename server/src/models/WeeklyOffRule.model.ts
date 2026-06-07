@@ -6,9 +6,10 @@ export interface IWeeklyOffRule extends Document {
   offDays: number[];
   isActive: boolean;
   createdBy?: mongoose.Types.ObjectId;
+  updatedBy?: mongoose.Types.ObjectId;
 }
 
-interface WeeklyOffRuleModel extends Model<IWeeklyOffRule> {}
+type WeeklyOffRuleModel = Model<IWeeklyOffRule>;
 
 const WeeklyOffRuleSchema = new Schema<IWeeklyOffRule>(
   {
@@ -24,9 +25,12 @@ const WeeklyOffRuleSchema = new Schema<IWeeklyOffRule>(
     }},
     isActive: { type: Boolean, default: true },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    updatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
   },
   { timestamps: true },
 );
+
+WeeklyOffRuleSchema.index({ isActive: 1, category: 1 });
 
 const WeeklyOffRule = mongoose.model<IWeeklyOffRule, WeeklyOffRuleModel>('WeeklyOffRule', WeeklyOffRuleSchema);
 

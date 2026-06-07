@@ -7,14 +7,39 @@ export interface IAttendanceEntry extends Document {
   status: 'present' | 'absent' | 'half-day' | 'leave' | 'weekly-off' | 'holiday';
   inTime?: string;
   outTime?: string;
-  overtimeHours: number;
+  totalHours?: number;
+  isLate?: boolean;
+  isLateCount?: number;
   remarks?: string;
-  source: 'manual-register-entry';
+  source: 'manual-register-entry' | 'qr-kiosk' | 'supervisor-override' | 'auto-checkout';
   enteredBy: mongoose.Types.ObjectId;
   updatedBy?: mongoose.Types.ObjectId;
+  autoCheckout?: boolean;
+  adminCheckout?: {
+    by: mongoose.Types.ObjectId;
+    reason: string;
+  };
+  checkInMethod?: 'qr-biometric' | 'qr-totp' | 'supervisor' | 'manual';
+  checkOutMethod?: 'qr-biometric' | 'qr-totp' | 'supervisor' | 'manual' | 'auto-checkout' | 'admin-override';
+  checkInDeviceId?: string;
+  checkOutDeviceId?: string;
+  checkInGPS?: { latitude: number; longitude: number; accuracy?: number };
+  checkOutGPS?: { latitude: number; longitude: number; accuracy?: number };
+  checkInSelfieUrl?: string;
+  checkOutSelfieUrl?: string;
+  checkInTokenNonce?: string;
+  checkOutTokenNonce?: string;
+  totpVerified: boolean;
+  biometricVerified: boolean;
+  isLatePresent: boolean;
+  supervisorOverride?: {
+    overriddenBy: mongoose.Types.ObjectId;
+    reason: string;
+    at: Date;
+  };
 }
 
-interface AttendanceEntryModel extends Model<IAttendanceEntry> {}
+type AttendanceEntryModel = Model<IAttendanceEntry>;
 
 const AttendanceEntrySchema = new Schema<IAttendanceEntry>(
   {
@@ -28,11 +53,44 @@ const AttendanceEntrySchema = new Schema<IAttendanceEntry>(
     },
     inTime: { type: String },
     outTime: { type: String },
-    overtimeHours: { type: Number, default: 0, min: 0 },
+    totalHours: { type: Number },
+    isLate: { type: Boolean, default: false },
+    isLateCount: { type: Number, default: 0 },
     remarks: { type: String },
-    source: { type: String, default: 'manual-register-entry' },
+    source: { type: String, default: 'manual-register-entry', enum: ['manual-register-entry', 'qr-kiosk', 'supervisor-override', 'auto-checkout'] },
     enteredBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    autoCheckout: { type: Boolean, default: false },
+    adminCheckout: {
+      by: { type: Schema.Types.ObjectId, ref: 'User' },
+      reason: { type: String },
+    },
+    checkInMethod: { type: String, enum: ['qr-biometric', 'qr-totp', 'supervisor', 'manual'] },
+    checkOutMethod: { type: String, enum: ['qr-biometric', 'qr-totp', 'supervisor', 'manual', 'auto-checkout', 'admin-override'] },
+    checkInDeviceId: { type: String },
+    checkOutDeviceId: { type: String },
+    checkInGPS: {
+      latitude: { type: Number },
+      longitude: { type: Number },
+      accuracy: { type: Number },
+    },
+    checkOutGPS: {
+      latitude: { type: Number },
+      longitude: { type: Number },
+      accuracy: { type: Number },
+    },
+    checkInSelfieUrl: { type: String },
+    checkOutSelfieUrl: { type: String },
+    checkInTokenNonce: { type: String },
+    checkOutTokenNonce: { type: String },
+    totpVerified: { type: Boolean, default: false },
+    biometricVerified: { type: Boolean, default: false },
+    isLatePresent: { type: Boolean, default: false },
+    supervisorOverride: {
+      overriddenBy: { type: Schema.Types.ObjectId, ref: 'User' },
+      reason: { type: String },
+      at: { type: Date },
+    },
   },
   { timestamps: true },
 );

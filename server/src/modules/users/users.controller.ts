@@ -23,9 +23,47 @@ const update = asyncHandler(async (req: Request, res: Response) => {
   ResponseHandler.success(res, result, 'User updated successfully');
 });
 
-const remove = asyncHandler(async (req: Request, res: Response) => {
-  await UsersService.delete(req.params.id, req.user!.id);
-  ResponseHandler.noContent(res);
+const deactivate = asyncHandler(async (req: Request, res: Response) => {
+  const result = await UsersService.deactivate(req.params.id, req.user!.id);
+  ResponseHandler.success(res, result, 'User deactivated successfully');
 });
 
-export const usersController = { list, getById, create, update, remove };
+const activate = asyncHandler(async (req: Request, res: Response) => {
+  const result = await UsersService.activate(req.params.id, req.user!.id);
+  ResponseHandler.success(res, result, 'User activated successfully');
+});
+
+const getUserActivity = asyncHandler(async (req: Request, res: Response) => {
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = Math.min(parseInt(req.query.limit as string) || 10, 100);
+  const result = await UsersService.getUserActivity(req.params.id, page, limit);
+  ResponseHandler.paginated(res, result.data, result.meta, 'Activity fetched successfully');
+});
+
+const getUserStats = asyncHandler(async (req: Request, res: Response) => {
+  const result = await UsersService.getUserStats(req.params.id);
+  ResponseHandler.success(res, result, 'Stats fetched successfully');
+});
+
+const exportUsers = asyncHandler(async (_req: Request, res: Response) => {
+  const result = await UsersService.exportUsers();
+  ResponseHandler.success(res, result, 'Users exported successfully');
+});
+
+const importUsers = asyncHandler(async (req: Request, res: Response) => {
+  const result = await UsersService.importUsers(req.body.users, req.user!.id);
+  ResponseHandler.success(res, result, 'Users imported successfully');
+});
+
+export const usersController = {
+  list,
+  getById,
+  create,
+  update,
+  deactivate,
+  activate,
+  getUserActivity,
+  getUserStats,
+  exportUsers,
+  importUsers,
+};

@@ -13,10 +13,11 @@ export class FileUploadService {
     buffer: Buffer,
     folder: string,
     publicId?: string,
+    mimeType: string = 'application/octet-stream',
   ): Promise<string> {
     try {
       const result = await cloudinary.uploader.upload(
-        `data:image/png;base64,${buffer.toString('base64')}`,
+        `data:${mimeType};base64,${buffer.toString('base64')}`,
         {
           folder,
           public_id: publicId,

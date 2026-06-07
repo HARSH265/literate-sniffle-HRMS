@@ -1,4 +1,5 @@
 import apiClient from '../../../core/api/apiClient';
+import { PaginatedResponse } from '@/types/shared';
 
 export interface Designation {
   id: string;
@@ -12,13 +13,6 @@ export interface Designation {
 export interface CreateDesignation {
   name: string;
   department: string;
-}
-
-export interface PaginatedResponse<T> {
-  success: boolean;
-  message: string;
-  data: T[];
-  meta: { page: number; limit: number; total: number; totalPages: number };
 }
 
 export const designationService = {
@@ -37,8 +31,8 @@ export const designationService = {
     return data;
   },
 
-  async update(id: string, payload: Partial<CreateDesignation>): Promise<{ success: boolean; data: Designation }> {
-    const { data } = await apiClient.put(`/designations/${id}`, payload);
+  async update(id: string, payload: Partial<CreateDesignation> & { isActive?: boolean }): Promise<{ success: boolean; data: Designation }> {
+    const { data } = await apiClient.patch(`/designations/${id}`, payload);
     return data;
   },
 

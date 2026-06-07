@@ -45,6 +45,40 @@ export class EmailService {
     }
   }
 
+  static async sendWithConfig(
+    to: string,
+    subject: string,
+    html: string,
+    config: {
+      host: string;
+      port?: number;
+      secure?: boolean;
+      user?: string;
+      pass?: string;
+      from?: string;
+    },
+  ): Promise<void> {
+    try {
+      const transporter = nodemailer.createTransport({
+        host: config.host,
+        port: config.port ?? 587,
+        secure: config.secure ?? false,
+        auth: config.user ? { user: config.user, pass: config.pass } : undefined,
+      });
+
+      await transporter.sendMail({
+        from: config.from ?? env.EMAIL_FROM,
+        to,
+        subject,
+        html,
+      });
+
+      logger.info(`Email sent via custom config to ${to}: ${subject}`);
+    } catch (error) {
+      logger.error('Custom email send failed:', error);
+    }
+  }
+
   static getWelcomeTemplate(name: string): string {
     return `
       <h2>Welcome to HRMS</h2>

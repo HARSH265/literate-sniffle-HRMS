@@ -1,0 +1,38 @@
+import mongoose, { Schema, Document, Model } from 'mongoose';
+
+export interface IKioskDevice extends Document {
+  name: string;
+  deviceCode: string;
+  location: {
+    latitude: number;
+    longitude: number;
+    address?: string;
+  };
+  isActive: boolean;
+  lastSeenAt?: Date;
+  registeredBy: mongoose.Types.ObjectId;
+}
+
+type KioskDeviceModel = Model<IKioskDevice>;
+
+const KioskDeviceSchema = new Schema<IKioskDevice>(
+  {
+    name: { type: String, required: true, trim: true },
+    deviceCode: { type: String, unique: true, required: true },
+    location: {
+      latitude: { type: Number, required: true },
+      longitude: { type: Number, required: true },
+      address: { type: String },
+    },
+    isActive: { type: Boolean, default: true },
+    lastSeenAt: { type: Date },
+    registeredBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  },
+  { timestamps: true },
+);
+
+KioskDeviceSchema.index({ isActive: 1 });
+
+const KioskDevice = mongoose.model<IKioskDevice, KioskDeviceModel>('KioskDevice', KioskDeviceSchema);
+
+export default KioskDevice;

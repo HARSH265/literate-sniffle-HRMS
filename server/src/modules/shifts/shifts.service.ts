@@ -1,9 +1,69 @@
 import Shift from '../../models/Shift.model.js';
+import Employee from '../../models/Employee.model.js';
 import { AppError } from '../../core/errors/AppError.js';
 import { CacheService } from '../../core/cache/CacheService.js';
 import { CACHE_KEYS } from '../../core/cache/cache.keys.js';
 import { AuditService } from '../../core/audit/AuditService.js';
 import { PaginationUtil, PaginationMeta } from '../../core/utils/PaginationUtil.js';
+
+function parseTime(time: string): number {
+  const [h, m] = time.split(':').map(Number);
+  return h * 60 + m;
+}
+
+function rangesOverlap(start1: number, end1: number, start2: number, end2: number): boolean {
+  if (start1 < start2) {
+    return end1 > start2;
+  } else {
+    return end2 > start1;
+  }
+}
+
+async function checkShiftOverlap(
+  newStart: string,
+  newEnd: string,
+  newId?: string,
+  isNightShift: boolean = false
+): Promise<{ hasOverlap: boolean; conflictingShifts: string[] }> {
+  const newStartMin = parseTime(newStart);
+  const newEndMin = parseTime(newEnd);
+
+  const allShifts = await Shift.find({ isActive: true }).lean();
+  const conflicting: string[] = [];
+
+  for (const shift of allShifts) {
+    if (newId && String((shift as any)._id) === newId) continue;
+
+    const existingStart = parseTime(String(shift.startTime));
+    const existingEnd = parseTime(String(shift.endTime));
+    const existingIsNight = String(shift.startTime) > String(shift.endTime);
+
+    let overlap = false;
+
+    if (isNightShift && existingIsNight) {
+      const newStartAfterMidnight = newStartMin;
+      const newEndAfterMidnight = newEndMin > newStartMin ? newEndMin : newEndMin + 24 * 60;
+      const existingStartAfterMidnight = existingStart;
+      const existingEndAfterMidnight = existingEnd > existingStart ? existingEnd : existingEnd + 24 * 60;
+
+      overlap = rangesOverlap(newStartAfterMidnight, newEndAfterMidnight, existingStartAfterMidnight, existingEndAfterMidnight);
+    } else if (isNightShift) {
+      const newEndAfterMidnight = newEndMin > newStartMin ? newEndMin : newEndMin + 24 * 60;
+      overlap = newStartMin < existingEnd || newEndAfterMidnight > existingStart;
+    } else if (existingIsNight) {
+      const existingEndAfterMidnight = existingEnd > existingStart ? existingEnd : existingEnd + 24 * 60;
+      overlap = existingStart < newEndMin || existingEndAfterMidnight > newStartMin;
+    } else {
+      overlap = rangesOverlap(newStartMin, newEndMin, existingStart, existingEnd);
+    }
+
+    if (overlap) {
+      conflicting.push(shift.name);
+    }
+  }
+
+  return { hasOverlap: conflicting.length > 0, conflictingShifts: conflicting };
+}
 
 export class ShiftsService {
   static async list(queryParams: Record<string, unknown>): Promise<{ data: unknown[]; meta: PaginationMeta }> {
@@ -12,7 +72,8 @@ export class ShiftsService {
     const filter: Record<string, unknown> = {};
 
     if (search) {
-      filter.name = { $regex: search, $options: 'i' };
+      const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      filter.name = { $regex: escaped, $options: 'i' };
     }
 
     if (queryParams.status) {
@@ -53,7 +114,7 @@ export class ShiftsService {
   static async getById(id: string): Promise<Record<string, unknown>> {
     const shift = await Shift.findById(id).lean();
     if (!shift) {
-      throw new AppError('Shift not found', 404);
+      throw new AppError('Shift not found or already deleted', 404);
     }
     return { ...shift, id: shift._id.toString(), _id: undefined };
   }
@@ -62,6 +123,19 @@ export class ShiftsService {
     const existing = await Shift.findOne({ name: data.name as string });
     if (existing) {
       throw new AppError('Shift name already exists', 400);
+    }
+
+    const startTime = data.startTime as string;
+    const endTime = data.endTime as string;
+
+    const isNightShift = startTime > endTime;
+    if (!isNightShift && startTime >= endTime) {
+      throw new AppError('End time must be greater than start time', 400);
+    }
+
+    const overlapCheck = await checkShiftOverlap(startTime, endTime);
+    if (overlapCheck.hasOverlap) {
+      throw new AppError(`Shift timing overlaps with: ${overlapCheck.conflictingShifts.join(', ')}`, 400);
     }
 
     const shift = await Shift.create({
@@ -86,7 +160,24 @@ export class ShiftsService {
   static async update(id: string, data: Record<string, unknown>, updatedById: string) {
     const shift = await Shift.findById(id);
     if (!shift) {
-      throw new AppError('Shift not found', 404);
+      throw new AppError('Shift not found or already deleted', 404);
+    }
+
+    const startTime = (data.startTime as string) || shift.startTime;
+    const endTime = (data.endTime as string) || shift.endTime;
+
+    if (data.startTime && data.endTime) {
+      const isNightShift = startTime > endTime;
+      if (!isNightShift && startTime >= endTime) {
+        throw new AppError('End time must be greater than start time', 400);
+      }
+    }
+
+    if (data.startTime || data.endTime) {
+      const overlapCheck = await checkShiftOverlap(startTime, endTime, id);
+      if (overlapCheck.hasOverlap) {
+        throw new AppError(`Shift timing overlaps with: ${overlapCheck.conflictingShifts.join(', ')}`, 400);
+      }
     }
 
     if (data.name) shift.name = data.name as string;
@@ -95,6 +186,7 @@ export class ShiftsService {
     if (data.workingHours) shift.workingHours = data.workingHours as number;
     if (data.applicableTo) shift.applicableTo = data.applicableTo as 'all' | 'worker' | 'office-staff';
     if (data.isActive !== undefined) shift.isActive = data.isActive as boolean;
+    shift.updatedBy = updatedById as any;
 
     await shift.save();
     CacheService.invalidateShifts();
@@ -113,7 +205,12 @@ export class ShiftsService {
   static async delete(id: string, deletedById: string) {
     const shift = await Shift.findById(id);
     if (!shift) {
-      throw new AppError('Shift not found', 404);
+      throw new AppError('Shift not found or already deleted', 404);
+    }
+
+    const employeeCount = await Employee.countDocuments({ shift: id });
+    if (employeeCount > 0) {
+      throw new AppError(`Cannot delete shift with ${employeeCount} assigned employees. Please reassign employees first.`, 400);
     }
 
     await Shift.findByIdAndDelete(id);

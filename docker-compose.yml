@@ -1,0 +1,40 @@
+services:
+  # Redis – used for caching and token blacklist
+  redis:
+    image: redis:7-alpine
+    container_name: hrms-redis
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--appendonly", "yes"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+
+  # HashiCorp Vault – local dev secret store (dev mode, unsealed)
+  vault:
+    image: hashicorp/vault:latest
+    container_name: hrms-vault
+    ports:
+      - "8200:8200"
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: root-token   # static dev token – never commit real secrets
+      VAULT_LOG_LEVEL: info
+    cap_add:
+      - IPC_LOCK            # keep dev data in memory only
+    command: server -dev -dev-root-token-id=root-token -log-level=info
+    healthcheck:
+      test: ["CMD-SHELL", "VAULT_ADDR='http://127.0.0.1:8200' vault status -format=json"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+
+  mongodb:
+    image: mongo:6
+    container_name: hrms-mongo
+    ports:
+      - "27017:27017"
+    # No auth for simplicity in dev – data is stored in a Docker volume (anonymous)
+    restart: unless-stopped
+

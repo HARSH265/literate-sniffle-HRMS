@@ -12,6 +12,7 @@ export function errorHandler(
     res.status(err.statusCode).json({
       success: false,
       message: err.message,
+      code: err.errorCode,
       errors: [],
     });
     return;

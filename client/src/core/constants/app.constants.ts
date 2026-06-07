@@ -1,7 +1,7 @@
 export const APP_CONSTANTS = {
-  APP_NAME: 'HRMS',
+  APP_NAME: 'Orian',
 
-  DEFAULT_PAGE_SIZE: 20,
+  DEFAULT_PAGE_SIZE: 10,
   PAGE_SIZE_OPTIONS: [10, 20, 50, 100] as const,
   MAX_PAGE_SIZE: 100,
 

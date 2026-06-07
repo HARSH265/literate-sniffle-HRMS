@@ -1,462 +1,383 @@
-<div align="center">
+# HRMS — Human Resource Management System
 
-# ⚡ Orion HRMS
-
-### Human Resource Management System — Version 1.0
-
-**A complete, production-grade HRMS built for manufacturing companies.**
-
-*Manage your entire workforce — from attendance and payroll to performance and compliance — all in one place.*
+A full-featured, modular Human Resource Management System built with **Node.js**, **Express**, **TypeScript**, **MongoDB**, and **React**.
 
 ---
 
-![React](https://img.shields.io/badge/React-18-61DAFB?style=flat&logo=react)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.4-3178C6?style=flat&logo=typescript)
-![Node.js](https://img.shields.io/badge/Node.js-20-339933?style=flat&logo=node.js)
-![MongoDB](https://img.shields.io/badge/MongoDB-6-47A248?style=flat&logo=mongodb)
-![Redis](https://img.shields.io/badge/Redis-7-DC382D?style=flat&logo=redis)
-![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=flat&logo=docker)
+## Overview
 
-</div>
+HRMS is a comprehensive platform for managing all aspects of human resources — from employee onboarding and attendance tracking to payroll processing, leave management, and performance reviews. The system supports multiple user roles with fine-grained permissions, real-time notifications via Socket.io, and a responsive React frontend.
 
 ---
 
-## What is Orion HRMS?
+## Key Features
 
-Orion HRMS is a full-featured Human Resource Management System designed for **manufacturing companies**. It handles everything — employee lifecycle, attendance tracking with QR kiosk, payroll processing with statutory compliance, performance management, and a complete Employee Self-Service portal.
+### Core HR
 
-**Version 1** ships with **20+ modules**, **5 user roles**, and **51 granular permissions** — ready to deploy and scale.
+| Module | Description |
+|--------|-------------|
+| **Employee Management** | Complete employee profiles with personal info, employment details, documents, bank details, and emergency contacts |
+| **Department & Designation** | Organizational hierarchy with custom departments, designations, and reporting structures |
+| **Shift Management** | Define work shifts, assign employees, and manage shift swaps with approval workflows |
+| **Holiday Management** | Company-wide and department-specific holiday calendars with financial year support |
+| **Weekly Off Rules** | Configurable weekly off policies per department/category |
 
----
+### Attendance & Time
 
-## Modules & Features
+| Module | Description |
+|--------|-------------|
+| **Attendance Tracking** | Daily attendance with check-in/check-out, late marking, half-day deductions, and overtime calculation |
+| **QR Code Attendance** | Kiosk-based attendance using dynamically generated QR codes with TOTP verification |
+| **Geofencing** | Location-based attendance restriction within configurable radius |
+| **Overtime Management** | Overtime rules, entry tracking, and approval workflows |
+| **Totp (2FA)** | Time-based one-time password for attendance verification |
 
-### 🔐 Authentication & User Management
+### Payroll & Finance
 
-| Feature | Description |
-|---------|-------------|
-| JWT Login/Logout | Secure access + refresh token rotation with blacklist |
-| Role-Based Access | 5 roles: Super Admin, HR Admin, HR Staff, Accounts, Manager |
-| Password Security | bcrypt hashing, complexity rules, history enforcement, lockout after 5 failed attempts |
-| Password Reset | Email-based token reset |
-| Bulk Import/Export | Onboard multiple users at once via spreadsheet |
+| Module | Description |
+|--------|-------------|
+| **Payroll Processing** | Automated salary calculation with allowances, deductions, OT, and LOP |
+| **Salary Slips** | PDF-generated salary slips with company branding |
+| **Loan Management** | Loan application, approval, and repayment tracking |
+| **Statutory Compliance** | PF, ESI, and Professional Tax calculations with state-specific slabs |
+| **Employee Self-Service** | Employees can update personal details, view payslips, and apply for leaves |
 
----
+### Leave Management
 
-### 👥 Employee Management
+| Module | Description |
+|--------|-------------|
+| **Leave Applications** | Multi-level approval workflows with configurable approval chains |
+| **Leave Types** | Custom leave types with accrual policies |
+| **Leave Balances** | Real-time leave balance tracking with pro-rata calculation |
+| **Leave Calendar** | Visual calendar view of team leaves |
 
-| Feature | Description |
-|---------|-------------|
-| Full Employee Profiles | Personal info, employment details, emergency contacts |
-| Auto-Generated Codes | Unique employee codes with collision retry |
-| Photo Upload | Employee profile photos via Cloudinary |
-| Bank Details | AES-256 encrypted at rest, masked by role |
-| Archive/Restore | Soft-delete with restore capability |
-| Bulk Shift Assignment | Assign shifts to multiple employees at once |
-| Redis Caching | Role+query-based caching with 5-min TTL |
+### Performance & Growth
 
----
+| Module | Description |
+|--------|-------------|
+| **Performance Reviews** | Quarterly/half-yearly/yearly reviews with self and manager evaluations |
+| **360° Feedback** | Multi-rater feedback with customizable rating scales |
+| **Goal Setting** | Employee and manager goal creation with deadline tracking |
+| **Training & Skills** | Training programs, enrollment, certification tracking, and skill management |
 
-### 🏢 Organization Structure
+### Communication & Collaboration
 
-| Feature | Description |
-|---------|-------------|
-| Departments | CRUD with auto-generated codes, referential integrity |
-| Designations | Linked to departments, caching, referential integrity |
+| Module | Description |
+|--------|-------------|
+| **Announcements** | Company-wide announcements with scheduling and auto-expiry |
+| **Notifications** | Real-time in-app and email notifications for key events |
+| **Help Desk** | Ticket-based support system with SLA tracking and auto-assignment |
+| **Document Repository** | Centralized document storage with categories, tags, versioning, and access control |
 
----
+### Asset Management
 
-### 🕐 Shift Management
+| Module | Description |
+|--------|-------------|
+| **Asset Allocation** | Track company assets assigned to employees |
+| **Asset Categories** | Define asset types, conditions, and maintenance schedules |
+| **Maintenance Reminders** | Automated reminders for asset maintenance |
 
-| Feature | Description |
-|---------|-------------|
-| Shift CRUD | Define work shifts with overlap detection (including night-shift wrapping) |
-| Shift Swap | Request → Approve → Reject → Cancel workflow with deadline enforcement |
-| Max Swaps Limit | Configurable monthly swap limit per employee |
-| Shift Preferences | Employees can set preferred shifts |
-| Weekly Off Rules | Configurable per employee category (worker/office-staff/all) |
+### Reporting & Analytics
 
----
-
-### ✅ Attendance & Time Tracking
-
-| Feature | Description |
-|---------|-------------|
-| Manual Entry | Bulk create/update attendance records |
-| QR + TOTP Kiosk | Check-in/check-out with dynamic QR codes and TOTP verification |
-| Geofencing | Location-based attendance within configurable radius |
-| Device Binding | Kiosk tied to specific devices |
-| Admin Force Checkout | With reason logging |
-| Auto-Checkout Cron | Runs every 15 min — `shiftEndTime + maxOTHours + graceMinutes` |
-| Overtime Calculation | Late = all hours OT; On-time = hours after shift end (capped) |
-| Monthly Grid View | Paginated attendance grid |
-| Late Detection | Half-day threshold and late marking |
-| Holiday/Weekly-Off Aware | Skips holidays and weekly offs in calculations |
-
----
-
-### 📅 Leave Management
-
-| Feature | Description |
-|---------|-------------|
-| Leave Types | Custom types with annual quota, max concurrent, advance notice |
-| Multi-Level Approval | Configurable approval chain |
-| Leave Balance | Accrual, pro-rata, carry-forward, encashment |
-| Calendar View | Visual team leave calendar |
-| Bulk Accrual | Accrue leaves for all employees at once |
-| Auto Attendance | Creates attendance entries on leave approval |
-| Cancellation | Reverse attendance on leave cancellation |
+| Module | Description |
+|--------|-------------|
+| **Attendance Reports** | Summary and detailed attendance reports with export |
+| **Payroll Reports** | Salary, PF, ESI, and tax reports |
+| **Employee Reports** | Headcount, department-wise, and custom reports |
+| **Audit Logs** | Complete audit trail of all system actions with IP and user-agent tracking |
+| **Excel Export** | All reports exportable to Excel format |
 
 ---
 
-### ⏰ Overtime Management
-
-| Feature | Description |
-|---------|-------------|
-| Overtime Rules | Multiplier, max hours/day, max hours/month, applicable-to category |
-| Manual Entry | Admin can create OT entries with rule-based max enforcement |
-| Auto-Calculation | OT calculated during QR checkout |
-| Payroll Integration | OT hours flow into payroll calculation |
-
----
-
-### 💰 Payroll Processing
-
-| Feature | Description |
-|---------|-------------|
-| Full Payroll Engine | Run → Preview → Submit → Approve → Reject → Finalize |
-| Per-Employee Calc | Basic, allowances, deductions, OT, statutory (PF/ESI/PT), loan EMI |
-| Weekly-Off Pay | Configurable weekly-off compensation |
-| Holiday Pay | Holiday compensation logic |
-| Late/Half-Day Deductions | Automatic deduction rules |
-| Revision Tracking | Batch item editing with history |
-| Lock-Window | Cannot modify payroll after lock date |
-| MongoDB Transactions | Atomic operations for data integrity |
-
----
-
-### 📋 Statutory Compliance (India)
-
-| Feature | Description |
-|---------|-------------|
-| PF Calculation | Employee + employer share |
-| ESI Calculation | Based on configurable thresholds |
-| Professional Tax | State-specific slabs |
-| PF Challan | Generate PF challan for submission |
-| Statutory Reports | PF-ECR, ESI return, PF Form 5/10, PT return |
-| Dashboard Summary | Compliance status at a glance |
-
----
-
-### 🏦 Loan Management
-
-| Feature | Description |
-|---------|-------------|
-| Loan Types | Interest rate, max amount, min balance, eligibility criteria |
-| Full Lifecycle | Apply → Approve → Disburse → Repay → Close |
-| EMI Schedule | Auto-generated repayment schedule |
-| Repayment Tracking | Track each payment |
-| Payroll Integration | Automatic EMI deduction from salary |
-| Overdue Tracking | Flag and track overdue loans |
-
----
-
-### 📊 Performance Management
-
-| Feature | Description |
-|---------|-------------|
-| Performance Cycles | Quarterly reviews with configurable timelines |
-| Goal Setting | 100% weight enforcement, employee + manager goals |
-| Self-Review | Employee self-assessment |
-| Manager Review | Manager evaluation |
-| 360° Feedback | Multi-rater feedback system |
-| Appeals Process | Employee can appeal review outcomes |
-| Cycle Progress | Track cycle completion status |
-
----
-
-### 🎓 Training & Skills
-
-| Feature | Description |
-|---------|-------------|
-| Training Programs | Create and manage training sessions |
-| Enrollment | Single + batch enrollment, drop/completion |
-| Attendance | Track training attendance |
-| Certifications | Manage certifications with expiry reminders |
-| Skills Catalog | Define skills and map to employees |
-| Skill Gap Analysis | Required vs. possessed skill comparison |
-
----
-
-### 🎫 Helpdesk
-
-| Feature | Description |
-|---------|-------------|
-| Ticket Lifecycle | Create → Update → Close |
-| SLA Tracking | Deadline per priority level |
-| Comments | Threaded comments with attachments |
-| SLA Breach Detection | Automatic alerts for breached SLAs |
-| Dashboard | Ticket stats and overview |
-
----
-
-### 📢 Announcements
-
-| Feature | Description |
-|---------|-------------|
-| Create/Schedule/Expire | Full lifecycle with priority levels |
-| Audience Targeting | All / Department / Designation / Specific employees |
-| Read Tracking | Know who has read each announcement |
-| Notification Dispatch | Auto-notify on publish |
-
----
-
-### 🖥️ Asset Management
-
-| Feature | Description |
-|---------|-------------|
-| Asset CRUD | Auto-generated asset codes |
-| Full Lifecycle | Allocate → Return → Maintain → Retire |
-| History Tracking | Complete asset history |
-| Employee View | Employees can see their assigned assets |
-| Dashboard | Asset stats and overview |
-
----
-
-### 📁 Document Management
-
-| Feature | Description |
-|---------|-------------|
-| Upload with Versioning | Track document versions |
-| Category-Based Storage | Organize by categories |
-| File Validation | Type and size validation |
-| Expiry Reminders | Alert before document expiry |
-| Download Tracking | Know who downloaded what |
-| Access Control | Role-based document access |
-
----
-
-### 🔔 Notifications
-
-| Feature | Description |
-|---------|-------------|
-| In-App Notifications | List, unread count, mark-as-read |
-| Mark All as Read | Bulk action |
-| Module Integration | Used across all modules for events |
-
----
-
-### 📈 Reports & Analytics
-
-| Feature | Description |
-|---------|-------------|
-| Excel Export | Employees, attendance, payroll, overtime |
-| Attendance Summary | Department-wise and overall |
-| Payroll Summary | Salary breakdown reports |
-| Custom Reports | Field-selectable report builder |
-| Chart Data | Attendance, payroll, department, leave charts |
-| Drill-Down | Click-through to details |
-| Scheduled Export | Configurable report scheduling |
-
----
-
-### ⚙️ Settings
-
-| Feature | Description |
-|---------|-------------|
-| Company Info | Name, logo, details |
-| Payroll Config | Salary structure, components |
-| Attendance Config | Geofencing, auto-checkout, grace period |
-| Leave Config | Quotas, approval chains, carry-forward |
-| Loan Config | Interest rates, eligibility |
-| Statutory Config | PF/ESI/PT slabs and rules |
-| Allowances/Deductions | Define salary components |
-| Email Config | SMTP settings with test |
-
----
-
-### 📝 Audit Trail
-
-| Feature | Description |
-|---------|-------------|
-| Auto-Logging | Every mutation logged (user, IP, user-agent, response time) |
-| Query & Export | Filter by module, action, user, date |
-| Stats | Module and action-wise breakdown |
-| Retention Management | Configurable log cleanup |
-
----
-
-### 🔑 API Key Management
-
-| Feature | Description |
-|---------|-------------|
-| Generate | Create API keys with permissions |
-| Revoke | Instantly revoke compromised keys |
-| Validate | Hash-based validation |
-| Rate Limits | Per-key rate limiting |
-| Expiration | Time-limited keys |
-
----
-
-## 👤 Employee Self-Service (ESS)
-
-> The ESS portal lets employees handle their own HR tasks — no need to go through HR for every request.
-
-| Feature | What Employees Can Do |
-|---------|----------------------|
-| **Profile** | View and edit personal details (with approval workflow) |
-| **Attendance** | Check their attendance history and status |
-| **Leave Balance** | View available leaves across all types |
-| **Leave Application** | Apply for leaves directly from ESS |
-| **Payslip View** | Download and view salary slips |
-| **Documents** | Upload and manage personal documents |
-| **Assets** | See assets assigned to them |
-| **Loan Application** | Apply for loans and track status |
-| **Shift Preferences** | Set preferred work shifts |
-| **Shift Swap** | Request shift swaps with colleagues |
-
----
-
-## 💵 Salary Slips
-
-| Feature | Description |
-|---------|-------------|
-| HTML Template | Company-branded salary slip generation |
-| Company Info | Auto-includes company details |
-| Allowances Breakdown | Itemized allowance display |
-| Deductions Breakdown | Itemized deduction display |
-| Attendance Summary | Days present, absent, leaves, holidays |
-
----
-
-## 🔒 Security
-
-| Feature | Implementation |
-|---------|---------------|
-| JWT Authentication | HS256-signed access + refresh tokens, httpOnly cookies |
-| Password Security | bcrypt (cost 10), complexity rules, history, lockout |
-| Rate Limiting | Auth: 10/min, General: 100/min, TOTP: 5/min |
-| Input Validation | Zod schemas on all mutation endpoints |
-| NoSQL Injection Protection | `express-mongo-sanitize` |
-| HTTP Security Headers | Helmet.js (HSTS, CSP, X-Frame-Options) |
-| CORS | Environment-aware origin whitelist |
-| Encryption at Rest | AES-256-GCM for sensitive data |
-| Secrets Management | HashiCorp Vault |
-| Audit Trail | Every mutation logged |
-| File Upload Security | Strict MIME type and size validation |
-
----
-
-## 👥 User Roles
-
-| Role | Access Level |
-|------|-------------|
-| **Super Admin** | Full system access — bypasses all permission checks |
-| **HR Admin** | Nearly full access (excludes audit log management) |
-| **HR Staff** | View-heavy with limited management capabilities |
-| **Accounts** | Payroll, loans, statutory, and financial reports |
-| **Manager** | Approve leaves, manage team performance, view employees |
-
-**51 granular permissions** enforced at the route level.
-
----
-
-## 🛠️ Tech Stack
+## Tech Stack
 
 | Layer | Technology |
 |-------|-----------|
-| **Frontend** | React 18 + Vite + TypeScript + Ant Design |
-| **State Management** | TanStack Query + Zustand |
-| **Backend** | Node.js + Express + TypeScript |
-| **Database** | MongoDB 6+ (Mongoose 8) |
-| **Cache** | Redis 7 |
-| **Real-time** | Socket.io |
-| **Auth** | JWT + bcrypt + TOTP |
-| **Validation** | Zod |
-| **File Storage** | Cloudinary |
-| **Email** | Nodemailer (SMTP) |
-| **PDF** | PDFKit |
-| **Excel** | ExcelJS |
+| **Runtime** | Node.js 20+ (ESM modules) |
+| **Language** | TypeScript 5.4 (strict mode) |
+| **Backend Framework** | Express 4.19 |
+| **Database** | MongoDB 6+ via Mongoose 8.4 |
+| **Caching** | Redis 7 (token blacklist, master data cache) |
+| **Secrets** | HashiCorp Vault (local dev) / Production Vault |
+| **Real-time** | Socket.io 4.8 with optional Redis adapter |
+| **Authentication** | JWT (access + refresh tokens), bcrypt, TOTP |
+| **Validation** | Zod schemas on all endpoints |
+| **File Storage** | Cloudinary (documents, photos) + local disk (logos) |
+| **Email** | Nodemailer with SMTP |
+| **PDF Generation** | PDFKit (salary slips) |
+| **Excel Generation** | ExcelJS (reports) |
+| **Frontend** | React 18 + Vite + TypeScript |
+| **Testing** | Vitest + Supertest (MongoDB Memory Server) |
+| **Load Testing** | Artillery |
 | **Containerization** | Docker + Docker Compose |
-| **Testing** | Vitest + Supertest |
 
 ---
-
-## 🚀 Getting Started
-
-### Prerequisites
-
-- **Node.js v20+**
-- **Docker Desktop**
-- **MongoDB** (local or Atlas)
-- **Redis**
-
-### Quick Start
-
-```bash
-# Clone the repository
-git clone https://github.com/HARSH265/literate-sniffle-HRMS.git
-cd literate-sniffle-HRMS
-
-# Start infrastructure (Redis + Vault + MongoDB)
-docker compose up -d
-
-# Seed Vault with secrets (run once)
-docker exec -e VAULT_ADDR=http://127.0.0.1:8200 hrms-vault vault kv put secret/hrms \
-  MONGODB_URI="mongodb://localhost:27017/hrms" \
-  JWT_SECRET="your-secret" \
-  JWT_REFRESH_SECRET="your-refresh-secret" \
-  ENCRYPTION_KEY="0123456789abcdef0123456789abcdef"
-
-# Setup server
-cd server && npm install && npm run seed && npm run dev
-
-# Setup client (new terminal)
-cd client && npm install && npm run dev
-```
-
-### Default Login
-
-| | |
-|---|---|
-| **Email** | `admin@hrms.com` |
-| **Password** | `admin123` |
 
 ---
 
 ## 📂 Project Structure
 
 ```
-orion-hrms/
-├── client/                 # React frontend (Vite + TypeScript)
+HRMS/
+├── client/                     # React frontend (Vite + TypeScript)
 │   └── src/
-│       ├── features/       # Feature-based modules
-│       ├── components/     # Shared UI components
-│       ├── hooks/          # Custom React hooks
-│       └── services/       # API service layer
+│       ├── features/           # Feature-based modules
+│       ├── components/         # Shared UI components
+│       ├── hooks/              # Custom React hooks
+│       ├── services/           # API service layer
+│       └── types/              # TypeScript type definitions
 │
-├── server/                 # Express backend (TypeScript)
+├── server/                     # Express backend (TypeScript)
 │   └── src/
-│       ├── config/         # Environment, database, constants
-│       ├── core/           # Auth, cache, email, errors, validation
-│       ├── models/         # 42 Mongoose models
-│       ├── modules/        # 20+ feature modules
-│       └── seeds/          # Database seeding
+│       ├── config/             # Environment, database, constants
+│       ├── core/               # Shared infrastructure
+│       │   ├── audit/          # Audit logging middleware
+│       │   ├── auth/           # Token blacklist
+│       │   ├── cache/          # Redis/NodeCache service
+│       │   ├── email/          # Nodemailer service
+│       │   ├── errors/         # Error handler, AppError
+│       │   ├── file/           # Cloudinary upload service
+│       │   ├── logger/         # Winston logger
+│       │   ├── permissions/    # Auth & RBAC middleware
+│       │   ├── redis/          # Redis client singleton
+│       │   ├── socket/         # Socket.io setup
+│       │   ├── utils/          # Encryption, date utils
+│       │   ├── validation/     # Zod validation middleware
+│       │   └── vault/          # Vault secret service
+│       ├── models/             # 41 Mongoose models
+│       ├── modules/            # 32 feature modules
+│       │   └── <module>/
+│       │       ├── <module>.controller.ts
+│       │       ├── <module>.service.ts
+│       │       ├── <module>.routes.ts
+│       │       └── <module>.validation.ts
+│       ├── seeds/              # Database seeding scripts
+│       └── test/               # Test setup
 │
-├── docker-compose.yml      # Infrastructure containers
-└── scripts/                # Vault setup, utilities
+├── docker-compose.yml          # Redis, Vault, MongoDB containers
+├── scripts/                    # Vault setup, migrations
+└── .env.example                # Environment variable template
 ```
 
 ---
 
-## 📄 License
+## Getting Started
 
-Proprietary software. All rights reserved.
+### Prerequisites
+
+- **Docker Desktop** ([Install](https://www.docker.com/products/docker-desktop))
+- **Node.js v20+** ([Install](https://nodejs.org))
+- **npm** (comes with Node.js)
+- **Git** ([Install](https://git-scm.com))
+
+### Quick Start
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/your-org/hrms.git
+cd hrms
+
+# 2. Start infrastructure containers (Redis + Vault + MongoDB)
+docker compose up -d
+
+# 3. Seed Vault with secrets (run once)
+docker exec -e VAULT_ADDR=http://127.0.0.1:8200 hrms-vault vault kv put secret/hrms \
+  MONGODB_URI="mongodb://localhost:27017/hrms" \
+  JWT_SECRET="dev-jwt-secret-change-in-production" \
+  JWT_REFRESH_SECRET="dev-refresh-secret-change-in-production" \
+  ENCRYPTION_KEY="0123456789abcdef0123456789abcdef" \
+  CLOUDINARY_CLOUD_NAME="demo" \
+  CLOUDINARY_API_KEY="demo" \
+  CLOUDINARY_API_SECRET="demo" \
+  EMAIL_HOST="smtp.example.com" \
+  EMAIL_PORT="587" \
+  EMAIL_USER="user" \
+  EMAIL_PASSWORD="pass" \
+  EMAIL_FROM="no-reply@example.com"
+
+# 4. Create server/.env
+echo "VAULT_TOKEN=root-token" > server/.env
+
+# 5. Install server dependencies
+cd server
+npm install
+
+# 6. Seed the database with default data
+npm run seed
+
+# 7. Start the backend
+npm run dev
+
+# 8. In a separate terminal — start the frontend
+cd ../client
+npm install
+npm run dev
+```
+
+### Access Points
+
+| Service | URL |
+|---------|-----|
+| Backend API | http://localhost:5000 |
+| Frontend | http://localhost:5173 |
+| Health Check | http://localhost:5000/api/v1/health |
+| Vault UI | http://localhost:8200/ui |
+| Redis | localhost:6379 |
+| MongoDB | localhost:27017 |
 
 ---
 
-<div align="center">
+## API Endpoints
 
-**Orion HRMS v1.0** — Built for manufacturing. Built to scale.
+All endpoints are versioned under `/api/v1/`.
 
-</div>
+| Prefix | Auth Required | Module |
+|--------|--------------|--------|
+| `/auth` | Partial (login/refresh are public) | Authentication & JWT management |
+| `/users` | `manage-users` | User CRUD and role assignment |
+| `/employees` | `view/manage-employees` | Employee profiles and details |
+| `/departments` | `manage-departments` | Department management |
+| `/designations` | `manage-departments` | Designation management |
+| `/shifts` | `manage-departments` | Shift definitions |
+| `/attendance` | `view/manage-attendance` | Daily attendance tracking |
+| `/attendance/qr` | Public (QR code) | QR-based kiosk check-in/out |
+| `/holidays` | `manage-departments` | Holiday calendar |
+| `/leave` | Leave permissions | Leave applications and approvals |
+| `/payroll` | `process-payroll` | Payroll run and processing |
+| `/salary-slips` | `view-reports` | PDF salary slip generation |
+| `/reports` | `view-reports` | Analytics and Excel exports |
+| `/loans` | Loan permissions | Loan applications |
+| `/statutory` | Statutory permissions | PF/ESI/PT management |
+| `/notifications` | Auth required | In-app notifications |
+| `/settings` | `manage-settings` | Company configuration |
+| `/audit-logs` | `view-audit` | Audit trail viewer |
+| `/documents` | `view-documents` | Document repository |
+| `/assets` | Auth required | Asset management |
+| `/helpdesk` | Auth required | Support tickets |
+| `/announcements` | Auth required | Company announcements |
+| `/performance` | Auth required | Performance reviews |
+| `/training` | Auth required | Training and skills |
+| `/ess` | Auth required | Employee self-service |
+
+---
+
+## User Roles & Permissions
+
+| Role | Access Level |
+|------|-------------|
+| **super-admin** | Full system access — bypasses all permission checks |
+| **hr-admin** | Nearly full access (excludes audit log management) |
+| **hr-staff** | View-heavy with limited management capabilities |
+| **accounts** | Payroll, loans, statutory, and financial reports |
+| **manager** | Approve leaves, manage team performance, view employees |
+
+51 granular permissions are enforced at the route level via `authorize('permission-name')` middleware.
+
+---
+
+## Security Features
+
+| Feature | Implementation |
+|---------|---------------|
+| **JWT Authentication** | HS256-signed access + refresh tokens, httpOnly cookies, token blacklist |
+| **Password Security** | bcrypt (cost 10), complexity rules, history enforcement, lockout after 5 failures |
+| **Rate Limiting** | Per-route rate limiters (auth: 10/min, general: 100/min, TOTP: 5/min) |
+| **Input Validation** | Zod schemas on all mutation endpoints |
+| **NoSQL Injection** | `express-mongo-sanitize` strips `$` and `.` from request bodies |
+| **HTTP Security Headers** | Helmet.js (HSTS, CSP, X-Frame-Options, etc.) |
+| **CORS** | Environment-aware origin whitelist |
+| **Encryption at Rest** | AES-256-GCM for sensitive data (bank details, email passwords) |
+| **Secrets Management** | HashiCorp Vault (dev) / Production Vault (prod) |
+| **Audit Trail** | Every mutation logged with user, IP, user-agent, response time |
+| **File Upload Security** | Strict MIME type and size validation per upload type |
+| **Request Tracing** | UUID-based X-Request-Id header on every request |
+| **Graceful Error Handling** | Custom AppError class, global error handler, no stack traces in production |
+
+---
+
+## Docker & Infrastructure
+
+For complete Docker setup, container management, and production deployment guide, see:
+
+**[DOCKER.md](./DOCKER.md)** — Covers:
+- Why Docker is used
+- Container architecture and networking
+- Step-by-step initialization
+- Secret management with Vault
+- Production deployment checklist
+- Troubleshooting guide
+- Command reference
+
+---
+
+## Testing
+
+```bash
+# Run all tests
+cd server
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Run with coverage
+npm run test:coverage
+
+# Run load tests
+npm run loadtest
+```
+
+Tests use **MongoDB Memory Server** for isolation — no external database required.
+
+---
+
+## Development Scripts
+
+| Script | Description |
+|--------|-------------|
+| `npm run dev` | Start backend with hot-reload (tsx watch) |
+| `npm run build` | Compile TypeScript to JavaScript |
+| `npm start` | Run compiled production build |
+| `npm run seed` | Populate database with initial data |
+| `npm run lint` | Run ESLint checks |
+| `npm run test` | Run test suite |
+| `npm run loadtest` | Run Artillery load tests |
+| `npm run check` | Lint + build + test (CI pipeline) |
+
+---
+
+## Environment Variables
+
+### Non-Secret (in `.env`)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PORT` | `5000` | Server port |
+| `CLIENT_URL` | `http://localhost:5173` | Frontend URL for CORS |
+| `VAULT_ADDR` | `http://127.0.0.1:8200` | Vault server address |
+| `VAULT_TOKEN` | `root-token` | Vault authentication token |
+| `REDIS_URL` | `redis://localhost:6379` | Redis connection URL |
+| `RATE_LIMIT_ENABLED` | `true` | Enable/disable rate limiting |
+
+### Secrets (in Vault at `secret/hrms`)
+
+| Variable | Description |
+|----------|-------------|
+| `MONGODB_URI` | MongoDB connection string |
+| `JWT_SECRET` | Access token signing key |
+| `JWT_REFRESH_SECRET` | Refresh token signing key |
+| `ENCRYPTION_KEY` | 32-char key for AES-256-GCM encryption |
+| `CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name |
+| `CLOUDINARY_API_KEY` | Cloudinary API key |
+| `CLOUDINARY_API_SECRET` | Cloudinary API secret |
+| `EMAIL_HOST` | SMTP server host |
+| `EMAIL_PORT` | SMTP server port |
+| `EMAIL_USER` | SMTP authentication user |
+| `EMAIL_PASSWORD` | SMTP authentication password |
+| `EMAIL_FROM` | Sender email address |
+
+---
+
+## License
+
+This project is proprietary software. All rights reserved.

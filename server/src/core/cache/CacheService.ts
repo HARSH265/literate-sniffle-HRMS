@@ -1,9 +1,10 @@
 import NodeCache from 'node-cache';
 import { CACHE_KEYS } from './cache.keys.js';
+import { env } from '../../config/env.js';
 
 const cache = new NodeCache({
-  stdTTL: 3600,
-  checkperiod: 600,
+  stdTTL: env.CACHE_TTL,
+  checkperiod: env.CACHE_CHECK_PERIOD,
   useClones: false,
 });
 
@@ -28,6 +29,10 @@ export class CacheService {
     cache.flushAll();
   }
 
+  static getStats(): any {
+    return (cache as any).getStats();
+  }
+
   static invalidateDepartments(): void {
     cache.del(CACHE_KEYS.DEPARTMENTS);
   }
@@ -50,6 +55,10 @@ export class CacheService {
 
   static invalidateWeeklyOffRules(): void {
     cache.del(CACHE_KEYS.WEEKLY_OFF_RULES);
+  }
+
+  static invalidateOvertimeRules(): void {
+    cache.del(CACHE_KEYS.OVERTIME_RULES);
   }
 }
 

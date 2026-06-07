@@ -1,11 +1,14 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '../../../core/components/PageHeader';
-import { Table, Button, Modal, Select, message, Tag, Card, Row, Col, Descriptions } from 'antd';
+import { DataTable } from '../../../core/components/DataTable';
+import { Button, Select, message, Tag } from 'antd';
 import { FilePdfOutlined, EyeOutlined } from '@ant-design/icons';
 import { salarySlipService } from '../services/salarySlipService';
-import { useQuery, useMutation } from '@tanstack/react-query';
-import dayjs from 'dayjs';
+import { useQuery } from '@tanstack/react-query';
+import { ROUTES } from '../../../core/constants/routes';
 import apiClient from '../../../core/api/apiClient';
+import dayjs from 'dayjs';
 
 const STATUS_COLORS: Record<string, string> = {
   draft: 'orange',
@@ -14,37 +17,37 @@ const STATUS_COLORS: Record<string, string> = {
 
 export function SalarySlipsPage() {
   const [monthFilter, setMonthFilter] = useState<string | undefined>(undefined);
-  const [selectedSlip, setSelectedSlip] = useState<any>(null);
-  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const navigate = useNavigate();
 
-  const { data, isLoading, refetch } = useQuery({
+  const monthOptions = useMemo(() => {
+    const options = [];
+    const now = dayjs();
+    for (let i = 0; i < 12; i++) {
+      const d = now.subtract(i, 'month');
+      options.push({ value: d.format('YYYY-MM'), label: d.format('MMMM YYYY') });
+    }
+    return options;
+  }, []);
+
+  const { data, isLoading } = useQuery({
     queryKey: ['salary-slips', monthFilter],
     queryFn: () => salarySlipService.list({ month: monthFilter }),
     refetchOnWindowFocus: false,
   });
 
-  const previewMutation = useMutation({
-    mutationFn: async (runId: string) => {
-      const result = await salarySlipService.generatePdf(runId);
-      return result.data;
-    },
-    onSuccess: (slipData: any) => {
-      setSelectedSlip(slipData);
-      setIsPreviewOpen(true);
-    },
-    onError: (err: any) => message.error(err?.response?.data?.message || 'Failed to generate slip'),
-  });
-
-  const handleDownloadPdf = async (runId: string, month: string) => {
+  const handleDownloadPdf = async (runId: string, month: string, employeeId?: string) => {
     try {
+      const params = employeeId ? { employeeId } : {};
       const response = await apiClient.get(`/salary-slips/${runId}/pdf`, {
+        params,
         responseType: 'blob',
       });
       
+      const empSuffix = employeeId ? `_${employeeId}` : '';
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `SalarySlip_${month.replace('-', '_')}.pdf`);
+      link.setAttribute('download', `SalarySlip_${month.replace('-', '_')}${empSuffix}.pdf`);
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -56,18 +59,24 @@ export function SalarySlipsPage() {
     }
   };
 
+  const handlePreview = (runId: string) => {
+    navigate(ROUTES.salarySlipDetails(runId));
+  };
+
   const columns = [
     {
       title: 'Month',
       dataIndex: 'month',
       key: 'month',
-      render: (m: string) => <span style={{ fontWeight: 600 }}>{dayjs(m + '-01').format('MMMM YYYY')}</span>,
+      render: (m: string) => <span style={{ fontWeight: 600 }}>{m}</span>,
     },
     {
       title: 'Status',
       dataIndex: 'status',
       key: 'status',
-      render: (s: string) => <Tag color={STATUS_COLORS[s]} style={{ textTransform: 'capitalize' }}>{s}</Tag>,
+      render: (status: string) => (
+        <Tag color={STATUS_COLORS[status] || 'default'}>{status.toUpperCase()}</Tag>
+      ),
     },
     {
       title: 'Employees',
@@ -78,114 +87,63 @@ export function SalarySlipsPage() {
       title: 'Total Net Pay',
       dataIndex: 'totalNetPay',
       key: 'totalNetPay',
-      render: (v: number) => <span style={{ fontWeight: 600, color: 'var(--hrms-success)' }}>₹{v.toLocaleString()}</span>,
+      render: (v: number) => `₹${v?.toLocaleString()}`,
     },
     {
       title: 'Generated',
       dataIndex: 'generatedAt',
       key: 'generatedAt',
-      render: (d: string) => d ? dayjs(d).format('DD MMM YYYY') : '-',
+      render: (d: string) => d ? new Date(d).toLocaleDateString() : '-',
     },
     {
-      title: '',
+      title: 'Actions',
       key: 'actions',
-      render: (_: unknown, record: any) => (
+      render: (_: any, record: any) => (
         <div style={{ display: 'flex', gap: 8 }}>
           <Button 
+            type="primary" 
             size="small" 
-            icon={<EyeOutlined />} 
-            onClick={() => previewMutation.mutate(record.id)}
-            loading={previewMutation.isPending}
+            icon={<EyeOutlined />}
+            onClick={() => handlePreview(record.id)}
           >
-            Preview
+            View
           </Button>
-          {record.status === 'finalized' && (
-            <Button 
-              size="small" 
-              icon={<FilePdfOutlined />}
-              onClick={() => handleDownloadPdf(record.id, record.month)}
-            >
-              Download PDF
-            </Button>
-          )}
+          <Button 
+            type="default" 
+            size="small" 
+            icon={<FilePdfOutlined />}
+            onClick={() => handleDownloadPdf(record.id, record.month)}
+          >
+            PDF
+          </Button>
         </div>
       ),
     },
   ];
 
   return (
-    <div style={{ padding: '0 4px' }}>
-      <PageHeader 
-        title="Salary Slips" 
+    <div>
+      <PageHeader
+        title="Salary Slips"
         subtitle="View and download employee salary slips"
       />
 
-      <Card style={{ marginBottom: 16 }}>
-        <Row gutter={16} align="middle">
-          <Col>
-            <Select
-              placeholder="Filter by month"
-              allowClear
-              style={{ width: 200 }}
-              value={monthFilter}
-              onChange={(val) => setMonthFilter(val)}
-              options={data?.data?.map((s: any) => ({
-                label: dayjs(s.month + '-01').format('MMMM YYYY'),
-                value: s.month,
-              }))}
-            />
-          </Col>
-          <Col>
-            <Button onClick={() => refetch()}>Refresh</Button>
-          </Col>
-        </Row>
-      </Card>
-
-      <Table
-        columns={columns}
+      <DataTable
         dataSource={data?.data}
+        columns={columns}
         rowKey="id"
         loading={isLoading}
-        pagination={{ pageSize: 10 }}
+        toolbarLeft={
+          <Select
+            placeholder="Filter by month"
+            allowClear
+            style={{ width: 200 }}
+            value={monthFilter}
+            onChange={setMonthFilter}
+            options={monthOptions}
+          />
+        }
       />
-
-      <Modal
-        title={`Salary Slip Preview - ${selectedSlip?.month || ''}`}
-        open={isPreviewOpen}
-        onCancel={() => setIsPreviewOpen(false)}
-        footer={[
-          <Button key="close" onClick={() => setIsPreviewOpen(false)}>Close</Button>,
-          <Button key="download" type="primary" icon={<FilePdfOutlined />}>Download PDF</Button>,
-        ]}
-        width={700}
-      >
-        {selectedSlip && (
-          <>
-            <Descriptions bordered size="small" column={2} style={{ marginBottom: 16 }}>
-              <Descriptions.Item label="Company">{selectedSlip.companyName}</Descriptions.Item>
-              <Descriptions.Item label="Address">{selectedSlip.companyAddress || 'N/A'}</Descriptions.Item>
-              <Descriptions.Item label="Month">{selectedSlip.month}</Descriptions.Item>
-              <Descriptions.Item label="Generated Date">{dayjs(selectedSlip.generatedDate).format('DD MMM YYYY')}</Descriptions.Item>
-            </Descriptions>
-            
-            <Table
-              dataSource={selectedSlip.employees}
-              rowKey="employeeCode"
-              size="small"
-              pagination={false}
-              columns={[
-                { title: 'Employee', dataIndex: 'name', key: 'name' },
-                { title: 'Code', dataIndex: 'employeeCode', key: 'employeeCode' },
-                { title: 'Dept', dataIndex: 'department', key: 'department' },
-                { title: 'Basic', dataIndex: 'basicSalary', key: 'basicSalary', render: (v: number) => `₹${v?.toLocaleString()}` },
-                { title: 'Earnings', dataIndex: 'totalEarnings', key: 'totalEarnings', render: (v: number) => `₹${v?.toLocaleString()}` },
-                { title: 'Deductions', dataIndex: 'totalDeductions', key: 'totalDeductions', render: (v: number) => `₹${v?.toLocaleString()}` },
-                { title: 'Net Pay', dataIndex: 'netPay', key: 'netPay', render: (v: number) => <b style={{ color: 'var(--hrms-success)' }}>₹{v?.toLocaleString()}</b> },
-              ]}
-            />
-          </>
-        )}
-      </Modal>
     </div>
   );
 }

@@ -8,9 +8,10 @@ export interface IShift extends Document {
   applicableTo: 'all' | 'worker' | 'office-staff';
   isActive: boolean;
   createdBy?: mongoose.Types.ObjectId;
+  updatedBy?: mongoose.Types.ObjectId;
 }
 
-interface ShiftModel extends Model<IShift> {}
+type ShiftModel = Model<IShift>;
 
 const ShiftSchema = new Schema<IShift>(
   {
@@ -25,9 +26,14 @@ const ShiftSchema = new Schema<IShift>(
     },
     isActive: { type: Boolean, default: true },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    updatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
   },
   { timestamps: true },
 );
+
+ShiftSchema.index({ isActive: 1 });
+ShiftSchema.index({ applicableTo: 1 });
+ShiftSchema.index({ isActive: 1, applicableTo: 1 });
 
 const Shift = mongoose.model<IShift, ShiftModel>('Shift', ShiftSchema);
 

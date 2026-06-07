@@ -11,7 +11,7 @@ const bankDetailsSchema = z.object({
 const contactNumberSchema = z.string().regex(/^[6-9][0-9]{9}$/, 'Invalid Indian mobile number').optional();
 
 export const createEmployeeSchema = z.object({
-  employeeCode: z.string().min(1).max(20),
+  employeeCode: z.string().min(1).max(20).optional(),
   fullName: z.string().min(2).max(100),
   fatherName: z.string().min(2).max(100),
   category: z.enum(['worker', 'office-staff']),
@@ -52,7 +52,7 @@ export const updateEmployeeSchema = z.object({
 
 export const listEmployeesSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
-  limit: z.coerce.number().int().min(1).max(100).default(20),
+  limit: z.coerce.number().int().min(1).max(100).default(10),
   sort: z.string().default('createdAt'),
   order: z.enum(['asc', 'desc']).default('desc'),
   search: z.string().optional(),
@@ -60,3 +60,8 @@ export const listEmployeesSchema = z.object({
   category: z.string().optional(),
   department: z.string().optional(),
 }).default({});
+
+export const bulkAssignShiftSchema = z.object({
+  employeeIds: z.array(z.string().refine((val) => mongoose.Types.ObjectId.isValid(val), { message: 'Invalid employee ID' })).min(1, 'At least one employee is required'),
+  shiftId: z.string().refine((val) => mongoose.Types.ObjectId.isValid(val), { message: 'Invalid shift ID' }),
+});

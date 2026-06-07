@@ -2,27 +2,27 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { env } from '../../config/env.js';
 import { AppError } from '../errors/AppError.js';
+import { TokenBlacklist } from '../auth/TokenBlacklist.js';
 
 export interface AuthUser {
   id: string;
   email: string;
   name: string;
   role: string;
+  employeeId?: string | null;
 }
 
-declare global {
-  namespace Express {
-    interface Request {
-      user?: AuthUser;
-    }
+declare module 'express-serve-static-core' {
+  interface Request {
+    user?: AuthUser;
   }
 }
 
-export function authenticate(
+export async function authenticate(
   req: Request,
   _res: Response,
   next: NextFunction,
-): void {
+): Promise<void> {
   try {
     let token: string | undefined;
 
@@ -36,11 +36,15 @@ export function authenticate(
       throw new AppError('No token provided', 401);
     }
 
-    const decoded = jwt.verify(token, env.JWT_SECRET) as AuthUser;
+    if (await TokenBlacklist.isBlacklisted(token)) {
+      throw new AppError('Token has been revoked', 401);
+    }
+
+    const decoded = jwt.verify(token, env.JWT_SECRET, { algorithms: ['HS256'] }) as AuthUser;
     req.user = decoded;
 
     next();
-  } catch (error) {
+  } catch {
     next(new AppError('Invalid token', 401));
   }
 }

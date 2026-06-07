@@ -1,4 +1,5 @@
 import apiClient from '../../../core/api/apiClient';
+import { PaginatedResponse } from '@/types/shared';
 
 export interface Shift {
   id: string;
@@ -8,13 +9,6 @@ export interface Shift {
   workingHours: number;
   applicableTo: 'all' | 'worker' | 'office-staff';
   isActive: boolean;
-}
-
-export interface PaginatedResponse<T> {
-  success: boolean;
-  message: string;
-  data: T[];
-  meta: { page: number; limit: number; total: number; totalPages: number };
 }
 
 export const shiftService = {
@@ -34,11 +28,16 @@ export const shiftService = {
   },
 
   async update(id: string, payload: Partial<Shift>): Promise<{ success: boolean; data: Shift }> {
-    const { data } = await apiClient.put(`/shifts/${id}`, payload);
+    const { data } = await apiClient.patch(`/shifts/${id}`, payload);
     return data;
   },
 
   async delete(id: string): Promise<void> {
     await apiClient.delete(`/shifts/${id}`);
+  },
+
+  async bulkAssignShift(employeeIds: string[], shiftId: string): Promise<{ success: boolean; data: { modifiedCount: number }; message: string }> {
+    const { data } = await apiClient.patch('/employees/bulk/shift', { employeeIds, shiftId });
+    return data;
   },
 };

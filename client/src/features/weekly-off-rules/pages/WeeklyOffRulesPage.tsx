@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Table, Button, Modal, Form, Input, Select, message, Popconfirm, Tag, Tooltip, Row, Col } from 'antd';
+import { Button, Modal, Form, Input, Select, message, Popconfirm, Tag, Tooltip, Row, Col } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { PageHeader } from '../../../core/components/PageHeader';
+import { DataTable } from '../../../core/components/DataTable';
 import { weeklyOffRuleService, WeeklyOffRule, CreateWeeklyOffRule } from '../services/weeklyOffRuleService';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -35,7 +36,7 @@ export function WeeklyOffRulesPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(20);
+  const [limit, setLimit] = useState(10);
   const [categoryFilter, setCategoryFilter] = useState<string>('');
   const queryClient = useQueryClient();
 
@@ -135,6 +136,7 @@ export function WeeklyOffRulesPage() {
       title: '',
       key: 'actions',
       width: 100,
+      fixed: 'right' as const,
       render: (_: unknown, record: WeeklyOffRule) => (
         <div className="action-group">
           <Tooltip title="Edit">
@@ -152,44 +154,42 @@ export function WeeklyOffRulesPage() {
 
   return (
     <div style={{ padding: '0 4px' }}>
-      <PageHeader title="Weekly Off Rules" subtitle="Configure weekly off days for employees" />
+      <PageHeader
+        title="Weekly Off Rules"
+        subtitle="Configure weekly off days for employees"
+        actions={
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => setIsModalOpen(true)}>
+            Add Rule
+          </Button>
+        }
+      />
 
-      <div className="hrms-table-card">
-        <div className="hrms-table-toolbar">
-          <div className="hrms-table-toolbar-left">
-            <Select
-              placeholder="Filter by category"
-              allowClear
-              style={{ width: 180 }}
-              value={categoryFilter || undefined}
-              onChange={(val) => { setCategoryFilter(val || ''); setPage(1); }}
-              options={CATEGORY_OPTIONS}
-            />
-          </div>
-          <div className="hrms-table-toolbar-right">
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => setIsModalOpen(true)}>
-              Add Rule
-            </Button>
-          </div>
-        </div>
-
-        <Table
-          columns={columns}
-          dataSource={data?.data}
-          rowKey="id"
-          loading={isLoading}
-          pagination={{
-            current: page,
-            defaultPageSize: 20,
-            pageSize: limit,
-            total: data?.meta?.total ?? 0,
-            onChange: (p, size) => { setPage(p); setLimit(size ?? 20); },
-            showSizeChanger: true,
-            pageSizeOptions: ['10', '20', '50'],
-            showTotal: (total, range) => `${range[0]}–${range[1]} of ${total}`,
-          }}
-        />
-      </div>
+      <DataTable
+        columns={columns}
+        dataSource={data?.data}
+        rowKey="id"
+        loading={isLoading}
+        total={data?.meta?.total ?? 0}
+        page={page}
+        pageSize={limit}
+        onPaginationChange={(p, size) => { setPage(p); setLimit(size ?? 10); }}
+        pageSizeOptions={['10', '20', '50']}
+        filterContent={
+          <Select
+            placeholder="Filter by category"
+            allowClear
+            style={{ width: 180 }}
+            value={categoryFilter || undefined}
+            onChange={(val) => { setCategoryFilter(val || ''); setPage(1); }}
+            options={CATEGORY_OPTIONS}
+          />
+        }
+        toolbarRight={
+          <span style={{ fontSize: 13, color: 'var(--hrms-text-muted)' }}>
+            {data?.meta?.total ?? 0} rules
+          </span>
+        }
+      />
 
       <Modal
         title={editingId ? 'Edit Rule' : 'Add Weekly Off Rule'}

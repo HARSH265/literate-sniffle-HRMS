@@ -6,4 +6,7 @@ export const CACHE_KEYS = {
   HOLIDAYS: 'holidays:all',
   WEEKLY_OFF_RULES: 'weekly_off_rules:all',
   OVERTIME_RULES: 'overtime_rules:all',
+  LEAVE_SETTINGS: 'leave:settings',
+  EMPLOYEES_LIST: 'employees:list',
+  ANNOUNCEMENTS_LIST: 'announcements:list',
 } as const;

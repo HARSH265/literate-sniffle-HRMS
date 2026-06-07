@@ -1,4 +1,4 @@
-import axios, { AxiosInstance, AxiosError } from 'axios';
+import axios, { AxiosInstance, AxiosError, AxiosRequestConfig } from 'axios';
 import { useAuthStore } from '../stores/authStore';
 
 let isRefreshing = false;
@@ -21,6 +21,8 @@ const apiClient: AxiosInstance = axios.create({
   withCredentials: true,
 });
 
+const isAuthRequest = (url?: string) => url?.includes('/auth/login') || url?.includes('/auth/refresh');
+
 apiClient.interceptors.request.use(
   (config) => {
     const token = useAuthStore.getState().token;
@@ -35,15 +37,17 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
-    const originalRequest = error.config as { _retry?: boolean };
+    const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean };
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (error.response?.status === 401 && !originalRequest._retry && !isAuthRequest(originalRequest.url)) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
         })
           .then((token) => {
-            originalRequest.headers.Authorization = `Bearer ${token}`;
+            if (originalRequest.headers) {
+              originalRequest.headers.Authorization = `Bearer ${token}`;
+            }
             return apiClient(originalRequest);
           })
           .catch((err) => Promise.reject(err));
@@ -52,30 +56,23 @@ apiClient.interceptors.response.use(
       originalRequest._retry = true;
       isRefreshing = true;
 
-      const refreshToken = useAuthStore.getState().refreshToken;
-
-      if (!refreshToken) {
-        useAuthStore.getState().logout();
-        window.location.href = '/login';
-        return Promise.reject(error);
-      }
-
       try {
         const res = await axios.post(
           `${import.meta.env.VITE_API_BASE_URL}/auth/refresh`,
-          { refreshToken },
+          {},
           { withCredentials: true }
         );
-        const { token, refreshToken: newRefreshToken } = res.data.data;
+        const { token } = res.data.data;
 
         useAuthStore.getState().login(
           useAuthStore.getState().user!,
-          token,
-          newRefreshToken
+          token
         );
 
         processQueue(null, token);
-        originalRequest.headers.Authorization = `Bearer ${token}`;
+        if (originalRequest.headers) {
+          originalRequest.headers.Authorization = `Bearer ${token}`;
+        }
         return apiClient(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError, null);

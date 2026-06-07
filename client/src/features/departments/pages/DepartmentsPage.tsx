@@ -1,24 +1,52 @@
-import { useState } from 'react';
-import { Table, Button, Modal, Form, Input, message, Popconfirm, Tooltip } from 'antd';
+import { useState, useEffect, useMemo } from 'react';
+import { Button, Modal, Form, Input, message, Popconfirm, Tooltip, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, SettingOutlined } from '@ant-design/icons';
 import { PageHeader } from '../../../core/components/PageHeader';
+import { DataTable } from '../../../core/components/DataTable';
 import { departmentService, Department, CreateDepartment, UpdateDepartment } from '../services/departmentService';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
+
+const StatusBadge = ({ isActive }: { isActive: boolean }) => (
+  <span className={`status-badge ${isActive ? 'status-active' : 'status-inactive'}`}>
+    {isActive ? 'Active' : 'Inactive'}
+  </span>
+);
 
 export function DepartmentsPage() {
   const [form] = Form.useForm();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(20);
+  const [limit, setLimit] = useState(10);
   const [search, setSearch] = useState('');
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const { data, isLoading, isFetching } = useQuery({
+  const { data: settings } = useQuery({
+    queryKey: ['settings'],
+    queryFn: () => import('../../settings/services/settingsService').then(m => m.settingsService.get()),
+    enabled: isModalOpen && !editingId,
+  });
+  const isAutoGenerate = !editingId ? settings?.data?.departmentCodeConfig?.isAutoGenerate !== false : false;
+
+  const { data: nextCode } = useQuery({
+    queryKey: ['next-dept-code'],
+    queryFn: () => departmentService.getNextCode(),
+    enabled: isModalOpen && !editingId && isAutoGenerate,
+  });
+
+  useEffect(() => {
+    if (nextCode && !editingId) {
+      form.setFieldValue('code', nextCode);
+    }
+  }, [nextCode, form, editingId]);
+
+  const { data, isLoading } = useQuery({
     queryKey: ['departments', page, limit, search],
     queryFn: () => departmentService.list({ page, limit, search }),
-    refetchOnWindowFocus: false,
+    staleTime: 5 * 60 * 1000,
   });
 
   const createMutation = useMutation({
@@ -75,13 +103,7 @@ export function DepartmentsPage() {
     setIsModalOpen(true);
   };
 
-  const StatusBadge = ({ isActive }: { isActive: boolean }) => (
-    <span className={`status-badge ${isActive ? 'status-active' : 'status-inactive'}`}>
-      {isActive ? 'Active' : 'Inactive'}
-    </span>
-  );
-
-  const columns: ColumnsType<Department> = [
+  const columns: ColumnsType<Department> = useMemo(() => [
     {
       title: 'Department Code',
       dataIndex: 'code',
@@ -104,6 +126,7 @@ export function DepartmentsPage() {
       title: '',
       key: 'actions',
       width: 100,
+      fixed: 'right' as const,
       render: (_: unknown, record: Department) => (
         <div className="action-group">
           <Tooltip title="Edit">
@@ -120,7 +143,7 @@ export function DepartmentsPage() {
         </div>
       ),
     },
-  ];
+  ], []);
 
   return (
     <div style={{ padding: '0 4px' }}>
@@ -134,44 +157,32 @@ export function DepartmentsPage() {
         }
       />
 
-      <div className="hrms-table-card">
-        <div className="hrms-table-toolbar">
-          <div className="hrms-table-toolbar-left">
-            <Input.Search
-              placeholder="Search by name or code..."
-              onSearch={(val) => { setSearch(val); setPage(1); }}
-              style={{ width: 280 }}
-              allowClear
-              prefix={<SearchOutlined style={{ color: 'var(--hrms-text-muted)' }} />}
-              enterButton={false}
-              loading={isFetching}
-            />
-          </div>
-          <div className="hrms-table-toolbar-right">
-            <span style={{ fontSize: 13, color: 'var(--hrms-text-muted)' }}>
-              {data?.meta?.total ?? 0} total
-            </span>
-          </div>
-        </div>
-
-        <Table
-          columns={columns}
-          dataSource={data?.data}
-          rowKey="id"
-          loading={isLoading}
-          scroll={{ x: 600 }}
-          pagination={{
-            current: page,
-            defaultPageSize: 20,
-            pageSize: limit,
-            total: data?.meta?.total ?? 0,
-            onChange: (p, size) => { setPage(p); setLimit(size ?? 20); },
-            showSizeChanger: true,
-            pageSizeOptions: ['10', '20', '50', '100'],
-            showTotal: (total, range) => `${range[0]}–${range[1]} of ${total}`,
-          }}
-        />
-      </div>
+      <DataTable
+        columns={columns}
+        dataSource={data?.data}
+        rowKey="id"
+        loading={isLoading}
+        total={data?.meta?.total ?? 0}
+        page={page}
+        pageSize={limit}
+        onPaginationChange={(p, size) => { setPage(p); setLimit(size ?? 10); }}
+        toolbarLeft={
+          <Input.Search
+            placeholder="Search by name or code..."
+            onSearch={(val) => { setSearch(val); setPage(1); }}
+            style={{ width: 280 }}
+            allowClear
+            prefix={<SearchOutlined style={{ color: 'var(--hrms-text-muted)' }} />}
+            enterButton={false}
+            loading={isLoading}
+          />
+        }
+        toolbarRight={
+          <span style={{ fontSize: 13, color: 'var(--hrms-text-muted)' }}>
+            {data?.meta?.total ?? 0} total
+          </span>
+        }
+      />
 
       <Modal
         title={
@@ -193,8 +204,25 @@ export function DepartmentsPage() {
         <div style={{ padding: '8px 0 0' }}>
           <Form form={form} layout="vertical">
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-              <Form.Item name="code" label="Department Code" rules={[{ required: true, message: 'Code is required' }]}>
-                <Input placeholder="e.g. PROD" style={{ height: 40 }} />
+              <Form.Item name="code" label="Department Code" rules={editingId || !isAutoGenerate ? [{ required: true, message: 'Code is required' }] : []}>
+                <div style={{ display: 'flex', gap: 4 }}>
+                  {!editingId && isAutoGenerate ? (
+                    <Input
+                      placeholder="Auto-generated"
+                      style={{ height: 40, flex: 1 }}
+                      disabled
+                      suffix={<Tag color="blue" style={{ marginRight: 0, fontSize: 11, lineHeight: '18px' }}>Auto</Tag>}
+                    />
+                  ) : (
+                    <Input placeholder="e.g. PROD" style={{ height: 40, flex: 1 }} />
+                  )}
+                  <Button
+                    type="default"
+                    icon={<SettingOutlined />}
+                    style={{ height: 40, width: 40 }}
+                    onClick={() => navigate('/settings', { state: { section: 'codeConfig' } })}
+                  />
+                </div>
               </Form.Item>
               <Form.Item name="name" label="Department Name" rules={[{ required: true, message: 'Name is required' }]}>
                 <Input placeholder="e.g. Production" style={{ height: 40 }} />

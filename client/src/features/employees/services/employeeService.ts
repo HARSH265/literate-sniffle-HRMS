@@ -1,4 +1,5 @@
 import apiClient from '../../../core/api/apiClient';
+import { PaginatedResponse } from '@/types/shared';
 
 export interface Employee {
   id: string;
@@ -15,8 +16,9 @@ export interface Employee {
   baseSalary: number;
   dailyWage: number;
   overtimeEligible: boolean;
-  status: 'active' | 'inactive' | 'terminated';
+  status: 'active' | 'inactive' | 'terminated' | 'archived';
   contactNumber?: string;
+  email?: string;
   address?: string;
   bankDetails?: {
     bankName?: string;
@@ -25,12 +27,30 @@ export interface Employee {
     accountType?: 'savings' | 'current';
   };
   photo?: string;
+  documents?: Array<{
+    type: 'aadhar' | 'pan' | 'voter' | 'driver_license' | 'passport' | 'other';
+    fileName: string;
+    filePath: string;
+    uploadedAt: string;
+    _id: string;
+  }>;
+  pfUAN?: string;
+  esiNumber?: string;
+  pfJoiningDate?: string;
+  pfExempted?: boolean;
+  esiExempted?: boolean;
+  ptExempted?: boolean;
+  ptState?: string;
 }
 
 export interface CreateEmployee {
-  employeeCode: string;
+  employeeCode?: string;
   fullName: string;
   fatherName: string;
+  dateOfBirth?: string;
+  gender?: string;
+  bloodGroup?: string;
+  maritalStatus?: string;
   category: 'worker' | 'office-staff';
   employmentType: 'permanent' | 'contract' | 'temporary' | 'trainee';
   department: string;
@@ -42,23 +62,32 @@ export interface CreateEmployee {
   dailyWage?: number;
   overtimeEligible?: boolean;
   contactNumber?: string;
+  email?: string;
+  emergencyContact?: string;
   address?: string;
+  permanentAddress?: string;
   bankDetails?: {
     bankName?: string;
     accountNumber?: string;
     ifscCode?: string;
+    accountHolderName?: string;
     accountType?: 'savings' | 'current';
   };
-}
-
-export interface PaginatedResponse<T> {
-  success: boolean;
-  message: string;
-  data: T[];
-  meta: { page: number; limit: number; total: number; totalPages: number };
+  pfUAN?: string;
+  esiNumber?: string;
+  pfJoiningDate?: string;
+  pfExempted?: boolean;
+  esiExempted?: boolean;
+  ptExempted?: boolean;
+  ptState?: string;
 }
 
 export const employeeService = {
+  async getNextCode(): Promise<string> {
+    const { data } = await apiClient.get('/employees/next-code');
+    return data.data.employeeCode;
+  },
+
   async list(params?: Record<string, unknown>): Promise<PaginatedResponse<Employee>> {
     const { data } = await apiClient.get<PaginatedResponse<Employee>>('/employees', { params });
     return data;
@@ -81,5 +110,44 @@ export const employeeService = {
 
   async delete(id: string): Promise<void> {
     await apiClient.delete(`/employees/${id}`);
+  },
+
+  async export(): Promise<Blob> {
+    const response = await apiClient.get('/employees/export', { responseType: 'blob' });
+    return response.data;
+  },
+
+  async downloadTemplate(): Promise<Blob> {
+    const response = await apiClient.get('/employees/template', { responseType: 'blob' });
+    return response.data;
+  },
+
+  async import(file: File): Promise<{ success: number; failed: number; errors: string[] }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    const { data } = await apiClient.post('/employees/import', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return data;
+  },
+
+  async uploadDocument(employeeId: string, file: File, documentType: string): Promise<any> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('documentType', documentType);
+    const { data } = await apiClient.post(`/employees/${employeeId}/documents`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return data;
+  },
+
+  async deleteDocument(employeeId: string, docId: string): Promise<any> {
+    const { data } = await apiClient.delete(`/employees/${employeeId}/documents/${docId}`);
+    return data;
+  },
+
+  getDocumentUrl(employeeId: string, docId: string): string {
+    const baseURL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
+    return `${baseURL}/employees/${employeeId}/documents/${docId}`;
   },
 };

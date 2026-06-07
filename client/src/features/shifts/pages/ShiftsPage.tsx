@@ -1,9 +1,11 @@
 import { useState } from 'react';
-import { Table, Button, Input, message, Modal, Form, Select, InputNumber, Tooltip, Tag } from 'antd';
+import { Button, Input, message, Modal, Form, Select, InputNumber, Tooltip, Tag, Popconfirm } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, SwapOutlined } from '@ant-design/icons';
 import { PageHeader } from '../../../core/components/PageHeader';
+import { DataTable } from '../../../core/components/DataTable';
 import { shiftService, Shift } from '../services/shiftService';
+import { employeeService } from '../../employees/services/employeeService';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 const APPLICABLE_OPTIONS = [
@@ -14,17 +16,31 @@ const APPLICABLE_OPTIONS = [
 
 export function ShiftsPage() {
   const [form] = Form.useForm();
+  const [bulkForm] = Form.useForm();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [bulkModalOpen, setBulkModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(20);
+  const [limit, setLimit] = useState(10);
   const [search, setSearch] = useState('');
   const queryClient = useQueryClient();
 
   const { data, isLoading, isFetching } = useQuery({
     queryKey: ['shifts', page, limit, search],
     queryFn: () => shiftService.list({ page, limit, search }),
-    refetchOnWindowFocus: false,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: employees } = useQuery({
+    queryKey: ['employees', 'list'],
+    queryFn: () => employeeService.list({ limit: 500, status: 'active' }),
+    enabled: bulkModalOpen,
+  });
+
+  const { data: shiftList } = useQuery({
+    queryKey: ['shifts', 'all'],
+    queryFn: () => shiftService.list({ limit: 100 }),
+    enabled: bulkModalOpen,
   });
 
   const createMutation = useMutation({
@@ -45,7 +61,11 @@ export function ShiftsPage() {
     onError: (err: any) => message.error(err?.response?.data?.message || 'Failed to delete'),
   });
 
-  
+  const bulkMutation = useMutation({
+    mutationFn: ({ employeeIds, shiftId }: { employeeIds: string[]; shiftId: string }) => shiftService.bulkAssignShift(employeeIds, shiftId),
+    onSuccess: (res) => { message.success(res.message); setBulkModalOpen(false); bulkForm.resetFields(); },
+    onError: (err: any) => message.error(err?.response?.data?.message || 'Failed to assign shift'),
+  });
 
   const columns: ColumnsType<Shift> = [
     { title: 'Shift Name', dataIndex: 'name', key: 'name', render: (n: string) => <span style={{ fontWeight: 600, fontSize: 14 }}>{n}</span> },
@@ -71,7 +91,9 @@ export function ShiftsPage() {
       render: (_: unknown, r: Shift) => (
         <div className="action-group">
           <Tooltip title="Edit"><Button type="text" size="small" icon={<EditOutlined />} onClick={() => { setEditingId(r.id); form.setFieldsValue(r); setIsModalOpen(true); }} style={{ color: 'var(--hrms-text-muted)', borderRadius: 6 }} /></Tooltip>
-          <Tooltip title="Delete"><Button type="text" size="small" icon={<DeleteOutlined />} onClick={() => deleteMutation.mutate(r.id)} style={{ color: '#ef4444', borderRadius: 6 }} /></Tooltip>
+          <Popconfirm title="Delete this shift?" description="This cannot be undone." onConfirm={() => deleteMutation.mutate(r.id)} okText="Delete" okButtonProps={{ danger: true }} cancelText="Cancel">
+            <Tooltip title="Delete"><Button type="text" size="small" icon={<DeleteOutlined />} style={{ color: '#ef4444', borderRadius: 6 }} /></Tooltip>
+          </Popconfirm>
         </div>
       ),
     },
@@ -79,22 +101,29 @@ export function ShiftsPage() {
 
   return (
     <div style={{ padding: '0 4px' }}>
-      <PageHeader title="Shifts" subtitle="Configure work schedules and timing" actions={<Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditingId(null); form.resetFields(); setIsModalOpen(true); }}>Add Shift</Button>} />
-
-      <div className="hrms-table-card">
-        <div className="hrms-table-toolbar">
-          <div className="hrms-table-toolbar-left">
-            <Input.Search placeholder="Search shifts..." onSearch={(val) => { setSearch(val); setPage(1); }} style={{ width: 260 }} allowClear prefix={<SearchOutlined style={{ color: 'var(--hrms-text-muted)' }} />} enterButton={false} loading={isFetching} />
-          </div>
-          <div className="hrms-table-toolbar-right">
-            <span style={{ fontSize: 13, color: 'var(--hrms-text-muted)' }}>{data?.meta?.total ?? 0} shifts</span>
-          </div>
+      <PageHeader title="Shifts" subtitle="Configure work schedules and timing" actions={
+        <div style={{ display: 'flex', gap: 8 }}>
+          <Button icon={<SwapOutlined />} onClick={() => { setBulkModalOpen(true); }}>Bulk Assign</Button>
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditingId(null); form.resetFields(); setIsModalOpen(true); }}>Add Shift</Button>
         </div>
+      } />
 
-        <Table columns={columns} dataSource={data?.data} rowKey="id" loading={isLoading} scroll={{ x: 800 }}
-          pagination={{ current: page, defaultPageSize: 20, pageSize: limit, total: data?.meta?.total ?? 0, onChange: (p, size) => { setPage(p); setLimit(size ?? 20); }, showSizeChanger: true, pageSizeOptions: ['10', '20', '50', '100'], showTotal: (t, r) => `${r[0]}–${r[1]} of ${t}` }}
-        />
-      </div>
+      <DataTable
+        columns={columns}
+        dataSource={data?.data}
+        rowKey="id"
+        loading={isLoading}
+        total={data?.meta?.total ?? 0}
+        page={page}
+        pageSize={limit}
+        onPaginationChange={(p, size) => { setPage(p); setLimit(size ?? 10); }}
+        toolbarLeft={
+          <Input.Search placeholder="Search shifts..." onSearch={(val) => { setSearch(val); setPage(1); }} style={{ width: 260 }} allowClear prefix={<SearchOutlined style={{ color: 'var(--hrms-text-muted)' }} />} enterButton={false} loading={isFetching} />
+        }
+        toolbarRight={
+          <span style={{ fontSize: 13, color: 'var(--hrms-text-muted)' }}>{data?.meta?.total ?? 0} shifts</span>
+        }
+      />
 
       <Modal title={editingId ? 'Edit Shift' : 'New Shift'} open={isModalOpen}
         onOk={() => form.validateFields().then(v => editingId ? updateMutation.mutate({ id: editingId, payload: v }) : createMutation.mutate(v))}
@@ -118,6 +147,36 @@ export function ShiftsPage() {
           </div>
           <Form.Item name="applicableTo" label="Applicable To" rules={[{ required: true }]}>
             <Select options={APPLICABLE_OPTIONS} style={{ height: 40 }} />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal title="Bulk Assign Shift" open={bulkModalOpen}
+        onOk={() => bulkForm.validateFields().then(v => bulkMutation.mutate(v))}
+        onCancel={() => { setBulkModalOpen(false); bulkForm.resetFields(); }}
+        confirmLoading={bulkMutation.isPending}
+        okText="Assign" okButtonProps={{ style: { borderRadius: 8 } }} cancelButtonProps={{ style: { borderRadius: 8 } }}
+        width={600}
+      >
+        <Form form={bulkForm} layout="vertical" style={{ paddingTop: 8 }}>
+          <Form.Item name="shiftId" label="Select Shift" rules={[{ required: true, message: 'Select a shift' }]}>
+            <Select
+              showSearch
+              placeholder="Search and select a shift"
+              style={{ height: 40 }}
+              filterOption={(input, option) => (option?.label as string || '').toLowerCase().includes(input.toLowerCase())}
+              options={(shiftList?.data || []).map((s: Shift) => ({ label: `${s.name} (${s.startTime}-${s.endTime})`, value: s.id }))}
+            />
+          </Form.Item>
+          <Form.Item name="employeeIds" label="Select Employees" rules={[{ required: true, message: 'Select at least one employee' }]}>
+            <Select
+              mode="multiple"
+              showSearch
+              placeholder="Search and select employees"
+              style={{ height: 40 }}
+              filterOption={(input, option) => (option?.label as string || '').toLowerCase().includes(input.toLowerCase())}
+              options={(employees?.data || []).map((e: any) => ({ label: `${e.fullName} (${e.employeeCode})`, value: e.id }))}
+            />
           </Form.Item>
         </Form>
       </Modal>

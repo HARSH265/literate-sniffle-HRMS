@@ -27,6 +27,15 @@ export const QUERY_KEYS = {
   salarySlips: ['salary-slips'] as const,
   salarySlip: (id: string) => ['salary-slips', id] as const,
 
+  leaveTypes: ['leave', 'types'] as const,
+  leaveApplications: ['leave', 'applications'] as const,
+  leaveApplicationsMy: ['leave', 'applications', 'my'] as const,
+  leaveApprovalsPending: ['leave', 'approvals', 'pending'] as const,
+  leaveBalances: (employeeId: string) => ['leave', 'balances', employeeId] as const,
+  leaveBalancesMy: ['leave', 'balances', 'my'] as const,
+  leaveCalendar: ['leave', 'calendar'] as const,
+  leaveSummary: ['leave', 'summary'] as const,
+
   reports: ['reports'] as const,
 
   settings: ['settings'] as const,
@@ -35,4 +44,17 @@ export const QUERY_KEYS = {
   unreadCount: ['notifications', 'unread-count'] as const,
 
   auditLogs: ['audit-logs'] as const,
+
+  trainingPrograms: ['training', 'programs'] as const,
+  trainingProgram: (id: string) => ['training', 'programs', id] as const,
+  trainingEnrollmentsMy: ['training', 'enrollments', 'my'] as const,
+  trainingEnrollments: ['training', 'enrollments'] as const,
+  trainingSkills: ['training', 'skills'] as const,
+  trainingSkillsMy: ['training', 'skills', 'my'] as const,
+  trainingStats: ['training', 'stats'] as const,
+
+  performanceCycles: ['performance', 'cycles'] as const,
+  performanceCycle: (id: string) => ['performance', 'cycles', id] as const,
+  performanceReviews: ['performance', 'reviews'] as const,
+  performanceReview: (id: string) => ['performance', 'reviews', id] as const,
 } as const;

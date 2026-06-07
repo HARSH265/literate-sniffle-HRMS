@@ -20,6 +20,7 @@ export const API_ENDPOINTS = {
     get: (id: string) => `/departments/${id}`,
     update: (id: string) => `/departments/${id}`,
     delete: (id: string) => `/departments/${id}`,
+    nextCode: '/departments/next-code',
   },
 
   designations: {
@@ -44,6 +45,16 @@ export const API_ENDPOINTS = {
     get: (id: string) => `/employees/${id}`,
     update: (id: string) => `/employees/${id}`,
     delete: (id: string) => `/employees/${id}`,
+    nextCode: '/employees/next-code',
+    import: '/employees/import',
+    export: '/employees/export',
+    template: '/employees/template',
+    bulkAssignShift: '/employees/bulk/shift',
+    restore: (id: string) => `/employees/${id}/restore`,
+    uploadDocument: (id: string) => `/employees/${id}/documents`,
+    downloadDocument: (id: string, docId: string) => `/employees/${id}/documents/${docId}`,
+    removeDocument: (id: string, docId: string) => `/employees/${id}/documents/${docId}`,
+    photo: (id: string) => `/employees/${id}/photo`,
   },
 
   holidays: {
@@ -88,16 +99,24 @@ export const API_ENDPOINTS = {
   payroll: {
     runs: {
       list: '/payroll/runs',
-      create: '/payroll/runs',
-      get: (id: string) => `/payroll/runs/${id}`,
-      finalize: (id: string) => `/payroll/runs/${id}/finalize`,
-      update: (id: string) => `/payroll/runs/${id}`,
+      create: '/payroll/run',
+      get: (id: string) => `/payroll/run/${id}`,
+      preview: '/payroll/preview',
+      submit: (id: string) => `/payroll/run/${id}/submit`,
+      approve: (id: string) => `/payroll/run/${id}/approve`,
+      reject: (id: string) => `/payroll/run/${id}/reject`,
+      finalize: (id: string) => `/payroll/run/${id}/finalize`,
+      unfinalize: (id: string) => `/payroll/run/${id}/unfinalize`,
+      delete: (id: string) => `/payroll/run/${id}`,
+      update: (id: string) => `/payroll/run/${id}`,
     },
     items: {
       list: '/payroll/items',
       get: (id: string) => `/payroll/items/${id}`,
       update: (id: string) => `/payroll/items/${id}`,
+      batch: (runId: string) => `/payroll/run/${runId}/items/batch`,
     },
+    employee: (employeeId: string) => `/payroll/runs/employee/${employeeId}`
   },
 
   salarySlips: {
@@ -118,6 +137,32 @@ export const API_ENDPOINTS = {
     update: '/settings',
   },
 
+  leave: {
+    types: {
+      list: '/leave/types',
+      create: '/leave/types',
+      update: (id: string) => `/leave/types/${id}`,
+      delete: (id: string) => `/leave/types/${id}`,
+    },
+    applications: {
+      list: '/leave/applications',
+      my: '/leave/applications/my',
+      create: '/leave/applications',
+      cancel: (id: string) => `/leave/applications/${id}/cancel`,
+      approve: '/leave/applications/approve',
+    },
+    approvals: {
+      pending: '/leave/approvals/pending',
+    },
+    balances: {
+      get: (employeeId: string) => `/leave/balances/${employeeId}`,
+      my: '/leave/balances/my',
+    },
+    accrue: '/leave/accrue',
+    calendar: '/leave/calendar',
+    summary: '/leave/summary',
+  },
+
   notifications: {
     list: '/notifications',
     markRead: (id: string) => `/notifications/${id}/read`,
@@ -130,8 +175,79 @@ export const API_ENDPOINTS = {
     modules: '/audit-logs/modules',
   },
 
+  training: {
+    programs: {
+      list: '/training/programs',
+      create: '/training/programs',
+      get: (id: string) => `/training/programs/${id}`,
+      update: (id: string) => `/training/programs/${id}`,
+      cancel: (id: string) => `/training/programs/${id}`,
+    },
+    enrollments: {
+      my: '/training/enrollments/my',
+      pending: '/training/enrollments/pending',
+      create: '/training/enrollments',
+      batch: '/training/enrollments/batch',
+      complete: (id: string) => `/training/enrollments/${id}/complete`,
+      drop: (id: string) => `/training/enrollments/${id}/drop`,
+      attendance: (id: string) => `/training/enrollments/${id}/attendance`,
+    },
+    skills: {
+      list: '/training/skills',
+      my: '/training/skills/my',
+      employee: (employeeId: string) => `/training/skills/employee/${employeeId}`,
+      gap: (designationId: string) => `/training/skills/gap/${designationId}`,
+      create: '/training/skills',
+      update: (employeeId: string, skillId: string) => `/training/skills/employee/${employeeId}/${skillId}`,
+    },
+    stats: '/training/stats',
+    certificationsExpiring: '/training/certifications/expiring',
+  },
+
+  performance: {
+    cycles: {
+      list: '/performance/cycles',
+      create: '/performance/cycles',
+      get: (id: string) => `/performance/cycles/${id}`,
+      update: (id: string) => `/performance/cycles/${id}`,
+    },
+    reviews: {
+      list: '/performance/reviews',
+      get: (id: string) => `/performance/reviews/${id}`,
+      setGoals: (id: string) => `/performance/reviews/${id}/goals`,
+      submit: (id: string) => `/performance/reviews/${id}/submit`,
+      managerReview: (id: string) => `/performance/reviews/${id}/manager-review`,
+      appeal: (id: string) => `/performance/reviews/${id}/appeal`,
+      resolveAppeal: (id: string) => `/performance/reviews/${id}/resolve-appeal`,
+      feedback: (id: string) => `/performance/reviews/${id}/feedback`,
+    },
+  },
+
   upload: {
     logo: '/upload/logo',
     employeePhoto: '/upload/employee-photo',
+  },
+
+  permissions: {
+    groups: '/permissions/groups',
+    roles: '/permissions/roles',
+    role: (role: string) => `/permissions/roles/${role}`,
+    resetRole: (role: string) => `/permissions/roles/${role}/reset`,
+  },
+  // Component Master endpoints
+  componentMaster: {
+    list: '/component-master',
+    create: '/component-master',
+    get: (id: string) => `/component-master/${id}`,
+    update: (id: string) => `/component-master/${id}`,
+    delete: (id: string) => `/component-master/${id}`,
+  },
+  // Salary Structure endpoints
+  salaryStructures: {
+    list: '/salary-structures',
+    create: '/salary-structures',
+    get: (id: string) => `/salary-structures/${id}`,
+    update: (id: string) => `/salary-structures/${id}`,
+    delete: (id: string) => `/salary-structures/${id}`,
   },
 } as const;

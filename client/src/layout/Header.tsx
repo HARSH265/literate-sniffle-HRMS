@@ -23,12 +23,12 @@ export function Header() {
   const fetchNotifications = async () => {
     try {
       const [{ data: notifs }, { data: count }] = await Promise.all([
-        apiClient.get('/api/v1/notifications?limit=5'),
-        apiClient.get('/api/v1/notifications/unread-count'),
+        apiClient.get('/notifications?limit=5'),
+        apiClient.get('/notifications/unread-count'),
       ]);
-      setNotifications(notifs.data.notifications);
+      setNotifications(notifs.data);
       setUnreadCount(count.data.count);
-    } catch {}
+    } catch { /* ignore */ }
   };
 
   useEffect(() => {
@@ -43,16 +43,24 @@ export function Header() {
   };
 
   const handleMarkAllRead = async () => {
-    await apiClient.patch('/api/v1/notifications/mark-all-read');
+    await apiClient.patch('/notifications/mark-all-read');
     setUnreadCount(0);
     setNotifications(notifications.map(n => ({ ...n, isRead: true })));
+  };
+
+  const handleMarkAsRead = async (notificationId: string) => {
+    await apiClient.patch(`/notifications/${notificationId}/read`);
+    setNotifications(notifications.map(n => n.id === notificationId || n._id === notificationId ? { ...n, isRead: true } : n));
+    setUnreadCount(Math.max(0, unreadCount - 1));
   };
 
   const notificationContent = (
     <div style={{ width: 360, maxHeight: 400, overflow: 'auto', background: 'var(--hrms-surface)', borderRadius: 8, boxShadow: '0 6px 16px rgba(0,0,0,0.12)' }}>
       <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--hrms-border-light)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Text strong>Notifications</Text>
-        {unreadCount > 0 && <Button size="small" type="link" icon={<CheckOutlined />} onClick={handleMarkAllRead}>Mark all read</Button>}
+        <Button size="small" type="link" icon={<CheckOutlined />} onClick={handleMarkAllRead}>
+          {unreadCount > 0 ? `Mark all read (${unreadCount})` : 'Mark all read'}
+        </Button>
       </div>
       {notifications.length === 0 ? (
         <Empty description="No notifications" image={Empty.PRESENTED_IMAGE_SIMPLE} style={{ padding: 40 }} />
@@ -61,8 +69,9 @@ export function Header() {
           dataSource={notifications}
           renderItem={(item: any) => (
             <List.Item
-              style={{ padding: '12px 16px', cursor: 'pointer', background: item.isRead ? 'transparent' : '#fafafa' }}
+              style={{ padding: '12px 16px', cursor: 'pointer', background: item.isRead ? 'transparent' : '#f0f7ff' }}
               onClick={() => {
+                if (!item.isRead) handleMarkAsRead(item.id || item._id);
                 if (item.link) navigate(item.link);
               }}
             >
@@ -75,6 +84,11 @@ export function Header() {
           )}
         />
       )}
+      <div style={{ padding: '10px 16px', borderTop: '1px solid var(--hrms-border-light)', textAlign: 'center' }}>
+        <Button type="link" size="small" onClick={() => navigate('/notifications')} style={{ fontSize: 12 }}>
+          View all notifications
+        </Button>
+      </div>
     </div>
   );
 
@@ -107,7 +121,7 @@ export function Header() {
       />
 
       <Space size={16}>
-        <Dropdown dropdownRender={() => notificationContent} placement="bottomRight" trigger={['click']}>
+        <Dropdown popupRender={() => notificationContent} placement="bottomRight" trigger={['click']}>
           <Badge count={unreadCount} size="small" offset={[2, -2]}>
             <Button
               type="text"

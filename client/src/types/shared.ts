@@ -1,25 +1,7 @@
-export type StatusType =
-  | 'active'
-  | 'inactive'
-  | 'terminated'
-  | 'present'
-  | 'absent'
-  | 'half-day'
-  | 'leave'
-  | 'weekly-off'
-  | 'holiday'
-  | 'draft'
-  | 'finalized'
-  | 'pending'
-  | 'paid';
-
-export interface ApiResponse<T> {
+export interface PaginatedResponse<T> {
   success: boolean;
   message: string;
-  data: T;
-}
-
-export interface PaginatedResponse<T> extends ApiResponse<T[]> {
+  data: T[];
   meta: {
     page: number;
     limit: number;
@@ -28,40 +10,36 @@ export interface PaginatedResponse<T> extends ApiResponse<T[]> {
   };
 }
 
-export interface User {
+export interface ApiResponse<T> {
+  success: boolean;
+  message: string;
+  data: T;
+}
+
+export interface Meta {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
+export interface LocationState {
+  section?: string;
+  [key: string]: unknown;
+}
+
+export interface NameEntity {
   id: string;
   name: string;
-  email: string;
-  role: string;
 }
 
-export interface Employee {
-  id: string;
-  employeeCode: string;
-  fullName: string;
-  fatherName: string;
-  category: 'worker' | 'office-staff';
-  employmentType: 'permanent' | 'contract' | 'temporary' | 'trainee';
-  department: { _id: string; name: string };
-  designation: { _id: string; name: string };
-  shift: { _id: string; name: string };
-  joiningDate: string;
-  salaryType: 'monthly' | 'daily';
-  baseSalary: number;
-  dailyWage: number;
-  overtimeEligible: boolean;
-  status: 'active' | 'inactive' | 'terminated';
+export type UserRole = 'super-admin' | 'hr-admin' | 'hr-staff' | 'accounts' | 'manager';
+
+export function isNameEntity(value: unknown): value is NameEntity {
+  return typeof value === 'object' && value !== null && 'name' in value && typeof (value as NameEntity).name === 'string';
 }
 
-export interface Department {
-  id: string;
-  name: string;
-  code: string;
-  description?: string;
-  isActive: boolean;
-}
-
-export interface SelectOption {
-  label: string;
-  value: string;
+export function isNamedLabel(value: unknown): value is { name: string } | { label: string } {
+  if (typeof value !== 'object' || value === null) return false;
+  return 'name' in value || 'label' in value;
 }

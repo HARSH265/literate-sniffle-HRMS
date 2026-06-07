@@ -1,0 +1,19 @@
+{
+  "name": "Orian HRMS - Employee Self Service",
+  "short_name": "Orian ESS",
+  "description": "Employee self-service portal for attendance, leave, payslips and more",
+  "start_url": "/ess",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f5f5f5",
+  "theme_color": "#1a1a2e",
+  "icons": [
+    {
+      "src": "/orian.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

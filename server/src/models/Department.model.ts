@@ -6,9 +6,10 @@ export interface IDepartment extends Document {
   description?: string;
   isActive: boolean;
   createdBy?: mongoose.Types.ObjectId;
+  updatedBy?: mongoose.Types.ObjectId;
 }
 
-interface DepartmentModel extends Model<IDepartment> {}
+type DepartmentModel = Model<IDepartment>;
 
 const DepartmentSchema = new Schema<IDepartment>(
   {
@@ -17,9 +18,12 @@ const DepartmentSchema = new Schema<IDepartment>(
     description: { type: String },
     isActive: { type: Boolean, default: true },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    updatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
   },
   { timestamps: true },
 );
+
+DepartmentSchema.index({ isActive: 1 });
 
 const Department = mongoose.model<IDepartment, DepartmentModel>('Department', DepartmentSchema);
 

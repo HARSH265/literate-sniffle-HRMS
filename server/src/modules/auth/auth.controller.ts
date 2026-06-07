@@ -18,6 +18,14 @@ const login = asyncHandler(async (req: Request, res: Response) => {
     maxAge: parseInt(env.JWT_COOKIE_EXPIRES_IN) * 24 * 60 * 60 * 1000,
   });
 
+  res.cookie('refreshToken', result.refreshToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+    path: '/',
+  });
+
   ResponseHandler.success(res, result, 'Login successful');
 });
 
@@ -38,25 +46,91 @@ const changePassword = asyncHandler(async (req: Request, res: Response) => {
 });
 
 const refreshToken = asyncHandler(async (req: Request, res: Response) => {
-  const { refreshToken } = req.body;
+  const token = req.cookies?.refreshToken || req.body.refreshToken;
 
-  const result = await AuthService.refreshToken(refreshToken);
+  if (!token) {
+    const { AppError } = await import('../../core/errors/AppError.js');
+    throw new AppError('No refresh token provided', 401);
+  }
+
+  const result = await AuthService.refreshToken(token);
+
+  res.cookie('jwt', result.token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    maxAge: parseInt(env.JWT_COOKIE_EXPIRES_IN) * 24 * 60 * 60 * 1000,
+  });
+
+  res.cookie('refreshToken', result.refreshToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+    path: '/',
+  });
 
   ResponseHandler.success(res, result, 'Token refreshed successfully');
 });
 
 const logout = asyncHandler(async (req: Request, res: Response) => {
   if (req.user) {
-    await AuthService.logout(req.user.id);
+    const token = req.cookies?.jwt || req.headers.authorization?.split(' ')[1];
+    await AuthService.logout(req.user.id, token);
   }
   res.clearCookie('jwt');
+  res.clearCookie('refreshToken', { path: '/' });
   ResponseHandler.success(res, null, 'Logout successful');
+});
+
+const logoutAllDevices = asyncHandler(async (req: Request, res: Response) => {
+  const ipAddress = req.ip || req.socket.remoteAddress;
+  const userAgent = req.headers['user-agent'];
+  const token = req.cookies?.jwt || req.headers.authorization?.split(' ')[1];
+  const result = await AuthService.logoutAllDevices(req.user!.id, token, ipAddress, userAgent);
+  res.clearCookie('jwt');
+  res.clearCookie('refreshToken', { path: '/' });
+  ResponseHandler.success(res, null, result.message);
+});
+
+const forgotPassword = asyncHandler(async (req: Request, res: Response) => {
+  const { email } = req.body;
+  const result = await AuthService.forgotPassword(email);
+  ResponseHandler.success(res, null, result.message);
+});
+
+const resetPassword = asyncHandler(async (req: Request, res: Response) => {
+  const { token, newPassword } = req.body;
+  const result = await AuthService.resetPassword(token, newPassword);
+  ResponseHandler.success(res, null, result.message);
+});
+
+const unlockAccount = asyncHandler(async (req: Request, res: Response) => {
+  const { userId } = req.body;
+  const result = await AuthService.unlockAccount(userId, req.user!.id);
+  ResponseHandler.success(res, null, result.message);
+});
+
+const forceChangePassword = asyncHandler(async (req: Request, res: Response) => {
+  const { newPassword } = req.body;
+  const ipAddress = req.ip || req.socket.remoteAddress;
+  const userAgent = req.headers['user-agent'];
+
+  await AuthService.forceChangePassword(req.user!.id, newPassword, ipAddress, userAgent);
+
+  res.clearCookie('jwt');
+  ResponseHandler.success(res, null, 'Password changed successfully. Please login with your new password.');
 });
 
 export const authController = {
   login,
   logout,
+  logoutAllDevices,
   getMe,
   changePassword,
+  forceChangePassword,
   refreshToken,
+  forgotPassword,
+  resetPassword,
+  unlockAccount,
 };

@@ -1,9 +1,11 @@
-import { useState } from 'react';
-import { Table, Button, Modal, Form, Input, Select, DatePicker, message, Tag, Row, Col, Tabs, Card } from 'antd';
+import { useState, useMemo } from 'react';
+import { Button, Modal, Form, Input, Select, DatePicker, message, Tag, Row, Col, Tabs, Card, Table, Tooltip } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { SaveOutlined, CalendarOutlined } from '@ant-design/icons';
+import { SaveOutlined, CalendarOutlined, LogoutOutlined } from '@ant-design/icons';
 import { PageHeader } from '../../../core/components/PageHeader';
-import { attendanceService, AttendanceEntry, BulkAttendanceEntry } from '../services/attendanceService';
+import { DataTable } from '../../../core/components/DataTable';
+import { attendanceService, AttendanceEntry } from '../services/attendanceService';
+import { MonthlyView } from '../components/MonthlyView';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 
@@ -27,34 +29,83 @@ const STATUS_COLORS: Record<string, string> = {
 
 export function AttendancePage() {
   const [form] = Form.useForm();
+  const [bulkForm] = Form.useForm();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isBulkUpdateOpen, setIsBulkUpdateOpen] = useState(false);
+  const [checkoutModalOpen, setCheckoutModalOpen] = useState(false);
+  const [checkoutRecord, setCheckoutRecord] = useState<AttendanceEntry | null>(null);
+  const [checkoutReason, setCheckoutReason] = useState('');
   const [selectedDate, setSelectedDate] = useState(dayjs());
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(20);
+  const [limit, setLimit] = useState(10);
+  const [departmentFilter, setDepartmentFilter] = useState<string>('');
+  const [selectedMonth, setSelectedMonth] = useState(dayjs());
   const queryClient = useQueryClient();
 
   const dateStr = selectedDate.format('YYYY-MM-DD');
+  const monthYear = { month: selectedMonth.month() + 1, year: selectedMonth.year() };
 
-  const { data, isLoading } = useQuery({
-    queryKey: ['attendance', page, limit, dateStr],
-    queryFn: () => attendanceService.list({ page, limit, date: dateStr }),
+  const { data, isLoading, error: listError } = useQuery({
+    queryKey: ['attendance', page, limit, dateStr, departmentFilter],
+    queryFn: () => attendanceService.list({ page, limit, date: dateStr, department: departmentFilter || undefined }),
+    refetchOnWindowFocus: false,
+  });
+
+  const { data: monthlyData, isLoading: monthlyLoading, error: monthlyError } = useQuery({
+    queryKey: ['attendance-monthly', monthYear.month, monthYear.year, departmentFilter],
+    queryFn: () => attendanceService.monthlyView({ ...monthYear, department: departmentFilter || undefined }),
     refetchOnWindowFocus: false,
   });
 
   const { data: employeeData } = useQuery({
-    queryKey: ['employees-active'],
+    queryKey: ['employees-active-with-shift'],
     queryFn: () => import('../../employees/services/employeeService').then(m => m.employeeService.list({ limit: 500, status: 'active' })),
   });
 
+  const { data: deptData } = useQuery({
+    queryKey: ['departments-attendance'],
+    queryFn: async () => {
+      const module = await import('../../departments/services/departmentService');
+      return module.departmentService.list({ limit: 100 });
+    },
+  });
+
   const bulkMutation = useMutation({
-    mutationFn: (payload: BulkAttendanceEntry) => attendanceService.bulkCreate(payload),
-    onSuccess: () => {
-      message.success('Attendance saved successfully');
+    mutationFn: (payload: Parameters<typeof attendanceService.bulkCreate>[0]) => attendanceService.bulkCreate(payload),
+    onSuccess: (res) => {
+      message.success(`Attendance saved: ${res.data.filter((r: any) => r.status === 'created').length} created, ${res.data.filter((r: any) => r.status === 'updated').length} updated`);
       setIsModalOpen(false);
       form.resetFields();
       queryClient.invalidateQueries({ queryKey: ['attendance'] });
+      queryClient.invalidateQueries({ queryKey: ['attendance-monthly'] });
     },
     onError: (err: any) => message.error(err?.response?.data?.message || 'Failed to save attendance'),
+  });
+
+  const bulkUpdateMutation = useMutation({
+    mutationFn: (entries: Array<{ id: string; status?: string; inTime?: string; outTime?: string; remarks?: string }>) => attendanceService.bulkUpdate(entries),
+    onSuccess: (res) => {
+      message.success(`Bulk update completed: ${res.updated} updated, ${res.failed} failed`);
+      setIsBulkUpdateOpen(false);
+      bulkForm.resetFields();
+      queryClient.invalidateQueries({ queryKey: ['attendance'] });
+      queryClient.invalidateQueries({ queryKey: ['attendance-monthly'] });
+    },
+    onError: (err: any) => message.error(err?.response?.data?.message || 'Failed to bulk update attendance'),
+  });
+
+  const checkoutMutation = useMutation({
+    mutationFn: ({ employeeId, reason }: { employeeId: string; reason: string }) =>
+      attendanceService.adminCheckout(employeeId, reason),
+    onSuccess: (res) => {
+      message.success(`Checked out at ${res.outTime} — ${res.totalHours}h worked, ${res.otHours}h OT`);
+      setCheckoutModalOpen(false);
+      setCheckoutRecord(null);
+      setCheckoutReason('');
+      queryClient.invalidateQueries({ queryKey: ['attendance'] });
+      queryClient.invalidateQueries({ queryKey: ['attendance-monthly'] });
+    },
+    onError: (err: any) => message.error(err?.response?.data?.message || 'Failed to checkout'),
   });
 
   const handleBulkSave = () => {
@@ -64,14 +115,30 @@ export function AttendancePage() {
       status: emp.status || 'present',
       inTime: emp.inTime,
       outTime: emp.outTime,
-      overtimeHours: emp.overtimeHours || 0,
       remarks: emp.remarks,
     })) || [];
 
     bulkMutation.mutate({ date: dateStr, entries });
   };
 
-  const columns: ColumnsType<AttendanceEntry> = [
+  const handleBulkUpdate = () => {
+    const values = bulkForm.getFieldsValue();
+    const entries = values.bulkEntries?.map((entry: any) => ({
+      id: entry.id,
+      status: entry.status,
+      inTime: entry.inTime || undefined,
+      outTime: entry.outTime || undefined,
+      remarks: entry.remarks || undefined,
+    })) || [];
+    bulkUpdateMutation.mutate(entries);
+  };
+
+  const getShiftDisplay = (shift: any) => {
+    if (!shift?.startTime || !shift?.endTime) return null;
+    return `${shift.startTime} - ${shift.endTime}`;
+  };
+
+  const columns = useMemo<ColumnsType<AttendanceEntry>>(() => [
     {
       title: 'Employee',
       key: 'employee',
@@ -83,14 +150,27 @@ export function AttendancePage() {
       ),
     },
     {
+      title: 'Shift',
+      key: 'shift',
+      width: 120,
+      render: (_: unknown, record: AttendanceEntry) => (
+        <span style={{ fontSize: 12, color: 'var(--hrms-text-secondary)' }}>
+          {getShiftDisplay(record.shift) || '-'}
+        </span>
+      ),
+    },
+    {
       title: 'Status',
       dataIndex: 'status',
       key: 'status',
       width: 120,
-      render: (status: string) => (
-        <Tag color={STATUS_COLORS[status]} style={{ textTransform: 'capitalize' }}>
-          {status.replace('-', ' ')}
-        </Tag>
+      render: (status: string, record: AttendanceEntry) => (
+        <div>
+          <Tag color={STATUS_COLORS[status]} style={{ textTransform: 'capitalize' }}>
+            {status.replace('-', ' ')}
+          </Tag>
+          {record.isLate && <Tag color="error" style={{ marginLeft: 4 }}>Late</Tag>}
+        </div>
       ),
     },
     {
@@ -108,23 +188,41 @@ export function AttendancePage() {
       render: (v: string) => v || '-',
     },
     {
-      title: 'Overtime',
-      dataIndex: 'overtimeHours',
-      key: 'overtimeHours',
-      width: 100,
-      render: (v: number) => v > 0 ? <Tag color="orange">{v}h</Tag> : '-',
-    },
-    {
       title: 'Remarks',
       dataIndex: 'remarks',
       key: 'remarks',
       render: (v: string) => v || '-',
     },
-  ];
+    {
+      title: '',
+      key: 'actions',
+      width: 80,
+      render: (_: unknown, record: AttendanceEntry) => {
+        if (record.outTime) return null;
+        return (
+          <Tooltip title="Force Checkout">
+            <Button
+              type="link"
+              icon={<LogoutOutlined />}
+              size="small"
+              style={{ color: 'var(--hrms-warning, #faad14)' }}
+              onClick={() => {
+                setCheckoutRecord(record);
+                setCheckoutModalOpen(true);
+              }}
+            />
+          </Tooltip>
+        );
+      },
+    },
+  ], []);
 
   return (
     <div style={{ padding: '0 4px' }}>
       <PageHeader title="Attendance" subtitle="Mark and manage employee attendance" />
+
+      {listError && <Card style={{ marginBottom: 16, borderColor: '#ff4d4f' }}><span style={{ color: '#ff4d4f' }}>Failed to load attendance records. Please try again.</span></Card>}
+      {monthlyError && <Card style={{ marginBottom: 16, borderColor: '#ff4d4f' }}><span style={{ color: '#ff4d4f' }}>Failed to load monthly view. Please try again.</span></Card>}
 
       <Tabs 
         defaultActiveKey="mark" 
@@ -140,6 +238,7 @@ export function AttendancePage() {
                       value={selectedDate} 
                       onChange={(date) => setSelectedDate(date || dayjs())}
                       format="DD MMMM YYYY"
+                      disabledDate={(current) => current && current > dayjs().endOf('day')}
                     />
                   </Col>
                   <Col>
@@ -155,34 +254,66 @@ export function AttendancePage() {
             key: 'records',
             label: <span><CalendarOutlined /> Records</span>,
             children: (
-              <div className="hrms-table-card">
-                <div className="hrms-table-toolbar">
-                  <div className="hrms-table-toolbar-left">
+              <DataTable
+                columns={columns}
+                dataSource={data?.data}
+                rowKey="id"
+                loading={isLoading}
+                total={data?.meta?.total ?? 0}
+                page={page}
+                pageSize={limit}
+                onPaginationChange={(p, size) => { setPage(p); setLimit(size ?? 10); }}
+                toolbarLeft={
+                  <div style={{ display: 'flex', gap: 8 }}>
                     <DatePicker 
                       value={selectedDate} 
                       onChange={(date) => setSelectedDate(date || dayjs())}
                       style={{ width: 150 }}
+                      disabledDate={(current) => current && current > dayjs().endOf('day')}
+                    />
+                    <Select
+                      placeholder="Department"
+                      allowClear
+                      style={{ width: 150 }}
+                      value={departmentFilter || undefined}
+                      onChange={(val) => { setDepartmentFilter(val || ''); setPage(1); }}
+                      options={deptData?.data?.map((d: any) => ({ label: d.name, value: d.id })) || []}
+                    />
+                    <Button onClick={() => setIsBulkUpdateOpen(true)}>
+                      Bulk Update
+                    </Button>
+                  </div>
+                }
+                toolbarRight={
+                  <span style={{ fontSize: 13, color: 'var(--hrms-text-muted)' }}>
+                    {data?.meta?.total ?? 0} records
+                  </span>
+                }
+              />
+            ),
+          },
+          {
+            key: 'monthly',
+            label: <span><CalendarOutlined /> Monthly View</span>,
+            children: (
+              <div className="hrms-table-card">
+                <div className="hrms-table-toolbar">
+                  <div className="hrms-table-toolbar-left" style={{ display: 'flex', gap: 8 }}>
+                    <Select
+                      placeholder="Department"
+                      allowClear
+                      style={{ width: 150 }}
+                      value={departmentFilter || undefined}
+                      onChange={(val) => setDepartmentFilter(val || '')}
+                      options={deptData?.data?.map((d: any) => ({ label: d.name, value: d.id })) || []}
                     />
                   </div>
-                  <div className="hrms-table-toolbar-right">
-                    <span style={{ fontSize: 13, color: 'var(--hrms-text-muted)' }}>
-                      {data?.meta?.total ?? 0} records
-                    </span>
-                  </div>
                 </div>
-                <Table
-                  columns={columns}
-                  dataSource={data?.data}
-                  rowKey="id"
-                  loading={isLoading}
-                  pagination={{
-                    current: page,
-                    defaultPageSize: 20,
-                    pageSize: limit,
-                    total: data?.meta?.total ?? 0,
-                    onChange: (p, size) => { setPage(p); setLimit(size ?? 20); },
-                    showSizeChanger: true,
-                  }}
+                <MonthlyView
+                  selectedMonth={selectedMonth}
+                  monthlyData={monthlyData}
+                  monthlyLoading={monthlyLoading}
+                  onMonthChange={setSelectedMonth}
                 />
               </div>
             ),
@@ -194,7 +325,7 @@ export function AttendancePage() {
         title={`Mark Attendance - ${selectedDate.format('DD MMMM YYYY')}`}
         open={isModalOpen}
         onCancel={() => { setIsModalOpen(false); form.resetFields(); }}
-        width={900}
+        width={1000}
         footer={[
           <Button key="cancel" onClick={() => setIsModalOpen(false)}>Cancel</Button>,
           <Button key="save" type="primary" icon={<SaveOutlined />} onClick={handleBulkSave} loading={bulkMutation.isPending}>
@@ -203,22 +334,36 @@ export function AttendancePage() {
         ]}
       >
         <Form form={form} layout="vertical">
-          <div style={{ maxHeight: 400, overflowY: 'auto' }}>
+          <div style={{ maxHeight: 500, overflowY: 'auto' }}>
             <Table
               dataSource={employeeData?.data || []}
               rowKey="id"
               pagination={false}
               size="small"
+              scroll={{ y: 400 }}
               columns={[
                 {
                   title: 'Employee',
                   dataIndex: 'fullName',
                   key: 'fullName',
+                  width: 160,
                   render: (name: string, record: any) => (
                     <div>
                       <div style={{ fontWeight: 500 }}>{name}</div>
                       <div style={{ fontSize: 11, color: 'var(--hrms-text-muted)' }}>{record.employeeCode}</div>
                     </div>
+                  ),
+                },
+                {
+                  title: 'Shift',
+                  key: 'shift',
+                  width: 120,
+                  render: (_: unknown, record: any) => (
+                    <span style={{ fontSize: 11, color: 'var(--hrms-text-secondary)' }}>
+                      {record.shift?.startTime && record.shift?.endTime 
+                        ? `${record.shift.startTime} - ${record.shift.endTime}` 
+                        : 'No shift'}
+                    </span>
                   ),
                 },
                 {
@@ -256,12 +401,12 @@ export function AttendancePage() {
                   ),
                 },
                 {
-                  title: 'OT (hrs)',
-                  key: 'overtimeHours',
-                  width: 80,
+                  title: 'Remarks',
+                  key: 'remarks',
+                  width: 150,
                   render: (_: unknown, _record: any, index: number) => (
-                    <Form.Item name={['employees', index, 'overtimeHours']} noStyle>
-                      <Input type="number" min={0} placeholder="0" style={{ width: '100%' }} />
+                    <Form.Item name={['employees', index, 'remarks']} noStyle>
+                      <Input placeholder="Optional remarks" style={{ width: '100%' }} />
                     </Form.Item>
                   ),
                 },
@@ -269,6 +414,142 @@ export function AttendancePage() {
             />
           </div>
         </Form>
+      </Modal>
+
+      <Modal
+        title="Bulk Update Attendance"
+        open={isBulkUpdateOpen}
+        onCancel={() => { setIsBulkUpdateOpen(false); bulkForm.resetFields(); }}
+        width={1000}
+        footer={[
+          <Button key="cancel" onClick={() => setIsBulkUpdateOpen(false)}>Cancel</Button>,
+          <Button key="update" type="primary" onClick={handleBulkUpdate} loading={bulkUpdateMutation.isPending}>
+            Update Selected
+          </Button>,
+        ]}
+      >
+        <Form form={bulkForm} layout="vertical">
+          <div style={{ maxHeight: 500, overflowY: 'auto' }}>
+            <Table
+              dataSource={data?.data || []}
+              rowKey="id"
+              pagination={false}
+              size="small"
+              scroll={{ y: 400 }}
+              columns={[
+                {
+                  title: 'Employee',
+                  key: 'employee',
+                  width: 160,
+                  render: (_: unknown, record: any, index: number) => (
+                    <div>
+                      <Form.Item name={['bulkEntries', index, 'id']} initialValue={record.id} noStyle>
+                        <input type="hidden" />
+                      </Form.Item>
+                      <div style={{ fontWeight: 500 }}>{record.employee?.fullName || 'N/A'}</div>
+                      <div style={{ fontSize: 11, color: 'var(--hrms-text-muted)' }}>{record.employee?.employeeCode}</div>
+                    </div>
+                  ),
+                },
+                {
+                  title: 'Status',
+                  key: 'status',
+                  width: 140,
+                  render: (_: unknown, record: any, index: number) => (
+                    <Form.Item name={['bulkEntries', index, 'status']} initialValue={record.status} noStyle>
+                      <Select
+                        options={STATUS_OPTIONS}
+                        style={{ width: '100%' }}
+                        placeholder="Select status"
+                        allowClear
+                      />
+                    </Form.Item>
+                  ),
+                },
+                {
+                  title: 'In Time',
+                  key: 'inTime',
+                  width: 100,
+                  render: (_: unknown, record: any, index: number) => (
+                    <Form.Item name={['bulkEntries', index, 'inTime']} initialValue={record.inTime} noStyle>
+                      <Input placeholder="09:00" style={{ width: '100%' }} />
+                    </Form.Item>
+                  ),
+                },
+                {
+                  title: 'Out Time',
+                  key: 'outTime',
+                  width: 100,
+                  render: (_: unknown, record: any, index: number) => (
+                    <Form.Item name={['bulkEntries', index, 'outTime']} initialValue={record.outTime} noStyle>
+                      <Input placeholder="18:00" style={{ width: '100%' }} />
+                    </Form.Item>
+                  ),
+                },
+                {
+                  title: 'Remarks',
+                  key: 'remarks',
+                  width: 150,
+                  render: (_: unknown, record: any, index: number) => (
+                    <Form.Item name={['bulkEntries', index, 'remarks']} initialValue={record.remarks} noStyle>
+                      <Input placeholder="Optional remarks" style={{ width: '100%' }} />
+                    </Form.Item>
+                  ),
+                },
+              ]}
+            />
+          </div>
+        </Form>
+      </Modal>
+
+      <Modal
+        title="Force Checkout"
+        open={checkoutModalOpen}
+        onCancel={() => {
+          setCheckoutModalOpen(false);
+          setCheckoutRecord(null);
+          setCheckoutReason('');
+        }}
+        footer={[
+          <Button key="cancel" onClick={() => { setCheckoutModalOpen(false); setCheckoutRecord(null); setCheckoutReason(''); }}>
+            Cancel
+          </Button>,
+          <Button
+            key="checkout"
+            type="primary"
+            icon={<LogoutOutlined />}
+            danger
+            disabled={!checkoutReason.trim()}
+            loading={checkoutMutation.isPending}
+            onClick={() => {
+              if (checkoutRecord?.employee?.id) {
+                checkoutMutation.mutate({
+                  employeeId: checkoutRecord.employee.id,
+                  reason: checkoutReason.trim(),
+                });
+              }
+            }}
+          >
+            Checkout
+          </Button>,
+        ]}
+      >
+        {checkoutRecord && (
+          <div style={{ marginBottom: 16 }}>
+            <p><strong>Employee:</strong> {checkoutRecord.employee?.fullName} ({checkoutRecord.employee?.employeeCode})</p>
+            <p><strong>Date:</strong> {checkoutRecord.date}</p>
+            <p><strong>In Time:</strong> {checkoutRecord.inTime || 'N/A'}</p>
+          </div>
+        )}
+        <div>
+          <label style={{ fontWeight: 500, marginBottom: 4, display: 'block' }}>Reason *</label>
+          <Input.TextArea
+            rows={3}
+            value={checkoutReason}
+            onChange={(e) => setCheckoutReason(e.target.value)}
+            placeholder="Why are you checking out this employee manually?"
+          />
+        </div>
       </Modal>
     </div>
   );

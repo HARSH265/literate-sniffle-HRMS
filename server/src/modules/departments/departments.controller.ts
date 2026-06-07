@@ -29,4 +29,9 @@ const remove = asyncHandler(async (req: Request, res: Response) => {
   ResponseHandler.noContent(res);
 });
 
-export const departmentsController = { list, getById, create, update, remove };
+const generateNextCode = asyncHandler(async (_req: Request, res: Response) => {
+  const result = await DepartmentsService.generateNextDepartmentCode();
+  ResponseHandler.success(res, { code: result }, 'Department code generated');
+});
+
+export const departmentsController = { list, getById, create, update, remove, generateNextCode };
