@@ -257,12 +257,14 @@ export async function runComplianceCheck(runId: string): Promise<ComplianceRepor
   const gapReport: StatutoryGapRow[] = [];
   const integrityIssues: IntegrityIssue[] = [];
   const allItemChecks: ComplianceCheck[] = [];
+  const checksPerItem: ComplianceCheck[][] = [];
   let totalRawNetPay = 0;
   let totalRoundedNetPay = 0;
 
   for (const item of items) {
     const emp = item.employee as any;
     const checks = await runItemComplianceChecks(item, emp, defaults, ptSlabs, settings.payrollConfig);
+    checksPerItem.push(checks);
 
     for (const check of checks) {
       allItemChecks.push(check);
@@ -340,10 +342,9 @@ export async function runComplianceCheck(runId: string): Promise<ComplianceRepor
   });
 
   // Update individual PayrollItem compliance flags
-  let checkIdx = 0;
-  for (const item of items) {
-    const itemChecks = allItemChecks.slice(checkIdx, checkIdx + 8);
-    checkIdx += 8;
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    const itemChecks = checksPerItem[i] ?? [];
     await PayrollItem.findByIdAndUpdate(item._id, { complianceFlags: itemChecks });
   }
 

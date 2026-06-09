@@ -4,10 +4,12 @@ import mongoose from 'mongoose';
 import { ResponseHandler } from '../../core/response/ResponseHandler.js';
 import { asyncHandler } from '../../core/errors/asyncHandler.js';
 import { AppError } from '../../core/errors/AppError.js';
+import { AuditService } from '../../core/audit/AuditService.js';
 import { PaginationMeta } from '../../core/utils/PaginationUtil.js';
 import { ExcelGeneratorService } from '../../core/excel/ExcelGeneratorService.js';
 import { FileUploadService } from '../../core/file/FileUploadService.js';
 import Employee from '../../models/Employee.model.js';
+import CompanySettings from '../../models/CompanySettings.model.js';
 import Department from '../../models/Department.model.js';
 import Designation from '../../models/Designation.model.js';
 import Shift from '../../models/Shift.model.js';
@@ -51,7 +53,22 @@ const uploadDocument = asyncHandler(async (req: Request, res: Response) => {
     return;
   }
 
-  const filePath = await FileUploadService.uploadFromBuffer(req.file.buffer, `employees/${id}/documents`);
+  // Server‑side validation for employee document uploads
+    const settings = await CompanySettings.findOne().lean();
+    const docConfig = (settings as any)?.documentConfig || {
+      documentRepoEnabled: true,
+      maxFileSizeMb: 20,
+      allowedFileTypes: ['pdf', 'doc', 'docx', 'xlsx', 'jpg', 'png'],
+    };
+    const maxSizeBytes = docConfig.maxFileSizeMb * 1024 * 1024;
+    if (req.file.size > maxSizeBytes) {
+      throw new AppError(`File size exceeds maximum of ${docConfig.maxFileSizeMb}MB`, 400);
+    }
+    const ext = req.file.originalname.split('.').pop()?.toLowerCase();
+    if (!ext || !docConfig.allowedFileTypes.includes(ext)) {
+      throw new AppError(`File type not allowed. Allowed: ${docConfig.allowedFileTypes.join(', ')}`, 400);
+    }
+    const filePath = await FileUploadService.uploadFromBuffer(req.file.buffer, `employees/${id}/documents`);
 
   const newDoc = {
     type: documentType || 'other',
@@ -65,6 +82,17 @@ const uploadDocument = asyncHandler(async (req: Request, res: Response) => {
   }
   employee.documents.push(newDoc as any);
   await employee.save();
+
+  // Audit log for document upload
+  const uploadedDoc = employee.documents[employee.documents.length - 1];
+  await AuditService.log({
+    action: 'upload-document',
+    module: 'employees',
+    userId: req.user!.id,
+    targetId: employee._id.toString(),
+    targetName: uploadedDoc.type,
+    details: { documentId: uploadedDoc._id?.toString(), fileName: uploadedDoc.fileName },
+  });
 
   ResponseHandler.success(res, employee.documents, 'Document uploaded successfully');
 });
@@ -84,6 +112,15 @@ const uploadPhoto = asyncHandler(async (req: Request, res: Response) => {
   const filePath = await FileUploadService.uploadFromBuffer(req.file.buffer, `employees/${id}/photo`);
 
   const result = await EmployeesService.updatePhoto(id, filePath, req.user!.id);
+  // Audit log for employee photo upload
+  await AuditService.log({
+    action: 'upload-photo',
+    module: 'employees',
+    userId: req.user!.id,
+    targetId: id,
+    targetName: 'employee-photo',
+    details: { filePath },
+  });
   ResponseHandler.success(res, result, 'Employee photo uploaded successfully');
 });
 
@@ -108,6 +145,16 @@ const removeDocument = asyncHandler(async (req: Request, res: Response) => {
 
   employee.documents = (employee.documents || []).filter((doc: any) => doc._id?.toString() !== docId);
   await employee.save();
+
+  // Audit log for document deletion
+  await AuditService.log({
+    action: 'delete-document',
+    module: 'employees',
+    userId: req.user!.id,
+    targetId: employee._id.toString(),
+    targetName: 'employee-document',
+    details: { documentId: docId },
+  });
 
   ResponseHandler.success(res, employee.documents, 'Document deleted successfully');
 });

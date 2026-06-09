@@ -15,6 +15,16 @@ function optionalEnv(name: string, fallback: string): string {
 }
 
 export const env = {
+  // Validate critical env vars
+  // Ensure RATE_LIMIT_ENABLED is a boolean (defaults to true when not false)
+  // This check will throw early if mis‑configured
+  get RATE_LIMIT_ENABLED() {
+    const val = process.env.RATE_LIMIT_ENABLED;
+    if (val !== undefined && val !== 'true' && val !== 'false') {
+      throw new Error('Invalid RATE_LIMIT_ENABLED value. Expected "true" or "false".');
+    }
+    return val !== 'false';
+  },
   NODE_ENV: optionalEnv('NODE_ENV', 'development'),
   PORT: parseInt(process.env.PORT || '5000', 10),
   CLIENT_URL: optionalEnv('CLIENT_URL', 'http://localhost:5173'),
@@ -48,7 +58,7 @@ export const env = {
   CACHE_CHECK_PERIOD: parseInt(process.env.CACHE_CHECK_PERIOD || '600', 10),
 
   ENCRYPTION_KEY: requireEnv('ENCRYPTION_KEY', process.env.NODE_ENV === 'production' ? undefined : 'dev-encryption-key-not-for-production-123456'),
-  RATE_LIMIT_ENABLED: process.env.RATE_LIMIT_ENABLED !== 'false',
+
 };
 
 const requiredInProduction = ['MONGODB_URI', 'JWT_SECRET', 'JWT_REFRESH_SECRET', 'ENCRYPTION_KEY'];

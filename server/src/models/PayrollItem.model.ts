@@ -139,6 +139,7 @@ export interface IPayrollItem extends Document {
   totalDays: number;
   presentDays: number;
   absentDays: number;
+  latePresentDays: number;
   halfDays: number;
   paidLeaveDays: number;
   unpaidLeaveDays: number;
@@ -345,6 +346,7 @@ const PayrollItemSchema = new Schema<IPayrollItem>(
     totalDays: { type: Number, required: true },
     presentDays: { type: Number, required: true },
     absentDays: { type: Number, required: true },
+    latePresentDays: { type: Number, default: 0 },
     halfDays: { type: Number, required: true },
     paidLeaveDays: { type: Number, default: 0 },
     unpaidLeaveDays: { type: Number, default: 0 },

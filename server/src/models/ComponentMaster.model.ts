@@ -80,7 +80,7 @@ const ComponentMasterSchema = new Schema<IComponentMaster>(
   { timestamps: true },
 );
 
-ComponentMasterSchema.index({ code: 1 }, { unique: true });
+
 ComponentMasterSchema.index({ type: 1, isActive: 1 });
 ComponentMasterSchema.index({ isActive: 1 });
 

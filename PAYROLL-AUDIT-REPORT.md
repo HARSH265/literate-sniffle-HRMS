@@ -3,7 +3,7 @@
 **Date:** June 7, 2026
 **Scope:** Full payroll module audit — client & server
 **Total Issues Found:** 79
-**Issues Fixed in This Session:** 11
+**Issues Fixed in This Session:** 12
 
 ---
 
@@ -94,15 +94,17 @@ Each employee triggers 10+ DB queries (attendance, overtime, leave, salary struc
 
 These `updateMany` calls are outside any session and cannot be rolled back if a subsequent operation fails.
 
-#### S12. Compliance flag assignment uses hardcoded 8 checks per item
+#### S12. Compliance flag assignment uses hardcoded 8 checks per item ✅ FIXED
 **File:** `server/src/modules/compliance/compliance.service.ts:342-348`
 
 Slicing assumes exactly 8 checks per item. If a different number of checks is produced, compliance flags will be misaligned between items.
 
-#### S13. Loan repayment creates in loop without transaction
+#### S13. Loan repayment creates in loop without transaction ✅ FIXED
 **File:** `server/src/modules/loans/loans.service.ts:105-129`
 
 Creates a `Loan` document, then creates `LoanRepayment` documents one at a time in a `for` loop. Failure mid-loop leaves partial repayment schedules.
+
+**Fix Applied:** Wrapped loan and repayment creation in a Mongoose transaction using a session to guarantee atomicity.
 
 #### S14. `req.user!._id` vs `req.user!.id` mismatch in payroll-reports ✅ FIXED
 **File:** `server/src/modules/payroll-reports/payroll-reports.controller.ts:16,27,38,49`
@@ -144,7 +146,7 @@ Only `loanRepayments[0]._id` is stored. Multiple repayments are deducted but onl
 
 Unlike `runPayroll()` which wraps each employee in `.catch()`, `previewRun` fails entirely if one employee's calculation errors.
 
-#### S21. `CompanySettings.findOne()` inside per-employee loop
+#### S21. `CompanySettings.findOne()` inside per-employee loop ✅ FIXED
 **File:** `server/src/modules/payroll/payroll.service.ts:899`
 
 Singleton document fetched once per employee instead of once before the loop. Redundant DB queries.

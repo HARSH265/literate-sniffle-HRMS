@@ -33,36 +33,56 @@ export function PayrollDetailsPage() {
 
   const { data: runData, isLoading } = useQuery({
     queryKey: ['payroll-run-details', id],
-    queryFn: () => payrollService.getRunDetails(id!),
+    queryFn: () => {
+      if (!id) throw new Error('Run ID is missing');
+      return payrollService.getRunDetails(id);
+    },
     enabled: !!id,
   });
 
+  const runId = id ?? '';
+
   const submitMutation = useMutation({
-    mutationFn: () => payrollService.submitRun(id!),
+    mutationFn: () => {
+      if (!runId) throw new Error('Run ID is missing');
+      return payrollService.submitRun(runId);
+    },
     onSuccess: () => { message.success('Payroll submitted'); queryClient.invalidateQueries({ queryKey: ['payroll-run-details', id] }); queryClient.invalidateQueries({ queryKey: ['payroll-runs'] }); },
     onError: (err: any) => message.error(err?.response?.data?.message || 'Failed to submit'),
   });
 
   const approveMutation = useMutation({
-    mutationFn: () => payrollService.approveRun(id!),
+    mutationFn: () => {
+      if (!runId) throw new Error('Run ID is missing');
+      return payrollService.approveRun(runId);
+    },
     onSuccess: () => { message.success('Payroll approved'); queryClient.invalidateQueries({ queryKey: ['payroll-run-details', id] }); queryClient.invalidateQueries({ queryKey: ['payroll-runs'] }); },
     onError: (err: any) => message.error(err?.response?.data?.message || 'Failed to approve'),
   });
 
   const rejectMutation = useMutation({
-    mutationFn: () => payrollService.rejectRun(id!),
+    mutationFn: () => {
+      if (!runId) throw new Error('Run ID is missing');
+      return payrollService.rejectRun(runId);
+    },
     onSuccess: () => { message.success('Payroll rejected'); queryClient.invalidateQueries({ queryKey: ['payroll-run-details', id] }); queryClient.invalidateQueries({ queryKey: ['payroll-runs'] }); },
     onError: (err: any) => message.error(err?.response?.data?.message || 'Failed to reject'),
   });
 
   const finalizeMutation = useMutation({
-    mutationFn: (remarks?: string) => payrollService.finalizeRun(id!, remarks),
+    mutationFn: (remarks?: string) => {
+      if (!runId) throw new Error('Run ID is missing');
+      return payrollService.finalizeRun(runId, remarks);
+    },
     onSuccess: () => { message.success('Payroll finalized'); queryClient.invalidateQueries({ queryKey: ['payroll-run-details', id] }); queryClient.invalidateQueries({ queryKey: ['payroll-runs'] }); },
     onError: (err: any) => message.error(err?.response?.data?.message || 'Failed to finalize'),
   });
 
   const unfinalizeMutation = useMutation({
-    mutationFn: (reason: string) => payrollService.unfinalizeRun(id!, reason),
+    mutationFn: (reason: string) => {
+      if (!runId) throw new Error('Run ID is missing');
+      return payrollService.unfinalizeRun(runId, reason);
+    },
     onSuccess: () => {
       message.success('Payroll unfinalized');
       setIsUnfinalizeModalOpen(false);
@@ -74,13 +94,16 @@ export function PayrollDetailsPage() {
   });
 
   const updateItemMutation = useMutation({
-    mutationFn: ({ runId, itemId, payload }: { runId: string; itemId: string; payload: any }) => payrollService.updatePayrollItem(runId, itemId, payload),
+    mutationFn: ({ runId: mutationRunId, itemId, payload }: { runId: string; itemId: string; payload: any }) => payrollService.updatePayrollItem(mutationRunId, itemId, payload),
     onSuccess: () => { message.success('Payroll item updated'); setIsEditModalOpen(false); setEditingItem(null); editForm.resetFields(); queryClient.invalidateQueries({ queryKey: ['payroll-run-details', id] }); },
     onError: (err: any) => message.error(err?.response?.data?.message || 'Failed to update'),
   });
 
   const batchMutation = useMutation({
-    mutationFn: (items: Array<{ itemId: string; data: Record<string, unknown> }>) => payrollService.batchUpdateItems(id!, items),
+    mutationFn: (items: Array<{ itemId: string; data: Record<string, unknown> }>) => {
+      if (!runId) throw new Error('Run ID is missing');
+      return payrollService.batchUpdateItems(runId, items);
+    },
     onSuccess: (res) => { message.success(`${res.data.updated} items updated`); setBatchEditMode(false); setBatchChanges({}); queryClient.invalidateQueries({ queryKey: ['payroll-run-details', id] }); },
     onError: (err: any) => message.error(err?.response?.data?.message || 'Failed to batch update'),
   });
@@ -92,7 +115,7 @@ export function PayrollDetailsPage() {
   };
 
   const handleSaveEdit = () => {
-    if (!id || !editingItem) return;
+    if (!runId || !editingItem) return;
     editForm.validateFields().then((values) => {
       const basic = Number(values.basicEarnings);
       const net = Number(values.netPay);
@@ -101,7 +124,7 @@ export function PayrollDetailsPage() {
       if (net < basic) {
         message.warning('Net Pay is less than Basic Earnings. Please verify.');
       }
-      updateItemMutation.mutate({ runId: id, itemId: editingItem.id, payload: values });
+      updateItemMutation.mutate({ runId, itemId: editingItem.id, payload: values });
     });
   };
 
@@ -143,8 +166,8 @@ export function PayrollDetailsPage() {
 
   const handleDownloadSlip = async (employeeId: string) => {
     try {
-      if (!runData?.data) return;
-      const response = await apiClient.get(`/salary-slips/${id}/pdf`, {
+      if (!runData?.data || !runId) return;
+      const response = await apiClient.get(`/salary-slips/${runId}/pdf`, {
         params: { employeeId },
         responseType: 'blob',
       });

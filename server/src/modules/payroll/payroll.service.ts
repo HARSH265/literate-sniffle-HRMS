@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 import PayrollItem, { IPayrollItem } from '../../models/PayrollItem.model.js';
 import Employee from '../../models/Employee.model.js';
 import type { LeanEmployee } from '../../types/domain.js';
-import { calculateStatutoryForEmployee } from '../statutory/statutory.service.js';
+import { calculateStatutoryForEmployee, getStatutoryDefaults } from '../statutory/statutory.service.js';
 import AttendanceEntry from '../../models/AttendanceEntry.model.js';
 import OvertimeEntry from '../../models/OvertimeEntry.model.js';
 import OvertimeRule from '../../models/OvertimeRule.model.js';
@@ -20,6 +20,7 @@ import { PaginationUtil, PaginationMeta } from '../../core/utils/PaginationUtil.
 import { NotificationService } from '../../core/notification/NotificationService.js';
 import dayjs from 'dayjs';
 import { computeTax, TaxInput, TaxResult } from '../tax/tax.service.js';
+import { PAYROLL } from '../../config/constants.js';
 import { runComplianceCheck } from '../compliance/compliance.service.js';
 
 type PayrollConfig = {
@@ -69,6 +70,7 @@ interface PayrollCalcResult {
   totalDays: number;
   presentDays: number;
   absentDays: number;
+  latePresentDays: number;
   halfDays: number;
   paidLeaveDays: number;
   unpaidLeaveDays: number;
@@ -202,6 +204,9 @@ function applyOvertimeRules(hours: number, rule: LeanOvertimeRule | null): numbe
   let allowedHours = hours;
   if (rule.maxHoursPerDay && allowedHours > rule.maxHoursPerDay) {
     allowedHours = rule.maxHoursPerDay;
+  }
+  if (rule.maxHoursPerMonth && allowedHours > rule.maxHoursPerMonth) {
+    allowedHours = rule.maxHoursPerMonth;
   }
   return allowedHours;
 }
@@ -527,21 +532,22 @@ async function calculatePayrollForEmployee(
   emp: LeanEmployee, _month: number, _year: number, config: PayrollConfig, allowances: AllowanceConfig[], deductions: DeductionConfig[],
   startDate: Date, endDate: Date, totalDays: number, _workingDays: number, standardHours: number,
   minimumWageThreshold: number,
+  preFetched?: { attendanceMap: Map<string, any[]>; overtimeMap: Map<string, any[]>; leaveMap: Map<string, any[]>; statutoryDefaults: any; }
 ): Promise<PayrollCalcResult> {
   const category = emp.category || 'worker';
   const employmentType = emp.employmentType || 'permanent';
 
-  const attendances = await AttendanceEntry.find({
+  const attendances = preFetched?.attendanceMap?.get(String(emp._id)) ?? await AttendanceEntry.find({
     employee: emp._id,
     date: { $gte: startDate, $lte: endDate },
   }).lean();
 
-  const overtimes = await OvertimeEntry.find({
+  const overtimes = preFetched?.overtimeMap?.get(String(emp._id)) ?? await OvertimeEntry.find({
     employee: emp._id,
     date: { $gte: startDate, $lte: endDate },
   }).lean();
 
-  const leaveApplications = await LeaveApplication.find({
+  const leaveApplications = preFetched?.leaveMap?.get(String(emp._id)) ?? await LeaveApplication.find({
     employee: emp._id,
     status: 'approved',
     startDate: { $lte: endDate },
@@ -565,11 +571,13 @@ async function calculatePayrollForEmployee(
     }
   }
 
+  let latePresentDays = 0;
   for (const att of attendances) {
     switch (att.status) {
       case 'present': {
         if (att.isLatePresent) {
-          absentDays++;
+          latePresentDays++;
+          presentDays++;
         } else {
           presentDays++;
         }
@@ -687,7 +695,7 @@ async function calculatePayrollForEmployee(
   const halfDayDeduction = halfDays > 0
     ? Math.round((isMonthly ? baseSalary / payableDaysBase : dailyWage) * (config.halfDayDeductionPercent || 50) / 100 * halfDays)
     : 0;
-  const lateDeduction = absentDays > 0 ? (config.lateDeductionPerDay || 0) * absentDays : 0;
+  const lateDeduction = latePresentDays > 0 ? (config.lateDeductionPerDay || 0) * latePresentDays : 0;
 
   // LOP calculation using lopCalcMethod (2A) - handles multiple unpaid leave types
   const lopCalcMethod = config.lopCalcMethod || '30';
@@ -768,7 +776,61 @@ async function calculatePayrollForEmployee(
   let employerContributions: { name: string; calculatedValue: number }[] = [];
   const complianceFlags: PayrollCalcResult['complianceFlags'] = [];
   try {
-    const statutory = await calculateStatutoryForEmployee(String(emp._id), grossEarnings, monthStr);
+    let statutory;
+    if (preFetched?.statutoryDefaults) {
+      const defaults = preFetched.statutoryDefaults;
+      const pfApplicableWages = Math.min(grossEarnings, defaults.pfWageCeiling);
+      const stat: any = {
+        employeePf: 0,
+        employerPf: 0,
+        eps: 0,
+        edli: 0,
+        pfAdminCharges: 0,
+        edliAdminCharges: 0,
+        esiEmployee: 0,
+        esiEmployer: 0,
+        professionalTax: 0,
+        pfApplicableWages,
+        esiApplicable: false,
+      };
+      if (defaults.pfEnabled && !(emp as any).pfExempted && pfApplicableWages > 0) {
+        stat.employeePf = Math.round(pfApplicableWages * (defaults.pfEmployeeRate / 100));
+        const epsAmount = Math.round(Math.min(pfApplicableWages, defaults.pfWageCeiling) * (defaults.epsRate / 100));
+        stat.eps = epsAmount;
+        stat.employerPf = Math.round(pfApplicableWages * (defaults.pfEmployerRate / 100)) - epsAmount;
+        stat.edli = Math.round(pfApplicableWages * (defaults.edliRate / 100));
+        stat.pfAdminCharges = Math.round(pfApplicableWages * (defaults.pfAdminCharges / 100));
+        stat.edliAdminCharges = Math.round(pfApplicableWages * (defaults.edliAdminCharges / 100));
+      }
+      const esiApplicable = defaults.esiEnabled && !(emp as any).esiExempted && grossEarnings <= defaults.esiThreshold;
+      stat.esiApplicable = esiApplicable;
+      if (esiApplicable) {
+        stat.esiEmployee = Math.round(grossEarnings * (defaults.esiEmployeeRate / 100));
+        stat.esiEmployer = Math.round(grossEarnings * (defaults.esiEmployerRate / 100));
+      }
+      if (defaults.ptEnabled && !(emp as any).ptExempted) {
+        const state = (emp as any).ptState || 'Karnataka';
+        const stateSlabs = defaults.ptSlabs.find((s:any) => s.state === state);
+        if (stateSlabs) {
+          const slab = stateSlabs.slabs.find((s:any) => grossEarnings >= s.minSalary && grossEarnings <= s.maxSalary);
+          if (slab) {
+            if (slab.frequency === 'monthly') {
+              stat.professionalTax = slab.amount;
+            } else if (slab.frequency === 'half-yearly') {
+              const monthIdx = parseInt(monthStr.split('-')[1], 10);
+              const halfYearStartMonths = [3, 9];
+              stat.professionalTax = halfYearStartMonths.includes(monthIdx) ? slab.amount : 0;
+            } else if (slab.frequency === 'yearly') {
+              const monthIdx = parseInt(monthStr.split('-')[1], 10);
+              stat.professionalTax = monthIdx === 3 ? slab.amount : 0;
+            }
+          }
+        }
+      }
+      statutory = stat;
+    } else {
+      statutory = await calculateStatutoryForEmployee(String(emp._id), grossEarnings, monthStr);
+    }
     if (statutory.employeePf > 0) {
       appliedDeductions.push({ name: 'PF', type: 'percentage', value: 0, calculatedValue: statutory.employeePf });
       totalDeductionsValue += statutory.employeePf;
@@ -961,7 +1023,7 @@ async function calculatePayrollForEmployee(
   }
 
   return {
-    totalDays, presentDays, absentDays, halfDays, paidLeaveDays, unpaidLeaveDays,
+    totalDays, presentDays, absentDays, latePresentDays, halfDays, paidLeaveDays, unpaidLeaveDays,
     weeklyOffs: paidWeeklyOffs, holidays: paidHolidaysCount,
     effectiveWorkingDays: Math.round(effectiveWorkingDays * 100) / 100,
     overtimeHours: totalOvertimeHours, overtimeHoursAllowed: allowedOvertimeHours,
@@ -1077,19 +1139,49 @@ export class PayrollService {
       const standardHours = config.standardHoursPerDay || 8;
       
       const employees = await Employee.find({ status: 'active' }).lean().session(session);
+      const employeeIds = employees.map(e => e._id);
+      const [attendanceBulk, overtimeBulk, leaveAppBulk] = await Promise.all([
+        AttendanceEntry.find({ employee: { $in: employeeIds }, date: { $gte: startDate, $lte: endDate } }).lean(),
+        OvertimeEntry.find({ employee: { $in: employeeIds }, date: { $gte: startDate, $lte: endDate } }).lean(),
+        LeaveApplication.find({ employee: { $in: employeeIds }, status: 'approved', startDate: { $lte: endDate }, endDate: { $gte: startDate } })
+          .populate('leaveType', 'isPaid deductionMethod name')
+          .lean(),
+      ]);
+      const attendanceMap = new Map<string, any[]>();
+      for (const att of attendanceBulk) {
+        const key = String(att.employee);
+        const arr = attendanceMap.get(key) ?? [];
+        arr.push(att);
+        attendanceMap.set(key, arr);
+      }
+      const overtimeMap = new Map<string, any[]>();
+      for (const ot of overtimeBulk) {
+        const key = String(ot.employee);
+        const arr = overtimeMap.get(key) ?? [];
+        arr.push(ot);
+        overtimeMap.set(key, arr);
+      }
+      const leaveMap = new Map<string, any[]>();
+      for (const la of leaveAppBulk) {
+        const key = String(la.employee);
+        const arr = leaveMap.get(key) ?? [];
+        arr.push(la);
+        leaveMap.set(key, arr);
+      }
+      const statutoryDefaults = await getStatutoryDefaults();
       
-      const minimumWageThreshold = settings?.payrollConfig?.minimumWage || 10000;
+const minimumWageThreshold = settings?.payrollConfig?.minimumWage || PAYROLL.MINIMUM_WAGE_DEFAULT;
       
       let totalNetPay = 0, totalGrossPay = 0, totalDeductions = 0;
       const payrollItems = [];
       
       // Process in batches of 50 for large payrolls (2G)
-      const BATCH_SIZE = 50;
+const BATCH_SIZE = PAYROLL.BATCH_SIZE;
       for (let i = 0; i < employees.length; i += BATCH_SIZE) {
         const batch = employees.slice(i, i + BATCH_SIZE);
         const batchResults = await Promise.all(
           batch.map(emp =>
-            calculatePayrollForEmployee(emp, month, year, config, allowances, deductions, startDate, endDate, totalDays, totalDays, standardHours, minimumWageThreshold)
+            calculatePayrollForEmployee(emp, month, year, config, allowances, deductions, startDate, endDate, totalDays, totalDays, standardHours, minimumWageThreshold, { attendanceMap, overtimeMap, leaveMap, statutoryDefaults })
               .catch(err => {
                 throw new AppError(
                   `Payroll calculation failed for ${emp.employeeCode || emp.fullName || emp._id}: ${err instanceof Error ? err.message : 'Unknown error'}`,
@@ -1131,6 +1223,7 @@ export class PayrollService {
         totalDays: item.totalDays,
         presentDays: item.presentDays,
         absentDays: item.absentDays,
+        latePresentDays: item.latePresentDays,
         halfDays: item.halfDays,
         paidLeaveDays: item.paidLeaveDays,
         unpaidLeaveDays: item.unpaidLeaveDays,
@@ -1226,12 +1319,12 @@ export class PayrollService {
 
     const employees = await Employee.find({ status: 'active' }).lean();
 
-    const minimumWageThreshold = settings?.payrollConfig?.minimumWage || 10000;
+    const minimumWageThreshold = settings?.payrollConfig?.minimumWage || PAYROLL.MINIMUM_WAGE_DEFAULT;
 
     let totalNetPay = 0, totalGrossPay = 0, totalDeductions = 0;
     const payrollItems = [];
 
-    const BATCH_SIZE = 50;
+    const BATCH_SIZE = PAYROLL.BATCH_SIZE;
     for (let i = 0; i < employees.length; i += BATCH_SIZE) {
       const batch = employees.slice(i, i + BATCH_SIZE);
       const batchResults = await Promise.all(
@@ -1567,7 +1660,7 @@ export class PayrollService {
     const employees = await Employee.find({ _id: { $in: employeeIds }, status: 'active' }).lean();
     if (employees.length === 0) throw new AppError('No active employees found for the given IDs', 404);
 
-    const minimumWageThreshold = settings?.payrollConfig?.minimumWage || 10000;
+    const minimumWageThreshold = settings?.payrollConfig?.minimumWage || PAYROLL.MINIMUM_WAGE_DEFAULT;
 
     const payrollItemDocs = [];
     let totalNetPay = 0, totalGrossPay = 0, totalDeductions = 0;
@@ -1680,7 +1773,10 @@ export class PayrollService {
         employee: {
           id: String(emp._id),
           name: emp.fullName,
-          code: emp.employeeCode,
+          code: (function(){
+            const val = String(emp.employeeCode);
+            return val.length > 4 ? '*'.repeat(val.length - 4) + val.slice(-4) : '****';
+          })(),
         },
         totalDays: item.totalDays,
         presentDays: item.presentDays,
@@ -1893,11 +1989,14 @@ export class PayrollService {
       return {
         id: String(item._id),
         month: item.month,
-          employee: item.employee ? {
-            id: String((item.employee as any)._id),
-            name: (item.employee as any).fullName,
-            code: (item.employee as any).employeeCode,
-          } : undefined,
+employee: item.employee ? {
+          id: String((item.employee as any)._id),
+          name: (item.employee as any).fullName,
+          code: (function(){
+            const val = String((item.employee as any).employeeCode);
+            return val.length > 4 ? '*'.repeat(val.length - 4) + val.slice(-4) : '****';
+          })(),
+        } : undefined,
         payrollRun: pr ? {
           id: String(pr._id),
           month: pr.month,

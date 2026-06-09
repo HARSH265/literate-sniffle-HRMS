@@ -4,6 +4,7 @@ import LoanRepayment from '../../models/LoanRepayment.model.js';
 import Employee from '../../models/Employee.model.js';
 import { AppError } from '../../core/errors/AppError.js';
 import { AuditService } from '../../core/audit/AuditService.js';
+import mongoose from 'mongoose';
 
 function calculateEMI(principal: number, annualRate: number, tenureMonths: number): {
   emi: number;
@@ -89,48 +90,64 @@ export class LoansService {
 
     const { emi, totalInterest, totalPayable } = calculateEMI(amt, loanType.interestRate, Number(tenure));
 
-    const loan = await Loan.create({
-      employee: employee._id,
-      loanType: loanType._id,
-      amount: amt,
-      interestRate: loanType.interestRate,
-      tenure: Number(tenure),
-      emiAmount: emi,
-      totalPayable,
-      totalInterest,
-      purpose,
-      createdBy: userId,
-    });
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
+      const loanDocs = await Loan.create([
+        {
+          employee: employee._id,
+          loanType: loanType._id,
+          amount: amt,
+          interestRate: loanType.interestRate,
+          tenure: Number(tenure),
+          emiAmount: emi,
+          totalPayable,
+          totalInterest,
+          purpose,
+          createdBy: userId,
+        }
+      ], { session });
+      const loan = loanDocs[0];
 
-    const repayments = [];
-    let outstanding = totalPayable;
-    for (let i = 0; i < Number(tenure); i++) {
-      const d = new Date();
-      d.setMonth(d.getMonth() + i + 1);
-      const monthStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const repayments: { month: string; amount: number }[] = [];
+      let outstanding = totalPayable;
+      for (let i = 0; i < Number(tenure); i++) {
+        const d = new Date();
+        d.setMonth(d.getMonth() + i + 1);
+        const monthStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 
-      const interestPart = outstanding * (loanType.interestRate / 100 / 12);
-      const principalPart = emi - interestPart;
-      outstanding -= principalPart;
-      if (outstanding < 0) outstanding = 0;
+        const interestPart = outstanding * (loanType.interestRate / 100 / 12);
+        const principalPart = emi - interestPart;
+        outstanding -= principalPart;
+        if (outstanding < 0) outstanding = 0;
 
-      await LoanRepayment.create({
-        loan: loan._id,
-        employee: employee._id,
-        month: monthStr,
-        amount: emi,
-        principal: Math.round(principalPart * 100) / 100,
-        interest: Math.round(interestPart * 100) / 100,
-        outstandingBefore: Math.round((outstanding + principalPart) * 100) / 100,
-        outstandingAfter: Math.round(outstanding * 100) / 100,
-        status: 'pending',
-      });
-      repayments.push({ month: monthStr, amount: emi });
+        await LoanRepayment.create([
+          {
+            loan: loan._id,
+            employee: employee._id,
+            month: monthStr,
+            amount: emi,
+            principal: Math.round(principalPart * 100) / 100,
+            interest: Math.round(interestPart * 100) / 100,
+            outstandingBefore: Math.round((outstanding + principalPart) * 100) / 100,
+            outstandingAfter: Math.round(outstanding * 100) / 100,
+            status: 'pending',
+          }
+        ], { session });
+        repayments.push({ month: monthStr, amount: emi });
+      }
+
+      await AuditService.log({ action: 'create', module: 'loans', userId, targetId: loan._id.toString(), details: { employee: employee.employeeCode, amount: amt, loanType: loanType.code } });
+
+      await session.commitTransaction();
+      session.endSession();
+
+      return { loan: { ...loan.toObject(), id: loan._id.toString() }, repayments: repayments.slice(0, 12) };
+    } catch (err) {
+      await session.abortTransaction();
+      session.endSession();
+      throw err;
     }
-
-    await AuditService.log({ action: 'create', module: 'loans', userId, targetId: loan._id.toString(), details: { employee: employee.employeeCode, amount: amt, loanType: loanType.code } });
-
-    return { loan: { ...loan.toObject(), id: loan._id.toString() }, repayments: repayments.slice(0, 12) };
   }
 
   static async approveLoan(id: string, data: Record<string, unknown>, userId: string, level = 1): Promise<any> {

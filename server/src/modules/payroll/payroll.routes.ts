@@ -43,7 +43,7 @@ router.use(payrollRateLimit);
 
 router.get('/runs', authorize('process-payroll'), validate(listRunsSchema, 'query'), payrollController.listRuns);
 router.get('/runs/employee/:employeeId', authorize('process-payroll'), authorizeOwnership({ model: Employee, ownerField: '_id' }), validate(payrollEmployeeParamSchema, 'params'), payrollController.getByEmployee);
-router.post('/run', authorize('process-payroll'), runPayrollRateLimit, validate(runPayrollSchema), payrollController.runPayroll);
+router.post('/run', authorize('process-payroll'), runPayrollRateLimit, mutatingRateLimit, validate(runPayrollSchema), payrollController.runPayroll);
 
 router.post('/preview', authorize('process-payroll'), runPayrollRateLimit, validate(runPayrollSchema), payrollController.previewRun);
 router.get('/run/:id', authorize('process-payroll'), validate(payrollIdParamSchema, 'params'), payrollController.getRunDetails);
