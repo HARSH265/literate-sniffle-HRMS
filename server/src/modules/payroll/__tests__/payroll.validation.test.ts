@@ -7,6 +7,7 @@ import {
   finalizeRunSchema,
   unfinalizeRunSchema,
   payrollIdParamSchema,
+  supplementaryPayrollSchema,
 } from '../payroll.validation.js';
 
 describe('payroll validation schemas', () => {
@@ -124,6 +125,77 @@ describe('payroll validation schemas', () => {
 
     it('rejects invalid id format', () => {
       const result = payrollIdParamSchema.safeParse({ id: '123' });
+      expect(result.success).toBe(false);
+    });
+  });
+
+  describe('supplementaryPayrollSchema', () => {
+    it('accepts valid supplementary payroll request', () => {
+      const result = supplementaryPayrollSchema.safeParse({
+        month: 5,
+        year: 2026,
+        employeeIds: ['507f1f77bcf86cd799439011'],
+        reason: 'Late joiner',
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('accepts multiple employee IDs', () => {
+      const result = supplementaryPayrollSchema.safeParse({
+        month: 5,
+        year: 2026,
+        employeeIds: ['507f1f77bcf86cd799439011', '507f1f77bcf86cd799439012'],
+        reason: 'Correction',
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('rejects empty employeeIds array', () => {
+      const result = supplementaryPayrollSchema.safeParse({
+        month: 5,
+        year: 2026,
+        employeeIds: [],
+        reason: 'Test',
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects missing reason', () => {
+      const result = supplementaryPayrollSchema.safeParse({
+        month: 5,
+        year: 2026,
+        employeeIds: ['507f1f77bcf86cd799439011'],
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects empty reason', () => {
+      const result = supplementaryPayrollSchema.safeParse({
+        month: 5,
+        year: 2026,
+        employeeIds: ['507f1f77bcf86cd799439011'],
+        reason: '   ',
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects invalid month', () => {
+      const result = supplementaryPayrollSchema.safeParse({
+        month: 13,
+        year: 2026,
+        employeeIds: ['507f1f77bcf86cd799439011'],
+        reason: 'Test',
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects invalid employee ObjectId', () => {
+      const result = supplementaryPayrollSchema.safeParse({
+        month: 5,
+        year: 2026,
+        employeeIds: ['invalid-id'],
+        reason: 'Test',
+      });
       expect(result.success).toBe(false);
     });
   });

@@ -112,13 +112,20 @@ const primaryAmount = item.primaryBankAmount ?? Math.round(netAmount * (splitPer
   }
 }
 
+function sanitizeForCsv(value: string): string {
+  if (!value) return '';
+  const dangerous = /^[=+\-@\t\r]/;
+  const sanitized = dangerous.test(value) ? `'${value}` : value;
+  return sanitized.replace(/"/g, '""');
+}
+
 function formatBankContent(rows: BankFileRow[], format: string): string {
   const lines: string[] = [];
 
   if (format === 'nach') {
     lines.push('Employee Name,Account Number,IFSC Code,Amount');
     for (const row of rows) {
-      lines.push(`"${row.employeeName}",${row.accountNumber},${row.ifscCode},${row.netAmount.toFixed(2)}`);
+      lines.push(`"${sanitizeForCsv(row.employeeName)}",${row.accountNumber},${row.ifscCode},${row.netAmount.toFixed(2)}`);
     }
     // Control total
     const total = rows.reduce((s, r) => s + r.netAmount, 0);
@@ -133,7 +140,7 @@ function formatBankContent(rows: BankFileRow[], format: string): string {
     lines.push('---'.repeat(20));
     rows.forEach((row, i) => {
       lines.push(
-        `${i + 1} | ${row.employeeName} | ${row.accountNumber} | ${row.ifscCode} | ${row.bankName} | ${row.netAmount.toFixed(2)}`,
+        `${i + 1} | ${sanitizeForCsv(row.employeeName)} | ${row.accountNumber} | ${row.ifscCode} | ${row.bankName} | ${row.netAmount.toFixed(2)}`,
       );
     });
     lines.push('');

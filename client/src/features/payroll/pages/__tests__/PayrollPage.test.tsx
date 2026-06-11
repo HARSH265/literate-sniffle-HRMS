@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '../../../../test/test-utils';
+import { render, screen, waitFor, within } from '../../../../test/test-utils';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { PayrollPage } from '../PayrollPage';
@@ -21,8 +21,21 @@ vi.mock('react-router-dom', async () => {
   return { ...actual as any, useNavigate: () => mockNavigate };
 });
 
+vi.mock('../services/payrollService', () => ({
+  payrollService: {
+    listRuns: vi.fn().mockResolvedValue(mockRuns),
+    runPayroll: vi.fn().mockResolvedValue({ success: true, data: { id: '3', month: '2026-06', status: 'draft' } }),
+    previewRun: vi.fn().mockResolvedValue({ success: true, data: { month: '2026-06', totalEmployees: 10, totalNetPay: 250000, totalGrossPay: 300000, totalDeductions: 50000, items: [] } }),
+    submitRun: vi.fn().mockResolvedValue({ success: true }),
+    approveRun: vi.fn().mockResolvedValue({ success: true }),
+    rejectRun: vi.fn().mockResolvedValue({ success: true }),
+    finalizeRun: vi.fn().mockResolvedValue({ success: true }),
+    deleteRun: vi.fn().mockResolvedValue({ success: true }),
+  },
+}));
+
 function renderPage() {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
   qc.setQueryData(['payroll-runs', 1, 10], mockRuns);
   return render(
     <QueryClientProvider client={qc}>
@@ -57,5 +70,22 @@ describe('PayrollPage', () => {
     renderPage();
     screen.getByText('Run Payroll').click();
     await waitFor(() => { expect(screen.getByText('Process Payroll')).toBeInTheDocument(); });
+  });
+
+  it('shows status tags for each run', async () => {
+    renderPage();
+    await waitFor(() => { expect(screen.getByText('May 2026')).toBeInTheDocument(); });
+    expect(screen.getByText('draft')).toBeInTheDocument();
+    expect(screen.getByText('finalized')).toBeInTheDocument();
+  });
+
+  it('navigates to run details on row click', async () => {
+    renderPage();
+    await waitFor(() => { expect(screen.getByText('May 2026')).toBeInTheDocument(); });
+    const rows = screen.getAllByText('May 2026');
+    if (rows.length > 0) {
+      rows[0].closest('tr')?.click();
+      expect(mockNavigate).toHaveBeenCalledWith('/payroll/1');
+    }
   });
 });

@@ -1,7 +1,12 @@
-import { Form, InputNumber, Select, Switch, Button, Row, Col } from 'antd';
+import { Form, InputNumber, Select, Switch, Button, Row, Col, FormInstance } from 'antd';
 import { SaveOutlined } from '@ant-design/icons';
 
-export function PayrollSection({ form, onSave }: { form: any; onSave: (values: any) => void }) {
+interface PayrollSectionProps {
+  form: FormInstance;
+  onSave: (values: Record<string, unknown>) => void;
+}
+
+export function PayrollSection({ form, onSave }: PayrollSectionProps) {
   return (
     <Form form={form} layout="vertical" onFinish={onSave}>
       <h3 style={{ marginBottom: 16 }}>Payroll Configuration</h3>

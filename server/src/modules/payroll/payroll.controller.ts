@@ -51,6 +51,14 @@ const rejectRun = asyncHandler(async (req: Request, res: Response) => {
 
 const supplementaryPayroll = asyncHandler(async (req: Request, res: Response) => {
   const { month, year, employeeIds, reason } = req.body;
+  if (!month || !year) throw new AppError('Month and year are required', 400);
+  validateMonthYear(Number(month), Number(year));
+  if (!Array.isArray(employeeIds) || employeeIds.length === 0) {
+    throw new AppError('employeeIds must be a non-empty array', 400);
+  }
+  if (!reason || typeof reason !== 'string' || reason.trim() === '') {
+    throw new AppError('reason is required', 400);
+  }
   const result = await PayrollService.supplementaryRun(month, year, req.user!.id, employeeIds, reason);
   ResponseHandler.created(res, result, 'Supplementary payroll created successfully');
 });

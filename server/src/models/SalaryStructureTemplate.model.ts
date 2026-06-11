@@ -58,7 +58,7 @@ const SalaryStructureTemplateSchema = new Schema<ISalaryStructureTemplate>(
   { timestamps: true },
 );
 
-SalaryStructureTemplateSchema.index({ name: 1 }, { unique: true });
+
 SalaryStructureTemplateSchema.index({ isActive: 1 });
 
 const SalaryStructureTemplate = mongoose.model<ISalaryStructureTemplate, SalaryStructureTemplateModel>(

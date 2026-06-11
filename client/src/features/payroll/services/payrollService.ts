@@ -9,15 +9,40 @@ export interface PayrollRevision {
   timestamp: string;
 }
 
+export interface ApprovalHistoryEntry {
+  action: 'submitted' | 'approved' | 'rejected' | 'finalized' | 'unfinalized';
+  userId: string;
+  userName: string;
+  role: string;
+  comments?: string;
+  ipAddress?: string;
+  timestamp: string;
+}
+
 export interface PayrollRun {
   id: string;
   month: string;
   status: 'draft' | 'submitted' | 'approved' | 'finalized';
   totalEmployees: number;
   totalNetPay: number;
-  createdAt: string;
+  totalGrossPay: number;
+  totalDeductions: number;
+  totalEmployerContributions: number;
+  processedBy?: string;
+  submittedBy?: string;
+  submittedAt?: string;
+  approvedBy?: string;
+  approvedAt?: string;
+  finalizedBy?: string;
+  finalizedAt?: string;
+  isSupplementary?: boolean;
+  complianceStatus?: 'pass' | 'warning' | 'fail' | 'pending';
   remarks?: string;
   revisions?: PayrollRevision[];
+  approvalHistory?: ApprovalHistoryEntry[];
+  unfinalizeWindowDays?: number;
+  unfinalizeLocked?: boolean;
+  items?: PayrollItem[];
 }
 
 export interface PayrollItem {
@@ -44,11 +69,11 @@ export interface PayrollItem {
   status: string;
 }
 
-function validateResponse<T>(data: any): T {
+function validateResponse<T>(data: unknown, _requiredKeys: string[] = []): T {
   if (!data || typeof data !== 'object') {
     throw new Error('Invalid API response format');
   }
-  return data;
+  return data as T;
 }
 
 export const payrollService = {
@@ -57,52 +82,52 @@ export const payrollService = {
     return validateResponse(data);
   },
 
-  async runPayroll(month: number, year: number): Promise<{ success: boolean; data: any }> {
+  async runPayroll(month: number, year: number): Promise<{ success: boolean; data: PayrollRun }> {
     const { data } = await apiClient.post('/payroll/run', { month, year });
     return validateResponse(data);
   },
 
-  async previewRun(month: number, year: number): Promise<{ success: boolean; data: any }> {
+  async previewRun(month: number, year: number): Promise<{ success: boolean; data: PayrollRun }> {
     const { data } = await apiClient.post('/payroll/preview', { month, year });
     return validateResponse(data);
   },
 
-  async getRunDetails(id: string): Promise<{ success: boolean; data: any }> {
+  async getRunDetails(id: string): Promise<{ success: boolean; data: PayrollRun }> {
     const { data } = await apiClient.get(`/payroll/run/${id}`);
     return validateResponse(data);
   },
 
-  async submitRun(id: string): Promise<{ success: boolean; data: any }> {
+  async submitRun(id: string): Promise<{ success: boolean; data: PayrollRun }> {
     const { data } = await apiClient.post(`/payroll/run/${id}/submit`);
     return validateResponse(data);
   },
 
-  async approveRun(id: string): Promise<{ success: boolean; data: any }> {
+  async approveRun(id: string): Promise<{ success: boolean; data: PayrollRun }> {
     const { data } = await apiClient.post(`/payroll/run/${id}/approve`);
     return validateResponse(data);
   },
 
-  async rejectRun(id: string, reason?: string): Promise<{ success: boolean; data: any }> {
+  async rejectRun(id: string, reason?: string): Promise<{ success: boolean; data: PayrollRun }> {
     const { data } = await apiClient.post(`/payroll/run/${id}/reject`, { reason });
     return validateResponse(data);
   },
 
-  async updatePayrollItem(runId: string, itemId: string, payload: Partial<PayrollItem>): Promise<{ success: boolean; data: any }> {
+  async updatePayrollItem(runId: string, itemId: string, payload: Partial<PayrollItem>): Promise<{ success: boolean; data: PayrollItem }> {
     const { data } = await apiClient.patch(`/payroll/run/${runId}/item/${itemId}`, payload);
     return validateResponse(data);
   },
 
-  async batchUpdateItems(runId: string, items: Array<{ itemId: string; data: Record<string, unknown> }>): Promise<{ success: boolean; data: any }> {
+  async batchUpdateItems(runId: string, items: Array<{ itemId: string; data: Record<string, unknown> }>): Promise<{ success: boolean; data: PayrollRun }> {
     const { data } = await apiClient.patch(`/payroll/run/${runId}/items/batch`, { items });
     return validateResponse(data);
   },
 
-  async finalizeRun(id: string, remarks?: string): Promise<{ success: boolean; data: any }> {
+  async finalizeRun(id: string, remarks?: string): Promise<{ success: boolean; data: PayrollRun }> {
     const { data } = await apiClient.post(`/payroll/run/${id}/finalize`, { remarks });
     return validateResponse(data);
   },
 
-  async unfinalizeRun(id: string, reason: string): Promise<{ success: boolean; data: any }> {
+  async unfinalizeRun(id: string, reason: string): Promise<{ success: boolean; data: PayrollRun }> {
     const { data } = await apiClient.post(`/payroll/run/${id}/unfinalize`, { reason });
     return validateResponse(data);
   },
@@ -114,7 +139,7 @@ export const payrollService = {
 
   async getByEmployee(employeeId: string): Promise<PayrollItem[]> {
     const { data } = await apiClient.get(`/payroll/runs/employee/${employeeId}`);
-    const response = validateResponse<{ success: boolean; data: PayrollItem[] }>(data);
+    const response = validateResponse(data, ['success', 'data']) as { success: boolean; data: PayrollItem[] };
     return response.data;
   },
 };

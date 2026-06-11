@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 import PayrollItem, { IPayrollItem } from '../../models/PayrollItem.model.js';
 import Employee from '../../models/Employee.model.js';
 import type { LeanEmployee } from '../../types/domain.js';
-import { calculateStatutoryForEmployee } from '../statutory/statutory.service.js';
+import { calculateStatutoryForEmployee, getStatutoryDefaults } from '../statutory/statutory.service.js';
 import AttendanceEntry from '../../models/AttendanceEntry.model.js';
 import OvertimeEntry from '../../models/OvertimeEntry.model.js';
 import OvertimeRule from '../../models/OvertimeRule.model.js';
@@ -20,6 +20,7 @@ import { PaginationUtil, PaginationMeta } from '../../core/utils/PaginationUtil.
 import { NotificationService } from '../../core/notification/NotificationService.js';
 import dayjs from 'dayjs';
 import { computeTax, TaxInput, TaxResult } from '../tax/tax.service.js';
+import { PAYROLL } from '../../config/constants.js';
 import { runComplianceCheck } from '../compliance/compliance.service.js';
 
 type PayrollConfig = {
@@ -50,6 +51,24 @@ type PayrollConfig = {
   makerCheckerEnabled: boolean;
 };
 
+function buildPayrollConfig(settings: Record<string, unknown> | null): PayrollConfig {
+  const pc = (settings?.payrollConfig ?? {}) as Record<string, unknown>;
+  return {
+    ...(pc as Partial<PayrollConfig>),
+    perDayCalcMethod: (pc.perDayCalcMethod as string) || '30',
+    lopCalcMethod: (pc.lopCalcMethod as string) || '30',
+    roundingFinalSalary: (pc.roundingFinalSalary as string) || 'nearest',
+    roundingPrecision: (pc.roundingPrecision as number) ?? 0,
+    negativeNetPayAllow: (pc.negativeNetPayAllow as boolean) ?? false,
+    arrearsAutoCalculate: (pc.arrearsAutoCalculate as boolean) ?? true,
+    lopPerDayBase: (pc.lopPerDayBase as string) || '30',
+    lopComponentsAffected: (pc.lopComponentsAffected as string[]) || ['basic', 'hra', 'da', 'special'],
+    lopImpactsPf: (pc.lopImpactsPf as boolean) ?? true,
+    lopImpactsEsi: (pc.lopImpactsEsi as boolean) ?? true,
+    makerCheckerEnabled: (pc.makerCheckerEnabled as boolean) ?? false,
+  } as PayrollConfig;
+}
+
 interface PayrollItemComponentDetail {
   component: { code: string; name: string; id: string };
   type: 'earning' | 'deduction' | 'employer-cost';
@@ -69,6 +88,7 @@ interface PayrollCalcResult {
   totalDays: number;
   presentDays: number;
   absentDays: number;
+  latePresentDays: number;
   halfDays: number;
   paidLeaveDays: number;
   unpaidLeaveDays: number;
@@ -92,7 +112,7 @@ interface PayrollCalcResult {
   primaryBankAmount?: number;
   secondaryBankAmount?: number;
   employee: { id: string; name: string; code: string };
-  _loanRepaymentId?: string;
+  _loanRepaymentIds?: string[];
   paidDaysBreakdown: {
     calendarDays: number;
     payableDaysBase: number;
@@ -203,6 +223,9 @@ function applyOvertimeRules(hours: number, rule: LeanOvertimeRule | null): numbe
   if (rule.maxHoursPerDay && allowedHours > rule.maxHoursPerDay) {
     allowedHours = rule.maxHoursPerDay;
   }
+  if (rule.maxHoursPerMonth && allowedHours > rule.maxHoursPerMonth) {
+    allowedHours = rule.maxHoursPerMonth;
+  }
   return allowedHours;
 }
 
@@ -217,18 +240,30 @@ interface ArrearItem {
   effectiveArrearAmount: number;
 }
 
+export interface PayrollRunResult {
+  id: string;
+  month: string;
+  status: 'draft' | 'submitted' | 'approved' | 'finalized';
+  totalEmployees: number;
+  totalNetPay: number;
+  totalGrossPay: number;
+  totalDeductions: number;
+  totalEmployerContributions: number;
+  items: unknown[];
+}
+
 async function calculateArrears(
   empId: string, _month: number, year: number, _basicEarnings: number,
-  _payableDaysBase: number, totalDays: number,
+  _payableDaysBase: number, totalDays: number, arrearsAutoCalculate: boolean,
+  preFetched?: { salaryStructuresMap: Map<string, any>; prevSalaryStructuresMap: Map<string, any>; componentMasterMap: Map<string, IComponentMaster> },
 ): Promise<ArrearItem[]> {
-  const _config = (await CompanySettings.findOne().lean())?.payrollConfig as any;
-  if (!_config?.arrearsAutoCalculate) return [];
+  if (!arrearsAutoCalculate) return [];
 
   // Find current month structure
   const monthStart = new Date(year, _month - 1, 1);
   const monthEnd = new Date(year, _month, 0, 23, 59, 59);
 
-  const currentStructure = await SalaryStructure.findOne({
+  const currentStructure = preFetched?.salaryStructuresMap?.get(empId) ?? await SalaryStructure.findOne({
     employee: empId,
     isCurrent: true,
     effectiveFrom: { $lte: monthEnd },
@@ -238,7 +273,7 @@ async function calculateArrears(
   if (!currentStructure) return [];
 
   // Find previous structure
-  const prevStructure = await SalaryStructure.findOne({
+  const prevStructure = preFetched?.prevSalaryStructuresMap?.get(empId) ?? await SalaryStructure.findOne({
     employee: empId,
     _id: { $ne: currentStructure._id },
     effectiveFrom: { $lt: monthStart },
@@ -248,9 +283,30 @@ async function calculateArrears(
   if (!prevStructure) return [];
 
   // Build component maps
-  const allComponentIds = [...currentStructure.components.map(c => c.component), ...prevStructure.components.map(c => c.component)];
-  const components = await ComponentMaster.find({ _id: { $in: allComponentIds }, isActive: true }).lean();
-  const compMap = new Map(components.map(c => [String(c._id), c]));
+  const compMap = preFetched?.componentMasterMap;
+  if (!compMap) {
+    const allComponentIds = [...currentStructure.components.map((c: any) => c.component), ...prevStructure.components.map((c: any) => c.component)];
+    const components = await ComponentMaster.find({ _id: { $in: allComponentIds }, isActive: true }).lean();
+    const fallbackMap = new Map<string, IComponentMaster>();
+    for (const c of components) {
+      fallbackMap.set(String(c._id), c as unknown as IComponentMaster);
+    }
+    return calculateArrearsWithMap(currentStructure, prevStructure, fallbackMap, _month, year, totalDays);
+  }
+
+  return calculateArrearsWithMap(currentStructure, prevStructure, compMap, _month, year, totalDays);
+}
+
+function calculateArrearsWithMap(
+  currentStructure: any,
+  prevStructure: any,
+  compMap: Map<string, IComponentMaster>,
+  _month: number,
+  year: number,
+  totalDays: number,
+): ArrearItem[] {
+  const monthStart = new Date(year, _month - 1, 1);
+  const monthEnd = new Date(year, _month, 0, 23, 59, 59);
 
   const currentMap = new Map<string, number>();
   for (const c of currentStructure.components) {
@@ -419,6 +475,7 @@ async function calculateFromSalaryStructure(
   basicEarnings: number,
   grossEarnings: number,
   proRataFactor: number,
+  preFetched?: { salaryStructuresMap: Map<string, any>; componentMasterMap: Map<string, IComponentMaster> },
 ): Promise<{
   componentWiseEarnings: ComponentCalcItem[];
   componentWiseDeductions: ComponentCalcItem[];
@@ -429,7 +486,7 @@ async function calculateFromSalaryStructure(
   const monthStart = new Date(year, month - 1, 1);
   const monthEnd = new Date(year, month, 0, 23, 59, 59);
 
-  const structure = await SalaryStructure.findOne({
+  const structure = preFetched?.salaryStructuresMap?.get(empId) ?? await SalaryStructure.findOne({
     employee: empId,
     isCurrent: true,
     effectiveFrom: { $lte: monthEnd },
@@ -440,17 +497,38 @@ async function calculateFromSalaryStructure(
     return { componentWiseEarnings: [], componentWiseDeductions: [], employerCosts: [], totalComponentEarnings: 0, totalComponentDeductions: 0 };
   }
 
-  const componentIds = structure.components.map(c => c.component);
-  const components = await ComponentMaster.find({ _id: { $in: componentIds }, isActive: true }).lean();
-  const compMap = new Map<string, IComponentMaster>();
-  for (const c of components) {
-    compMap.set(String(c._id), c as unknown as IComponentMaster);
+  const compMap = preFetched?.componentMasterMap;
+  if (!compMap) {
+    const componentIds = structure.components.map((c: any) => c.component);
+    const components = await ComponentMaster.find({ _id: { $in: componentIds }, isActive: true }).lean();
+    const fallbackMap = new Map<string, IComponentMaster>();
+    for (const c of components) {
+      fallbackMap.set(String(c._id), c as unknown as IComponentMaster);
+    }
+    return calculateFromSalaryStructureWithMap(structure, basicEarnings, grossEarnings, proRataFactor, fallbackMap);
   }
+
+  return calculateFromSalaryStructureWithMap(structure, basicEarnings, grossEarnings, proRataFactor, compMap);
+}
+
+function calculateFromSalaryStructureWithMap(
+  structure: any,
+  basicEarnings: number,
+  grossEarnings: number,
+  proRataFactor: number,
+  compMap: Map<string, IComponentMaster>,
+): {
+  componentWiseEarnings: ComponentCalcItem[];
+  componentWiseDeductions: ComponentCalcItem[];
+  employerCosts: ComponentCalcItem[];
+  totalComponentEarnings: number;
+  totalComponentDeductions: number;
+} {
 
   const calcItems: ComponentCalcItem[] = [];
   const sortedComponents = structure.components
-    .filter(sc => sc.isActive)
-    .sort((a, b) => {
+    .filter((sc: any) => sc.isActive)
+    .sort((a: any, b: any) => {
       const ca = compMap.get(String(a.component));
       const cb = compMap.get(String(b.component));
       return (ca?.sortOrder || 0) - (cb?.sortOrder || 0);
@@ -524,32 +602,46 @@ async function calculateFromSalaryStructure(
   };
 }
 
+interface PreFetchedData {
+  attendanceMap: Map<string, any[]>;
+  overtimeMap: Map<string, any[]>;
+  leaveMap: Map<string, any[]>;
+  statutoryDefaults: any;
+  overtimeRulesMap: Map<string, LeanOvertimeRule | null>;
+  salaryStructuresMap: Map<string, any>;
+  componentMasterMap: Map<string, IComponentMaster>;
+  ytdItemsMap: Map<string, any[]>;
+  loanRepaymentsMap: Map<string, any[]>;
+  prevSalaryStructuresMap: Map<string, any>;
+}
+
 async function calculatePayrollForEmployee(
   emp: LeanEmployee, _month: number, _year: number, config: PayrollConfig, allowances: AllowanceConfig[], deductions: DeductionConfig[],
   startDate: Date, endDate: Date, totalDays: number, _workingDays: number, standardHours: number,
+  minimumWageThreshold: number,
+  preFetched?: PreFetchedData
 ): Promise<PayrollCalcResult> {
   const category = emp.category || 'worker';
   const employmentType = emp.employmentType || 'permanent';
 
-  const attendances = await AttendanceEntry.find({
+  const attendances = preFetched?.attendanceMap?.get(String(emp._id)) ?? await AttendanceEntry.find({
     employee: emp._id,
     date: { $gte: startDate, $lte: endDate },
   }).lean();
 
-  const overtimes = await OvertimeEntry.find({
+  const overtimes = preFetched?.overtimeMap?.get(String(emp._id)) ?? await OvertimeEntry.find({
     employee: emp._id,
     date: { $gte: startDate, $lte: endDate },
   }).lean();
 
-  const leaveApplications = await LeaveApplication.find({
+  const leaveApplications = preFetched?.leaveMap?.get(String(emp._id)) ?? await LeaveApplication.find({
     employee: emp._id,
     status: 'approved',
     startDate: { $lte: endDate },
     endDate: { $gte: startDate },
   }).populate('leaveType', 'isPaid deductionMethod name').lean();
 
-  let presentDays = 0, absentDays = 0, halfDays = 0, leaveDays = 0, weeklyOffs = 0, holidaysCount = 0;
-  void leaveDays;
+  let presentDays = 0, absentDays = 0, halfDays = 0, weeklyOffs = 0, holidaysCount = 0;
   let paidLeaveDays = 0, unpaidLeaveDays = 0;
   let totalOvertimeHours = 0;
 
@@ -565,11 +657,13 @@ async function calculatePayrollForEmployee(
     }
   }
 
+  let latePresentDays = 0;
   for (const att of attendances) {
     switch (att.status) {
       case 'present': {
         if (att.isLatePresent) {
-          absentDays++;
+          latePresentDays++;
+          presentDays++;
         } else {
           presentDays++;
         }
@@ -578,7 +672,6 @@ async function calculatePayrollForEmployee(
       case 'absent': absentDays++; break;
       case 'half-day': halfDays++; break;
       case 'leave': {
-        leaveDays++;
         const dateKey = formatDate(new Date(att.date));
         const ld = leaveDayMap[dateKey];
         if (ld && ld.isPaid) paidLeaveDays++;
@@ -603,7 +696,7 @@ async function calculatePayrollForEmployee(
     }
   }
 
-  const overtimeRule = await getApplicableOvertimeRule(category);
+  const overtimeRule = preFetched?.overtimeRulesMap?.get(category) ?? await getApplicableOvertimeRule(category);
   const allowedOvertimeHours = applyOvertimeRules(totalOvertimeHours, overtimeRule);
 
   const baseSalary = emp.baseSalary || 0;
@@ -627,12 +720,22 @@ async function calculatePayrollForEmployee(
   let joinDate: Date | undefined;
   let leaveDate: Date | undefined;
 
-  // Count working days in the month (excluding weekly offs and holidays - simplified)
+  // Count working days in the month using company weekly-off rules (S17 fix)
+  let weeklyOffDays = [0]; // default: Sunday
+  try {
+    const WeeklyOffRule = (await import('../../models/WeeklyOffRule.model.js')).default;
+    const applicableTo = category === 'worker' ? 'worker' : 'office-staff';
+    const weeklyOffRule = await WeeklyOffRule.findOne({ isActive: true, applicableTo }).lean()
+      ?? await WeeklyOffRule.findOne({ isActive: true, applicableTo: 'all' }).lean();
+    if (weeklyOffRule?.offDays?.length) {
+      weeklyOffDays = weeklyOffRule.offDays;
+    }
+  } catch { /* fall back to Sunday */ }
+
   const getWorkingDaysInMonth = (s: Date, e: Date) => {
     let wd = 0;
     for (let d = new Date(s); d <= e; d.setDate(d.getDate() + 1)) {
-      const day = d.getDay();
-      if (day !== 0) wd++; // exclude Sundays (simplified; can be enhanced for company holidays)
+      if (!weeklyOffDays.includes(d.getDay())) wd++;
     }
     return wd;
   };
@@ -642,10 +745,7 @@ async function calculatePayrollForEmployee(
     const doj = new Date(emp.joiningDate);
     if (doj > startDate && doj <= endDate) {
       isJoiner = true;
-      const workingDaysFromDoj = getWorkingDaysInMonth(doj, endDate);
       joinDate = doj;
-      proRataFactor = workingDaysFromDoj / monthWorkingDays;
-      daysWorked = effectiveWorkingDays;
     }
   }
 
@@ -653,11 +753,22 @@ async function calculatePayrollForEmployee(
     const lod = new Date(emp.leavingDate as string | number);
     if (lod >= startDate && lod < endDate) {
       isLeaver = true;
-      const workingDaysUntilLod = getWorkingDaysInMonth(startDate, lod);
       leaveDate = lod;
-      proRataFactor = workingDaysUntilLod / monthWorkingDays;
-      daysWorked = effectiveWorkingDays;
     }
+  }
+
+  if (isJoiner && isLeaver) {
+    const workingDaysInIntersection = getWorkingDaysInMonth(joinDate!, leaveDate!);
+    proRataFactor = workingDaysInIntersection / monthWorkingDays;
+    daysWorked = effectiveWorkingDays;
+  } else if (isJoiner) {
+    const workingDaysFromDoj = getWorkingDaysInMonth(joinDate!, endDate);
+    proRataFactor = workingDaysFromDoj / monthWorkingDays;
+    daysWorked = effectiveWorkingDays;
+  } else if (isLeaver) {
+    const workingDaysUntilLod = getWorkingDaysInMonth(startDate, leaveDate!);
+    proRataFactor = workingDaysUntilLod / monthWorkingDays;
+    daysWorked = effectiveWorkingDays;
   }
 
   const basicEarnings = isMonthly
@@ -687,7 +798,7 @@ async function calculatePayrollForEmployee(
   const halfDayDeduction = halfDays > 0
     ? Math.round((isMonthly ? baseSalary / payableDaysBase : dailyWage) * (config.halfDayDeductionPercent || 50) / 100 * halfDays)
     : 0;
-  const lateDeduction = absentDays > 0 ? (config.lateDeductionPerDay || 0) * absentDays : 0;
+  const lateDeduction = latePresentDays > 0 ? (config.lateDeductionPerDay || 0) * latePresentDays : 0;
 
   // LOP calculation using lopCalcMethod (2A) - handles multiple unpaid leave types
   const lopCalcMethod = config.lopCalcMethod || '30';
@@ -734,6 +845,7 @@ async function calculatePayrollForEmployee(
   // ComponentMaster-based calculation (2F)
   const componentCalc = await calculateFromSalaryStructure(
     String(emp._id), _month, _year, basicEarnings, grossEarnings, proRataFactor,
+    preFetched ? { salaryStructuresMap: preFetched.salaryStructuresMap, componentMasterMap: preFetched.componentMasterMap } : undefined,
   );
   const componentWiseEarnings = componentCalc.componentWiseEarnings.map(c => ({
     component: { code: c.code, name: c.name, id: c.componentId },
@@ -768,7 +880,61 @@ async function calculatePayrollForEmployee(
   let employerContributions: { name: string; calculatedValue: number }[] = [];
   const complianceFlags: PayrollCalcResult['complianceFlags'] = [];
   try {
-    const statutory = await calculateStatutoryForEmployee(String(emp._id), grossEarnings, monthStr);
+    let statutory;
+    if (preFetched?.statutoryDefaults) {
+      const defaults = preFetched.statutoryDefaults;
+      const pfApplicableWages = Math.min(grossEarnings, defaults.pfWageCeiling);
+      const stat: any = {
+        employeePf: 0,
+        employerPf: 0,
+        eps: 0,
+        edli: 0,
+        pfAdminCharges: 0,
+        edliAdminCharges: 0,
+        esiEmployee: 0,
+        esiEmployer: 0,
+        professionalTax: 0,
+        pfApplicableWages,
+        esiApplicable: false,
+      };
+      if (defaults.pfEnabled && !(emp as any).pfExempted && pfApplicableWages > 0) {
+        stat.employeePf = Math.round(pfApplicableWages * (defaults.pfEmployeeRate / 100));
+        const epsAmount = Math.round(Math.min(pfApplicableWages, defaults.pfWageCeiling) * (defaults.epsRate / 100));
+        stat.eps = epsAmount;
+        stat.employerPf = Math.round(pfApplicableWages * (defaults.pfEmployerRate / 100)) - epsAmount;
+        stat.edli = Math.round(pfApplicableWages * (defaults.edliRate / 100));
+        stat.pfAdminCharges = Math.round(pfApplicableWages * (defaults.pfAdminCharges / 100));
+        stat.edliAdminCharges = Math.round(pfApplicableWages * (defaults.edliAdminCharges / 100));
+      }
+      const esiApplicable = defaults.esiEnabled && !(emp as any).esiExempted && grossEarnings <= defaults.esiThreshold;
+      stat.esiApplicable = esiApplicable;
+      if (esiApplicable) {
+        stat.esiEmployee = Math.round(grossEarnings * (defaults.esiEmployeeRate / 100));
+        stat.esiEmployer = Math.round(grossEarnings * (defaults.esiEmployerRate / 100));
+      }
+      if (defaults.ptEnabled && !(emp as any).ptExempted) {
+        const state = (emp as any).ptState || 'Karnataka';
+        const stateSlabs = defaults.ptSlabs.find((s:any) => s.state === state);
+        if (stateSlabs) {
+          const slab = stateSlabs.slabs.find((s:any) => grossEarnings >= s.minSalary && grossEarnings <= s.maxSalary);
+          if (slab) {
+            if (slab.frequency === 'monthly') {
+              stat.professionalTax = slab.amount;
+            } else if (slab.frequency === 'half-yearly') {
+              const monthIdx = parseInt(monthStr.split('-')[1], 10);
+              const halfYearStartMonths = [3, 9];
+              stat.professionalTax = halfYearStartMonths.includes(monthIdx) ? slab.amount : 0;
+            } else if (slab.frequency === 'yearly') {
+              const monthIdx = parseInt(monthStr.split('-')[1], 10);
+              stat.professionalTax = monthIdx === 3 ? slab.amount : 0;
+            }
+          }
+        }
+      }
+      statutory = stat;
+    } else {
+      statutory = await calculateStatutoryForEmployee(String(emp._id), grossEarnings, monthStr);
+    }
     if (statutory.employeePf > 0) {
       appliedDeductions.push({ name: 'PF', type: 'percentage', value: 0, calculatedValue: statutory.employeePf });
       totalDeductionsValue += statutory.employeePf;
@@ -806,7 +972,7 @@ async function calculatePayrollForEmployee(
   try {
     const taxRegime = (emp as any)?.taxRegime || 'new';
     const financialYearStart = _month >= 4 ? _year : _year - 1;
-    const ytdItems = await PayrollItem.find({
+    const ytdItems = preFetched?.ytdItemsMap?.get(String(emp._id)) ?? await PayrollItem.find({
       employee: emp._id,
       month: { $gte: `${financialYearStart}-04`, $lte: `${_year}-${String(_month).padStart(2, '0')}` },
     }).lean();
@@ -850,7 +1016,7 @@ async function calculatePayrollForEmployee(
   }
 
   // Handle multiple pending loan repayments for the employee in this month
-  const loanRepayments = await LoanRepayment.find({
+  const loanRepayments = preFetched?.loanRepaymentsMap?.get(String(emp._id)) ?? await LoanRepayment.find({
     employee: emp._id,
     month: monthStr,
     status: 'pending',
@@ -873,8 +1039,8 @@ async function calculatePayrollForEmployee(
     netPay = grossEarnings - totalDeductionsValue;
   }
 
-  // Preserve loan repayment reference for the first pending loan (if any) for linking
-  const _loanRepaymentId = loanRepayments && loanRepayments.length ? loanRepayments[0]._id?.toString() : undefined;
+  // Preserve all loan repayment references for linking (S19 fix)
+  const _loanRepaymentIds = loanRepayments && loanRepayments.length ? loanRepayments.map(lr => lr._id?.toString()).filter(Boolean) : [];
 
   // Rounding and negative net pay (2B)
   const roundMethod = config.roundingFinalSalary || 'nearest';
@@ -896,7 +1062,6 @@ async function calculatePayrollForEmployee(
   }
 
   // Minimum wage compliance flag (configurable)
-  const minimumWageThreshold = (await CompanySettings.findOne().lean())?.payrollConfig?.minimumWage || 10000;
   if (basicEarnings < minimumWageThreshold) {
     complianceFlags.push({
       check: 'minimum-wage',
@@ -913,6 +1078,8 @@ async function calculatePayrollForEmployee(
   try {
     arrears = await calculateArrears(
       String(emp._id), _month, _year, basicEarnings, payableDaysBase, totalDays,
+      config.arrearsAutoCalculate ?? true,
+      preFetched ? { salaryStructuresMap: preFetched.salaryStructuresMap, prevSalaryStructuresMap: preFetched.prevSalaryStructuresMap, componentMasterMap: preFetched.componentMasterMap } : undefined,
     );
     if (arrears.length > 0) {
       for (const arrear of arrears) {
@@ -961,7 +1128,7 @@ async function calculatePayrollForEmployee(
   }
 
   return {
-    totalDays, presentDays, absentDays, halfDays, paidLeaveDays, unpaidLeaveDays,
+    totalDays, presentDays, absentDays, latePresentDays, halfDays, paidLeaveDays, unpaidLeaveDays,
     weeklyOffs: paidWeeklyOffs, holidays: paidHolidaysCount,
     effectiveWorkingDays: Math.round(effectiveWorkingDays * 100) / 100,
     overtimeHours: totalOvertimeHours, overtimeHoursAllowed: allowedOvertimeHours,
@@ -969,7 +1136,7 @@ async function calculatePayrollForEmployee(
     overtimeAmount, basicEarnings, allowances: appliedAllowances, allowancesTotal,
     grossEarnings, deductions: appliedDeductions, totalDeductions: totalDeductionsValue, employerContributions, loanEmiDeduction, netPay, bankSplitPercent, primaryBankAmount, secondaryBankAmount,
     employee: { id: String(emp._id), name: emp.fullName, code: emp.employeeCode },
-    _loanRepaymentId: _loanRepaymentId,
+    _loanRepaymentIds: _loanRepaymentIds,
     paidDaysBreakdown: {
       calendarDays: totalDays,
       payableDaysBase,
@@ -1032,13 +1199,20 @@ export class PayrollService {
       PayrollRun.countDocuments(filter),
     ]);
 
-    const data = runs.map((r) => ({ ...r, id: String(r._id), _id: undefined })) as PayrollResultRow[];
+    const settings = await CompanySettings.findOne().lean();
+    const lockDays = getPayrollLockDays(buildPayrollConfig(settings as unknown as Record<string, unknown>));
+
+    const data = runs.map((r) => {
+      const finalizedAt = r.finalizedAt ? new Date(r.finalizedAt) : null;
+      const unfinalizeLocked = !!(r.status === 'finalized' && finalizedAt && (lockDays <= 0 || dayjs().diff(dayjs(finalizedAt), 'day') >= lockDays));
+      return { ...r, id: String(r._id), _id: undefined, unfinalizeWindowDays: lockDays, unfinalizeLocked };
+    }) as PayrollResultRow[];
     const meta = PaginationUtil.getMeta(page, limit, total);
 
     return { data, meta };
   }
 
-  static async runPayroll(month: number, year: number, userId: string): Promise<Record<string, unknown>> {
+  static async runPayroll(month: number, year: number, userId: string): Promise<PayrollRunResult> {
     if (!userId) {
       throw new AppError('User authentication required', 401);
     }
@@ -1054,20 +1228,7 @@ export class PayrollService {
       }
       
       const settings = await CompanySettings.findOne().lean().session(session);
-      const config: PayrollConfig = {
-        ...(settings?.payrollConfig as Partial<PayrollConfig>),
-        perDayCalcMethod: (settings?.payrollConfig as any)?.perDayCalcMethod || '30',
-        lopCalcMethod: (settings?.payrollConfig as any)?.lopCalcMethod || '30',
-        roundingFinalSalary: (settings?.payrollConfig as any)?.roundingFinalSalary || 'nearest',
-        roundingPrecision: (settings?.payrollConfig as any)?.roundingPrecision ?? 0,
-        negativeNetPayAllow: (settings?.payrollConfig as any)?.negativeNetPayAllow ?? false,
-        arrearsAutoCalculate: (settings?.payrollConfig as any)?.arrearsAutoCalculate ?? true,
-        lopPerDayBase: (settings?.payrollConfig as any)?.lopPerDayBase || '30',
-        lopComponentsAffected: (settings?.payrollConfig as any)?.lopComponentsAffected || ['basic', 'hra', 'da', 'special'],
-        lopImpactsPf: (settings?.payrollConfig as any)?.lopImpactsPf ?? true,
-        lopImpactsEsi: (settings?.payrollConfig as any)?.lopImpactsEsi ?? true,
-        makerCheckerEnabled: (settings?.payrollConfig as any)?.makerCheckerEnabled ?? false,
-      } as PayrollConfig;
+      const config = buildPayrollConfig(settings as unknown as Record<string, unknown>);
       const allowances = (settings?.allowanceConfig as AllowanceConfig[]) || [];
       const deductions = (settings?.deductionConfig as DeductionConfig[]) || [];
       
@@ -1077,17 +1238,122 @@ export class PayrollService {
       const standardHours = config.standardHoursPerDay || 8;
       
       const employees = await Employee.find({ status: 'active' }).lean().session(session);
+      const employeeIds = employees.map(e => e._id);
+      const [attendanceBulk, overtimeBulk, leaveAppBulk] = await Promise.all([
+        AttendanceEntry.find({ employee: { $in: employeeIds }, date: { $gte: startDate, $lte: endDate } }).lean(),
+        OvertimeEntry.find({ employee: { $in: employeeIds }, date: { $gte: startDate, $lte: endDate } }).lean(),
+        LeaveApplication.find({ employee: { $in: employeeIds }, status: 'approved', startDate: { $lte: endDate }, endDate: { $gte: startDate } })
+          .populate('leaveType', 'isPaid deductionMethod name')
+          .lean(),
+      ]);
+      const attendanceMap = new Map<string, any[]>();
+      for (const att of attendanceBulk) {
+        const key = String(att.employee);
+        const arr = attendanceMap.get(key) ?? [];
+        arr.push(att);
+        attendanceMap.set(key, arr);
+      }
+      const overtimeMap = new Map<string, any[]>();
+      for (const ot of overtimeBulk) {
+        const key = String(ot.employee);
+        const arr = overtimeMap.get(key) ?? [];
+        arr.push(ot);
+        overtimeMap.set(key, arr);
+      }
+      const leaveMap = new Map<string, any[]>();
+      for (const la of leaveAppBulk) {
+        const key = String(la.employee);
+        const arr = leaveMap.get(key) ?? [];
+        arr.push(la);
+        leaveMap.set(key, arr);
+      }
+      const statutoryDefaults = await getStatutoryDefaults();
+      
+      // Batch-fetch overtime rules for all categories (S10 fix)
+      const overtimeRulesRaw = await OvertimeRule.find({ isActive: true }).lean();
+      const overtimeRulesMap = new Map<string, LeanOvertimeRule | null>();
+      const categories = [...new Set(employees.map(e => e.category || 'worker'))];
+      for (const cat of categories) {
+        const applicableTo = cat === 'worker' ? 'worker' : 'office-staff';
+        const rule = overtimeRulesRaw.find(r => r.applicableTo === applicableTo) ?? overtimeRulesRaw.find(r => r.applicableTo === 'all') ?? null;
+        overtimeRulesMap.set(cat, rule as LeanOvertimeRule | null);
+      }
+
+      // Batch-fetch salary structures, component masters, YTD items, loan repayments (S10 fix)
+      const empIdStrs = employeeIds.map(String);
+      const monthStart = new Date(year, month - 1, 1);
+      const monthEnd = new Date(year, month, 0, 23, 59, 59);
+      const financialYearStart = month >= 4 ? year : year - 1;
+
+      const [salaryStructuresRaw, componentMastersRaw, ytdItemsBulk, loanRepaymentsBulk, prevStructuresRaw] = await Promise.all([
+        SalaryStructure.find({
+          employee: { $in: empIdStrs },
+          isCurrent: true,
+          effectiveFrom: { $lte: monthEnd },
+          $or: [{ effectiveTo: null }, { effectiveTo: { $gte: monthStart } }],
+        }).lean(),
+        ComponentMaster.find({ isActive: true }).lean(),
+        PayrollItem.find({
+          employee: { $in: empIdStrs },
+          month: { $gte: `${financialYearStart}-04`, $lte: monthStr },
+        }).lean(),
+        LoanRepayment.find({
+          employee: { $in: empIdStrs },
+          month: monthStr,
+          status: 'pending',
+        }).populate('loan', 'amount').lean(),
+        SalaryStructure.find({
+          employee: { $in: empIdStrs },
+          isCurrent: { $ne: true },
+          effectiveFrom: { $lt: monthStart },
+          $or: [{ effectiveTo: null }, { effectiveTo: { $lt: monthStart } }],
+        }).sort({ effectiveFrom: -1 }).lean(),
+      ]);
+
+      // Build lookup maps
+      const salaryStructuresMap = new Map<string, any>();
+      for (const s of salaryStructuresRaw) {
+        salaryStructuresMap.set(String(s.employee), s);
+      }
+      const componentMasterMap = new Map<string, IComponentMaster>();
+      for (const c of componentMastersRaw) {
+        componentMasterMap.set(String(c._id), c as unknown as IComponentMaster);
+      }
+      const ytdItemsMap = new Map<string, any[]>();
+      for (const item of ytdItemsBulk) {
+        const key = String(item.employee);
+        const arr = ytdItemsMap.get(key) ?? [];
+        arr.push(item);
+        ytdItemsMap.set(key, arr);
+      }
+      const loanRepaymentsMap = new Map<string, any[]>();
+      for (const lr of loanRepaymentsBulk) {
+        const key = String(lr.employee);
+        const arr = loanRepaymentsMap.get(key) ?? [];
+        arr.push(lr);
+        loanRepaymentsMap.set(key, arr);
+      }
+      // For prevSalaryStructures, only keep the most recent per employee
+      const prevSalaryStructuresMap = new Map<string, any>();
+      for (const s of prevStructuresRaw) {
+        const key = String(s.employee);
+        if (!prevSalaryStructuresMap.has(key)) {
+          prevSalaryStructuresMap.set(key, s);
+        }
+      }
+      
+const minimumWageThreshold = settings?.payrollConfig?.minimumWage || PAYROLL.MINIMUM_WAGE_DEFAULT;
       
       let totalNetPay = 0, totalGrossPay = 0, totalDeductions = 0;
       const payrollItems = [];
       
       // Process in batches of 50 for large payrolls (2G)
-      const BATCH_SIZE = 50;
+const BATCH_SIZE = PAYROLL.BATCH_SIZE;
       for (let i = 0; i < employees.length; i += BATCH_SIZE) {
         const batch = employees.slice(i, i + BATCH_SIZE);
         const batchResults = await Promise.all(
           batch.map(emp =>
-            calculatePayrollForEmployee(emp, month, year, config, allowances, deductions, startDate, endDate, totalDays, totalDays, standardHours)
+            calculatePayrollForEmployee(emp, month, year, config, allowances, deductions, startDate, endDate, totalDays, totalDays, standardHours, minimumWageThreshold, { attendanceMap, overtimeMap, leaveMap, statutoryDefaults, overtimeRulesMap, salaryStructuresMap, componentMasterMap, ytdItemsMap, loanRepaymentsMap, prevSalaryStructuresMap })
               .catch(err => {
                 throw new AppError(
                   `Payroll calculation failed for ${emp.employeeCode || emp.fullName || emp._id}: ${err instanceof Error ? err.message : 'Unknown error'}`,
@@ -1129,6 +1395,7 @@ export class PayrollService {
         totalDays: item.totalDays,
         presentDays: item.presentDays,
         absentDays: item.absentDays,
+        latePresentDays: item.latePresentDays,
         halfDays: item.halfDays,
         paidLeaveDays: item.paidLeaveDays,
         unpaidLeaveDays: item.unpaidLeaveDays,
@@ -1146,7 +1413,7 @@ export class PayrollService {
         totalDeductions: item.totalDeductions,
         employerContributions: item.employerContributions || [],
         loanEmiDeduction: item.loanEmiDeduction || 0,
-        loanRepayment: item._loanRepaymentId || undefined,
+        loanRepayment: item._loanRepaymentIds?.[0] || undefined,
         netPay: item.netPay,
         status: 'draft',
         paidDaysBreakdown: item.paidDaysBreakdown,
@@ -1192,6 +1459,9 @@ export class PayrollService {
       if (err instanceof AppError) {
         throw err;
       }
+      if ((err as any)?.code === 11000) {
+        throw new AppError(`Payroll for ${monthStr} already exists`, 409);
+      }
       throw new AppError(err instanceof Error ? err.message : 'Payroll run failed', 500);
     }
   }
@@ -1200,22 +1470,10 @@ export class PayrollService {
     const monthStr = `${year}-${String(month).padStart(2, '0')}`;
 
     const settings = await CompanySettings.findOne().lean();
-    const config: PayrollConfig = {
-      ...(settings?.payrollConfig as Partial<PayrollConfig>),
-      perDayCalcMethod: (settings?.payrollConfig as any)?.perDayCalcMethod || '30',
-      lopCalcMethod: (settings?.payrollConfig as any)?.lopCalcMethod || '30',
-      roundingFinalSalary: (settings?.payrollConfig as any)?.roundingFinalSalary || 'nearest',
-      roundingPrecision: (settings?.payrollConfig as any)?.roundingPrecision ?? 0,
-      negativeNetPayAllow: (settings?.payrollConfig as any)?.negativeNetPayAllow ?? false,
-      arrearsAutoCalculate: (settings?.payrollConfig as any)?.arrearsAutoCalculate ?? true,
-      lopPerDayBase: (settings?.payrollConfig as any)?.lopPerDayBase || '30',
-      lopComponentsAffected: (settings?.payrollConfig as any)?.lopComponentsAffected || ['basic', 'hra', 'da', 'special'],
-      lopImpactsPf: (settings?.payrollConfig as any)?.lopImpactsPf ?? true,
-      lopImpactsEsi: (settings?.payrollConfig as any)?.lopImpactsEsi ?? true,
-      makerCheckerEnabled: (settings?.payrollConfig as any)?.makerCheckerEnabled ?? false,
-    } as PayrollConfig;
+    const config = buildPayrollConfig(settings as unknown as Record<string, unknown>);
     const allowances = (settings?.allowanceConfig as AllowanceConfig[]) || [];
     const deductions = (settings?.deductionConfig as DeductionConfig[]) || [];
+    const minimumWageThreshold = settings?.payrollConfig?.minimumWage || PAYROLL.MINIMUM_WAGE_DEFAULT;
 
     const startDate = new Date(year, month - 1, 1);
     const endDate = new Date(year, month, 0);
@@ -1223,19 +1481,123 @@ export class PayrollService {
     const standardHours = config.standardHoursPerDay || 8;
 
     const employees = await Employee.find({ status: 'active' }).lean();
+    const employeeIds = employees.map(e => e._id);
+    const [attendanceBulk, overtimeBulk, leaveAppBulk, statutoryDefaults] = await Promise.all([
+      AttendanceEntry.find({ employee: { $in: employeeIds }, date: { $gte: startDate, $lte: endDate } }).lean(),
+      OvertimeEntry.find({ employee: { $in: employeeIds }, date: { $gte: startDate, $lte: endDate } }).lean(),
+      LeaveApplication.find({ employee: { $in: employeeIds }, status: 'approved', startDate: { $lte: endDate }, endDate: { $gte: startDate } })
+        .populate('leaveType', 'isPaid deductionMethod name')
+        .lean(),
+      getStatutoryDefaults(),
+    ]);
+    const attendanceMap = new Map<string, any[]>();
+    for (const att of attendanceBulk) {
+      const key = String(att.employee);
+      const arr = attendanceMap.get(key) ?? [];
+      arr.push(att);
+      attendanceMap.set(key, arr);
+    }
+    const overtimeMap = new Map<string, any[]>();
+    for (const ot of overtimeBulk) {
+      const key = String(ot.employee);
+      const arr = overtimeMap.get(key) ?? [];
+      arr.push(ot);
+      overtimeMap.set(key, arr);
+    }
+    const leaveMap = new Map<string, any[]>();
+    for (const la of leaveAppBulk) {
+      const key = String(la.employee);
+      const arr = leaveMap.get(key) ?? [];
+      arr.push(la);
+      leaveMap.set(key, arr);
+    }
+
+    // Batch-fetch overtime rules for all categories (S10 fix)
+    const overtimeRulesRaw = await OvertimeRule.find({ isActive: true }).lean();
+    const overtimeRulesMap = new Map<string, LeanOvertimeRule | null>();
+    const categories = [...new Set(employees.map(e => e.category || 'worker'))];
+    for (const cat of categories) {
+      const applicableTo = cat === 'worker' ? 'worker' : 'office-staff';
+      const rule = overtimeRulesRaw.find(r => r.applicableTo === applicableTo) ?? overtimeRulesRaw.find(r => r.applicableTo === 'all') ?? null;
+      overtimeRulesMap.set(cat, rule as LeanOvertimeRule | null);
+    }
+
+    // Batch-fetch salary structures, component masters, YTD items, loan repayments (S10 fix)
+    const empIdStrs = employeeIds.map(String);
+    const monthStart = new Date(year, month - 1, 1);
+    const monthEnd = new Date(year, month, 0, 23, 59, 59);
+    const financialYearStart = month >= 4 ? year : year - 1;
+
+    const [salaryStructuresRaw, componentMastersRaw, ytdItemsBulk, loanRepaymentsBulk, prevStructuresRaw] = await Promise.all([
+      SalaryStructure.find({
+        employee: { $in: empIdStrs },
+        isCurrent: true,
+        effectiveFrom: { $lte: monthEnd },
+        $or: [{ effectiveTo: null }, { effectiveTo: { $gte: monthStart } }],
+      }).lean(),
+      ComponentMaster.find({ isActive: true }).lean(),
+      PayrollItem.find({
+        employee: { $in: empIdStrs },
+        month: { $gte: `${financialYearStart}-04`, $lte: monthStr },
+      }).lean(),
+      LoanRepayment.find({
+        employee: { $in: empIdStrs },
+        month: monthStr,
+        status: 'pending',
+      }).populate('loan', 'amount').lean(),
+      SalaryStructure.find({
+        employee: { $in: empIdStrs },
+        isCurrent: { $ne: true },
+        effectiveFrom: { $lt: monthStart },
+        $or: [{ effectiveTo: null }, { effectiveTo: { $lt: monthStart } }],
+      }).sort({ effectiveFrom: -1 }).lean(),
+    ]);
+
+    // Build lookup maps
+    const salaryStructuresMap = new Map<string, any>();
+    for (const s of salaryStructuresRaw) {
+      salaryStructuresMap.set(String(s.employee), s);
+    }
+    const componentMasterMap = new Map<string, IComponentMaster>();
+    for (const c of componentMastersRaw) {
+      componentMasterMap.set(String(c._id), c as unknown as IComponentMaster);
+    }
+    const ytdItemsMap = new Map<string, any[]>();
+    for (const item of ytdItemsBulk) {
+      const key = String(item.employee);
+      const arr = ytdItemsMap.get(key) ?? [];
+      arr.push(item);
+      ytdItemsMap.set(key, arr);
+    }
+    const loanRepaymentsMap = new Map<string, any[]>();
+    for (const lr of loanRepaymentsBulk) {
+      const key = String(lr.employee);
+      const arr = loanRepaymentsMap.get(key) ?? [];
+      arr.push(lr);
+      loanRepaymentsMap.set(key, arr);
+    }
+    const prevSalaryStructuresMap = new Map<string, any>();
+    for (const s of prevStructuresRaw) {
+      const key = String(s.employee);
+      if (!prevSalaryStructuresMap.has(key)) {
+        prevSalaryStructuresMap.set(key, s);
+      }
+    }
 
     let totalNetPay = 0, totalGrossPay = 0, totalDeductions = 0;
     const payrollItems = [];
 
-    const BATCH_SIZE = 50;
+    const BATCH_SIZE = PAYROLL.BATCH_SIZE;
     for (let i = 0; i < employees.length; i += BATCH_SIZE) {
       const batch = employees.slice(i, i + BATCH_SIZE);
       const batchResults = await Promise.all(
         batch.map(emp =>
-          calculatePayrollForEmployee(emp, month, year, config, allowances, deductions, startDate, endDate, totalDays, totalDays, standardHours)
+          calculatePayrollForEmployee(emp, month, year, config, allowances, deductions, startDate, endDate, totalDays, totalDays, standardHours, minimumWageThreshold, { attendanceMap, overtimeMap, leaveMap, statutoryDefaults, overtimeRulesMap, salaryStructuresMap, componentMasterMap, ytdItemsMap, loanRepaymentsMap, prevSalaryStructuresMap })
+            .catch(() => null)
         ),
       );
       for (const result of batchResults) {
+        if (!result) continue;
         totalNetPay += result.netPay;
         totalGrossPay += result.grossEarnings;
         totalDeductions += result.totalDeductions;
@@ -1254,144 +1616,195 @@ export class PayrollService {
   }
 
   static async submitRun(id: string, userId: string): Promise<Record<string, unknown>> {
-    const run = await PayrollRun.findById(id);
-    if (!run) throw new AppError('Payroll run not found', 404);
-    if (run.status !== 'draft') throw new AppError('Only draft payroll can be submitted', 400);
+    const session = await mongoose.startSession();
+    session.startTransaction();
 
-    run.status = 'submitted';
-    run.submittedBy = new mongoose.Types.ObjectId(userId);
-    run.submittedAt = new Date();
-    await addRevision(run, 'Submitted for approval', userId);
-    await addApprovalHistory(run, 'submitted', userId);
-    await run.save();
+    try {
+      const run = await PayrollRun.findById(id).session(session);
+      if (!run) throw new AppError('Payroll run not found', 404);
+      if (run.status !== 'draft') throw new AppError('Only draft payroll can be submitted', 400);
 
-    await PayrollItem.updateMany({ payrollRun: id }, { status: 'submitted' });
-    await AuditService.log({ action: 'update', module: 'payroll', userId, targetId: id, details: { status: 'submitted' } });
+      run.status = 'submitted';
+      run.submittedBy = new mongoose.Types.ObjectId(userId);
+      run.submittedAt = new Date();
+      await addRevision(run, 'Submitted for approval', userId);
+      await addApprovalHistory(run, 'submitted', userId);
+      await run.save();
 
-    return { id: String(run._id), status: run.status };
+      await PayrollItem.updateMany({ payrollRun: id }, { status: 'submitted' }).session(session);
+
+      await session.commitTransaction();
+
+      await AuditService.log({ action: 'update', module: 'payroll', userId, targetId: id, details: { status: 'submitted' } });
+
+      return { id: String(run._id), status: run.status };
+    } catch (err) {
+      await session.abortTransaction();
+      throw err;
+    } finally {
+      session.endSession();
+    }
   }
 
   static async approveRun(id: string, userId: string, comments?: string): Promise<Record<string, unknown>> {
-    const run = await PayrollRun.findById(id);
-    if (!run) throw new AppError('Payroll run not found', 404);
-    if (run.status !== 'submitted') throw new AppError('Only submitted payroll can be approved', 400);
+    const session = await mongoose.startSession();
+    session.startTransaction();
 
-    // Maker-checker enforcement (5A)
-    const settings = await CompanySettings.findOne().lean();
-    const makerCheckerEnabled = (settings?.payrollConfig as any)?.makerCheckerEnabled ?? false;
-    if (makerCheckerEnabled && run.submittedBy?.toString() === userId) {
-      throw new AppError('Cannot approve your own submission (maker-checker)', 400);
+    try {
+      const run = await PayrollRun.findById(id).session(session);
+      if (!run) throw new AppError('Payroll run not found', 404);
+      if (run.status !== 'submitted') throw new AppError('Only submitted payroll can be approved', 400);
+
+      // Maker-checker enforcement (5A)
+      const settings = await CompanySettings.findOne().lean();
+      const makerCheckerEnabled = (settings?.payrollConfig as any)?.makerCheckerEnabled ?? false;
+      if (makerCheckerEnabled && run.submittedBy?.toString() === userId) {
+        throw new AppError('Cannot approve your own submission (maker-checker)', 400);
+      }
+
+      run.status = 'approved';
+      run.approvedBy = new mongoose.Types.ObjectId(userId);
+      run.approvedAt = new Date();
+      run.remarks = comments || run.remarks;
+      await addRevision(run, 'Approved', userId);
+      await addApprovalHistory(run, 'approved', userId, comments);
+      await run.save();
+
+      await PayrollItem.updateMany({ payrollRun: id }, { status: 'approved' }).session(session);
+
+      await session.commitTransaction();
+
+      await AuditService.log({ action: 'approve', module: 'payroll', userId, targetId: id, details: { status: 'approved' } });
+
+      return { id: String(run._id), status: run.status };
+    } catch (err) {
+      await session.abortTransaction();
+      throw err;
+    } finally {
+      session.endSession();
     }
-
-    run.status = 'approved';
-    run.approvedBy = new mongoose.Types.ObjectId(userId);
-    run.approvedAt = new Date();
-    run.remarks = comments || run.remarks;
-    await addRevision(run, 'Approved', userId);
-    await addApprovalHistory(run, 'approved', userId, comments);
-    await run.save();
-
-    await PayrollItem.updateMany({ payrollRun: id }, { status: 'approved' });
-    await AuditService.log({ action: 'approve', module: 'payroll', userId, targetId: id, details: { status: 'approved' } });
-
-    return { id: String(run._id), status: run.status };
   }
 
   static async rejectRun(id: string, userId: string, reason?: string): Promise<Record<string, unknown>> {
-    const run = await PayrollRun.findById(id);
-    if (!run) throw new AppError('Payroll run not found', 404);
-    if (run.status !== 'submitted') throw new AppError('Only submitted payroll can be rejected', 400);
+    const session = await mongoose.startSession();
+    session.startTransaction();
 
-    // Maker-checker enforcement (5A)
-    const settings = await CompanySettings.findOne().lean();
-    const makerCheckerEnabled = (settings?.payrollConfig as any)?.makerCheckerEnabled ?? false;
-    if (makerCheckerEnabled && run.submittedBy?.toString() === userId) {
-      throw new AppError('Cannot reject your own submission (maker-checker)', 400);
+    try {
+      const run = await PayrollRun.findById(id).session(session);
+      if (!run) throw new AppError('Payroll run not found', 404);
+      if (run.status !== 'submitted') throw new AppError('Only submitted payroll can be rejected', 400);
+
+      // Maker-checker enforcement (5A)
+      const settings = await CompanySettings.findOne().lean();
+      const makerCheckerEnabled = (settings?.payrollConfig as any)?.makerCheckerEnabled ?? false;
+      if (makerCheckerEnabled && run.submittedBy?.toString() === userId) {
+        throw new AppError('Cannot reject your own submission (maker-checker)', 400);
+      }
+
+      run.status = 'draft';
+      run.submittedBy = undefined;
+      run.submittedAt = undefined;
+      if (reason) run.remarks = `Rejected: ${reason}`;
+      await addRevision(run, 'Rejected, returned to draft', userId, { reason });
+      await addApprovalHistory(run, 'rejected', userId, reason);
+      await run.save();
+
+      await PayrollItem.updateMany({ payrollRun: id }, { status: 'draft' }).session(session);
+
+      await session.commitTransaction();
+
+      await AuditService.log({ action: 'reject', module: 'payroll', userId, targetId: id, details: { reason } });
+
+      return { id: String(run._id), status: run.status };
+    } catch (err) {
+      await session.abortTransaction();
+      throw err;
+    } finally {
+      session.endSession();
     }
-
-    run.status = 'draft';
-    run.submittedBy = undefined;
-    run.submittedAt = undefined;
-    if (reason) run.remarks = `Rejected: ${reason}`;
-    await addRevision(run, 'Rejected, returned to draft', userId, { reason });
-    await addApprovalHistory(run, 'rejected', userId, reason);
-    await run.save();
-
-    await PayrollItem.updateMany({ payrollRun: id }, { status: 'draft' });
-    await AuditService.log({ action: 'reject', module: 'payroll', userId, targetId: id, details: { reason } });
-
-    return { id: String(run._id), status: run.status };
   }
 
   static async finalizeRun(id: string, userId: string, remarks?: string): Promise<Record<string, unknown>> {
-    const run = await PayrollRun.findById(id);
-    if (!run) throw new AppError('Payroll run not found', 404);
-    if (run.status === 'finalized') throw new AppError('Already finalized', 400);
-    if (run.status !== 'approved') throw new AppError('Only approved payroll can be finalized', 400);
+    const session = await mongoose.startSession();
+    session.startTransaction();
 
-    // Maker-checker: finalizer cannot be the submitter or approver
-    const settings = await CompanySettings.findOne().lean();
-    const makerCheckerEnabled = (settings?.payrollConfig as any)?.makerCheckerEnabled ?? false;
-    if (makerCheckerEnabled) {
-      if (run.submittedBy?.toString() === userId) {
-        throw new AppError('Cannot finalize your own submission (maker-checker)', 400);
+    try {
+      const run = await PayrollRun.findById(id).session(session);
+      if (!run) throw new AppError('Payroll run not found', 404);
+      if (run.status === 'finalized') throw new AppError('Already finalized', 400);
+      if (run.status !== 'approved') throw new AppError('Only approved payroll can be finalized', 400);
+
+      // Maker-checker: finalizer cannot be the submitter or approver
+      const settings = await CompanySettings.findOne().lean();
+      const makerCheckerEnabled = (settings?.payrollConfig as any)?.makerCheckerEnabled ?? false;
+      if (makerCheckerEnabled) {
+        if (run.submittedBy?.toString() === userId) {
+          throw new AppError('Cannot finalize your own submission (maker-checker)', 400);
+        }
+        if (run.approvedBy?.toString() === userId) {
+          throw new AppError('Cannot finalize your own approval (maker-checker)', 400);
+        }
       }
-      if (run.approvedBy?.toString() === userId) {
-        throw new AppError('Cannot finalize your own approval (maker-checker)', 400);
+
+      run.status = 'finalized';
+      run.finalizedBy = new mongoose.Types.ObjectId(userId);
+      run.finalizedAt = new Date();
+      if (remarks) run.remarks = remarks;
+      await addRevision(run, 'Finalized', userId);
+      await addApprovalHistory(run, 'finalized', userId, remarks);
+      await run.save();
+
+      await PayrollItem.updateMany(
+        { payrollRun: id },
+        { status: 'finalized' },
+      ).session(session);
+
+      const loanLinkedItems = await PayrollItem.find({
+        payrollRun: id,
+        loanRepayment: { $exists: true, $ne: null },
+      }).select('loanRepayment').lean().session(session);
+      const loanRepaymentIds = loanLinkedItems.map((item) => item.loanRepayment).filter(Boolean);
+      if (loanRepaymentIds.length > 0) {
+        await LoanRepayment.updateMany(
+          { _id: { $in: loanRepaymentIds }, status: 'pending' },
+          { status: 'deducted', payrollRun: run._id, repaidAt: new Date() },
+        ).session(session);
       }
-    }
 
-    run.status = 'finalized';
-    run.finalizedBy = new mongoose.Types.ObjectId(userId);
-    run.finalizedAt = new Date();
-    if (remarks) run.remarks = remarks;
-    await addRevision(run, 'Finalized', userId);
-    await addApprovalHistory(run, 'finalized', userId, remarks);
-    await run.save();
+      await session.commitTransaction();
 
-    await PayrollItem.updateMany(
-      { payrollRun: id },
-      { status: 'finalized' }
-    );
-
-    const loanLinkedItems = await PayrollItem.find({
-      payrollRun: id,
-      loanRepayment: { $exists: true, $ne: null },
-    }).select('loanRepayment').lean();
-    const loanRepaymentIds = loanLinkedItems.map((item) => item.loanRepayment).filter(Boolean);
-    if (loanRepaymentIds.length > 0) {
-      await LoanRepayment.updateMany(
-        { _id: { $in: loanRepaymentIds }, status: 'pending' },
-        { status: 'deducted', payrollRun: run._id, repaidAt: new Date() },
-      );
-    }
-
-    await AuditService.log({
-      action: 'finalize',
-      module: 'payroll',
-      userId,
-      targetId: id,
-      details: { month: run.month },
-    });
-
-    // Run compliance check asynchronously after finalization
-    runComplianceCheck(id).catch((err) => {
-      console.error(`Compliance check failed for run ${id}:`, err);
-    });
-
-    const hrAdmins = await User.find({ role: { $in: ['super-admin', 'hr-admin', 'accounts'] } }).lean();
-    for (const admin of hrAdmins) {
-      await NotificationService.send({
-        title: 'Payroll Finalized',
-        message: `Payroll for ${run.month} has been finalized.`,
-        type: 'success',
-        recipient: admin._id.toString(),
+      await AuditService.log({
+        action: 'finalize',
         module: 'payroll',
-        link: `/payroll/${id}`,
+        userId,
+        targetId: id,
+        details: { month: run.month },
       });
-    }
 
-    return { id: String(run._id), status: run.status };
+      // Run compliance check asynchronously after finalization
+      runComplianceCheck(id).catch((err) => {
+        console.error(`Compliance check failed for run ${id}:`, err);
+      });
+
+      const hrAdmins = await User.find({ role: { $in: ['super-admin', 'hr-admin', 'accounts'] } }).lean();
+      for (const admin of hrAdmins) {
+        await NotificationService.send({
+          title: 'Payroll Finalized',
+          message: `Payroll for ${run.month} has been finalized.`,
+          type: 'success',
+          recipient: admin._id.toString(),
+          module: 'payroll',
+          link: `/payroll/${id}`,
+        });
+      }
+
+      return { id: String(run._id), status: run.status };
+    } catch (err) {
+      await session.abortTransaction();
+      throw err;
+    } finally {
+      session.endSession();
+    }
   }
 
   static async unfinalizeRun(id: string, userId: string, reason?: string): Promise<Record<string, unknown>> {
@@ -1485,39 +1898,116 @@ export class PayrollService {
   static async supplementaryRun(
     month: number, year: number, userId: string, employeeIds: string[], reason: string,
   ): Promise<Record<string, unknown>> {
+    const monthStr = `${year}-${String(month).padStart(2, '0')}`;
     const settings = await CompanySettings.findOne().lean();
-    const config: PayrollConfig = {
-      ...(settings?.payrollConfig as Partial<PayrollConfig>),
-      perDayCalcMethod: (settings?.payrollConfig as any)?.perDayCalcMethod || '30',
-      lopCalcMethod: (settings?.payrollConfig as any)?.lopCalcMethod || '30',
-      roundingFinalSalary: (settings?.payrollConfig as any)?.roundingFinalSalary || 'nearest',
-      roundingPrecision: (settings?.payrollConfig as any)?.roundingPrecision ?? 0,
-      negativeNetPayAllow: (settings?.payrollConfig as any)?.negativeNetPayAllow ?? false,
-      arrearsAutoCalculate: (settings?.payrollConfig as any)?.arrearsAutoCalculate ?? true,
-      lopPerDayBase: (settings?.payrollConfig as any)?.lopPerDayBase || '30',
-      lopComponentsAffected: (settings?.payrollConfig as any)?.lopComponentsAffected || ['basic', 'hra', 'da', 'special'],
-      lopImpactsPf: (settings?.payrollConfig as any)?.lopImpactsPf ?? true,
-      lopImpactsEsi: (settings?.payrollConfig as any)?.lopImpactsEsi ?? true,
-      makerCheckerEnabled: (settings?.payrollConfig as any)?.makerCheckerEnabled ?? false,
-    } as PayrollConfig;
+    const config = buildPayrollConfig(settings as unknown as Record<string, unknown>);
     const allowances = (settings?.allowanceConfig as AllowanceConfig[]) || [];
     const deductions = (settings?.deductionConfig as DeductionConfig[]) || [];
+    const minimumWageThreshold = settings?.payrollConfig?.minimumWage || PAYROLL.MINIMUM_WAGE_DEFAULT;
 
-    const monthStr = `${year}-${String(month).padStart(2, '0')}`;
     const startDate = new Date(year, month - 1, 1);
     const endDate = new Date(year, month, 0);
     const totalDays = getDaysInMonth(year, month);
     const standardHours = config.standardHoursPerDay || 8;
 
-    const employees = await Employee.find({ _id: { $in: employeeIds }, status: 'active' }).lean();
-    if (employees.length === 0) throw new AppError('No active employees found for the given IDs', 404);
+    // Batch-fetch all per-employee data (S10 fix)
+    const empIdStrs = employeeIds.map(String);
+    const employees = await Employee.find({ _id: { $in: empIdStrs } }).lean();
+    const monthStart = new Date(year, month - 1, 1);
+    const monthEnd = new Date(year, month, 0, 23, 59, 59);
+    const financialYearStart = month >= 4 ? year : year - 1;
+
+    const [attendanceBulk, overtimeBulk, leaveAppBulk, statutoryDefaults, overtimeRulesRaw, salaryStructuresRaw, componentMastersRaw, ytdItemsBulk, loanRepaymentsBulk, prevStructuresRaw] = await Promise.all([
+      AttendanceEntry.find({ employee: { $in: empIdStrs }, date: { $gte: startDate, $lte: endDate } }).lean(),
+      OvertimeEntry.find({ employee: { $in: empIdStrs }, date: { $gte: startDate, $lte: endDate } }).lean(),
+      LeaveApplication.find({ employee: { $in: empIdStrs }, status: 'approved', startDate: { $lte: endDate }, endDate: { $gte: startDate } })
+        .populate('leaveType', 'isPaid deductionMethod name')
+        .lean(),
+      getStatutoryDefaults(),
+      OvertimeRule.find({ isActive: true }).lean(),
+      SalaryStructure.find({
+        employee: { $in: empIdStrs },
+        isCurrent: true,
+        effectiveFrom: { $lte: monthEnd },
+        $or: [{ effectiveTo: null }, { effectiveTo: { $gte: monthStart } }],
+      }).lean(),
+      ComponentMaster.find({ isActive: true }).lean(),
+      PayrollItem.find({
+        employee: { $in: empIdStrs },
+        month: { $gte: `${financialYearStart}-04`, $lte: monthStr },
+      }).lean(),
+      LoanRepayment.find({
+        employee: { $in: empIdStrs },
+        month: monthStr,
+        status: 'pending',
+      }).populate('loan', 'amount').lean(),
+      SalaryStructure.find({
+        employee: { $in: empIdStrs },
+        isCurrent: { $ne: true },
+        effectiveFrom: { $lt: monthStart },
+        $or: [{ effectiveTo: null }, { effectiveTo: { $lt: monthStart } }],
+      }).sort({ effectiveFrom: -1 }).lean(),
+    ]);
+
+    const attendanceMap = new Map<string, any[]>();
+    for (const att of attendanceBulk) {
+      const key = String(att.employee);
+      const arr = attendanceMap.get(key) ?? [];
+      arr.push(att);
+      attendanceMap.set(key, arr);
+    }
+    const overtimeMap = new Map<string, any[]>();
+    for (const ot of overtimeBulk) {
+      const key = String(ot.employee);
+      const arr = overtimeMap.get(key) ?? [];
+      arr.push(ot);
+      overtimeMap.set(key, arr);
+    }
+    const leaveMap = new Map<string, any[]>();
+    for (const la of leaveAppBulk) {
+      const key = String(la.employee);
+      const arr = leaveMap.get(key) ?? [];
+      arr.push(la);
+      leaveMap.set(key, arr);
+    }
+    const overtimeRulesMap = new Map<string, LeanOvertimeRule | null>();
+    const categories = [...new Set(employees.map(e => e.category || 'worker'))];
+    for (const cat of categories) {
+      const applicableTo = cat === 'worker' ? 'worker' : 'office-staff';
+      const rule = overtimeRulesRaw.find(r => r.applicableTo === applicableTo) ?? overtimeRulesRaw.find(r => r.applicableTo === 'all') ?? null;
+      overtimeRulesMap.set(cat, rule as LeanOvertimeRule | null);
+    }
+    const salaryStructuresMap = new Map<string, any>();
+    for (const s of salaryStructuresRaw) { salaryStructuresMap.set(String(s.employee), s); }
+    const componentMasterMap = new Map<string, IComponentMaster>();
+    for (const c of componentMastersRaw) { componentMasterMap.set(String(c._id), c as unknown as IComponentMaster); }
+    const ytdItemsMap = new Map<string, any[]>();
+    for (const item of ytdItemsBulk) {
+      const key = String(item.employee);
+      const arr = ytdItemsMap.get(key) ?? [];
+      arr.push(item);
+      ytdItemsMap.set(key, arr);
+    }
+    const loanRepaymentsMap = new Map<string, any[]>();
+    for (const lr of loanRepaymentsBulk) {
+      const key = String(lr.employee);
+      const arr = loanRepaymentsMap.get(key) ?? [];
+      arr.push(lr);
+      loanRepaymentsMap.set(key, arr);
+    }
+    const prevSalaryStructuresMap = new Map<string, any>();
+    for (const s of prevStructuresRaw) {
+      const key = String(s.employee);
+      if (!prevSalaryStructuresMap.has(key)) { prevSalaryStructuresMap.set(key, s); }
+    }
 
     const payrollItemDocs = [];
     let totalNetPay = 0, totalGrossPay = 0, totalDeductions = 0;
 
     for (const emp of employees) {
       const result = await calculatePayrollForEmployee(
-        emp, month, year, config, allowances, deductions, startDate, endDate, totalDays, totalDays, standardHours,
+        emp, month, year, config, allowances, deductions, startDate, endDate, totalDays, totalDays, standardHours, minimumWageThreshold,
+        { attendanceMap, overtimeMap, leaveMap, statutoryDefaults, overtimeRulesMap, salaryStructuresMap, componentMasterMap, ytdItemsMap, loanRepaymentsMap, prevSalaryStructuresMap },
       );
       totalNetPay += result.netPay;
       totalGrossPay += result.grossEarnings;
@@ -1560,37 +2050,49 @@ export class PayrollService {
       });
     }
 
-    const run = await PayrollRun.create({
-      month: monthStr,
-      status: 'draft',
-      totalEmployees: employees.length,
-      totalNetPay,
-      totalGrossPay,
-      totalDeductions,
-      processedBy: new mongoose.Types.ObjectId(userId),
-      isSupplementary: true,
-      remarks: `Supplementary: ${reason}`,
-    });
+    const session = await mongoose.startSession();
+    session.startTransaction();
 
-    await PayrollItem.insertMany(payrollItemDocs.map(doc => ({ ...doc, payrollRun: run._id })));
+    try {
+      const run = await PayrollRun.create([{
+        month: monthStr,
+        status: 'draft',
+        totalEmployees: employees.length,
+        totalNetPay,
+        totalGrossPay,
+        totalDeductions,
+        processedBy: new mongoose.Types.ObjectId(userId),
+        isSupplementary: true,
+        remarks: `Supplementary: ${reason}`,
+      }], { session });
 
-    await AuditService.log({
-      action: 'create',
-      module: 'payroll',
-      userId,
-      targetId: run._id.toString(),
-      details: { month: monthStr, type: 'supplementary', employees: employees.length, reason },
-    });
+      await PayrollItem.insertMany(payrollItemDocs.map(doc => ({ ...doc, payrollRun: run[0]._id })), { session });
 
-    return {
-      id: String(run._id),
-      month: monthStr,
-      type: 'supplementary',
-      reason,
-      status: 'draft',
-      totalEmployees: employees.length,
-      totalNetPay,
-    };
+      await session.commitTransaction();
+
+      await AuditService.log({
+        action: 'create',
+        module: 'payroll',
+        userId,
+        targetId: run[0]._id.toString(),
+        details: { month: monthStr, type: 'supplementary', employees: employees.length, reason },
+      });
+
+      return {
+        id: String(run[0]._id),
+        month: monthStr,
+        type: 'supplementary',
+        reason,
+        status: 'draft',
+        totalEmployees: employees.length,
+        totalNetPay,
+      };
+    } catch (err) {
+      await session.abortTransaction();
+      throw err;
+    } finally {
+      session.endSession();
+    }
   }
 
   static async getRunDetails(id: string): Promise<Record<string, unknown>> {
@@ -1611,7 +2113,10 @@ export class PayrollService {
         employee: {
           id: String(emp._id),
           name: emp.fullName,
-          code: emp.employeeCode,
+          code: (function(){
+            const val = String(emp.employeeCode);
+            return val.length > 4 ? '*'.repeat(val.length - 4) + val.slice(-4) : '****';
+          })(),
         },
         totalDays: item.totalDays,
         presentDays: item.presentDays,
@@ -1649,58 +2154,70 @@ export class PayrollService {
   }
 
   static async updatePayrollItem(runId: string, id: string, data: Record<string, unknown>, userId: string): Promise<Record<string, unknown>> {
-    const item = await PayrollItem.findOne({ _id: id, payrollRun: runId });
-    if (!item) throw new AppError('Payroll item not found', 404);
+    const session = await mongoose.startSession();
+    session.startTransaction();
 
-    const run = await PayrollRun.findById(runId);
-    if (!run) throw new AppError('Payroll run not found', 404);
-    if (run.status !== 'draft') throw new AppError('Can only edit draft payroll', 400);
+    try {
+      const item = await PayrollItem.findOne({ _id: id, payrollRun: runId }).session(session);
+      if (!item) throw new AppError('Payroll item not found', 404);
 
-    const changes: Record<string, unknown> = {};
-    if (data.basicEarnings !== undefined && item.basicEarnings !== data.basicEarnings) {
-      changes.basicEarnings = { from: item.basicEarnings, to: data.basicEarnings };
-      item.basicEarnings = data.basicEarnings as number;
-    }
-    if (data.allowances !== undefined) {
-      changes.allowances = { updated: true };
-      item.allowances = data.allowances as IPayrollItem['allowances'];
-    }
-    if (data.deductions !== undefined) {
-      changes.deductions = { updated: true };
-      item.deductions = data.deductions as IPayrollItem['deductions'];
-    }
-    if (data.netPay !== undefined && item.netPay !== data.netPay) {
-      changes.netPay = { from: item.netPay, to: data.netPay };
-      item.netPay = data.netPay as number;
-    }
+      const run = await PayrollRun.findById(runId).session(session);
+      if (!run) throw new AppError('Payroll run not found', 404);
+      if (run.status !== 'draft') throw new AppError('Can only edit draft payroll', 400);
 
-    await item.save();
+      const changes: Record<string, unknown> = {};
+      if (data.basicEarnings !== undefined && item.basicEarnings !== data.basicEarnings) {
+        changes.basicEarnings = { from: item.basicEarnings, to: data.basicEarnings };
+        item.basicEarnings = data.basicEarnings as number;
+      }
+      if (data.allowances !== undefined) {
+        changes.allowances = { updated: true };
+        item.allowances = data.allowances as IPayrollItem['allowances'];
+      }
+      if (data.deductions !== undefined) {
+        changes.deductions = { updated: true };
+        item.deductions = data.deductions as IPayrollItem['deductions'];
+      }
+      if (data.netPay !== undefined && item.netPay !== data.netPay) {
+        changes.netPay = { from: item.netPay, to: data.netPay };
+        item.netPay = data.netPay as number;
+      }
 
-    if (Object.keys(changes).length > 0) {
-      await addRevision(run, 'Payroll item updated', userId, { itemId: id, employee: item.employee.toString(), changes });
+      await item.save({ session });
 
-      const aggregates = await PayrollItem.aggregate([
-        { $match: { payrollRun: run._id } },
-        { $group: { _id: null, totalNetPay: { $sum: '$netPay' }, totalGrossPay: { $sum: '$grossEarnings' }, totalDeductions: { $sum: '$totalDeductions' } } }
-      ]).then(result => result[0]);
+      if (Object.keys(changes).length > 0) {
+        await addRevision(run, 'Payroll item updated', userId, { itemId: id, employee: item.employee.toString(), changes });
 
-      await PayrollRun.findByIdAndUpdate(run._id, {
-        totalNetPay: aggregates?.totalNetPay || 0,
-        totalGrossPay: aggregates?.totalGrossPay || 0,
-        totalDeductions: aggregates?.totalDeductions || 0,
+        const aggregates = await PayrollItem.aggregate([
+          { $match: { payrollRun: run._id } },
+          { $group: { _id: null, totalNetPay: { $sum: '$netPay' }, totalGrossPay: { $sum: '$grossEarnings' }, totalDeductions: { $sum: '$totalDeductions' } } }
+        ]).session(session).then(result => result[0]);
+
+        await PayrollRun.findByIdAndUpdate(run._id, {
+          totalNetPay: aggregates?.totalNetPay || 0,
+          totalGrossPay: aggregates?.totalGrossPay || 0,
+          totalDeductions: aggregates?.totalDeductions || 0,
+        }).session(session);
+      }
+
+      await session.commitTransaction();
+
+      await AuditService.log({
+        action: 'update',
+        module: 'payroll',
+        userId,
+        targetId: id,
+        details: { field: 'payroll_item', changes },
       });
+
+      const { _id, ...rest } = item.toObject();
+      return { ...rest, id: String(_id), _id: undefined };
+    } catch (err) {
+      await session.abortTransaction();
+      throw err;
+    } finally {
+      session.endSession();
     }
-
-    await AuditService.log({
-      action: 'update',
-      module: 'payroll',
-      userId,
-      targetId: id,
-      details: { field: 'payroll_item', changes },
-    });
-
-    const { _id, ...rest } = item.toObject();
-    return { ...rest, id: String(_id), _id: undefined };
   }
 
   static async batchUpdateItems(id: string, items: Array<{ itemId: string; data: Record<string, unknown> }>, userId: string): Promise<Record<string, unknown>> {
@@ -1772,24 +2289,36 @@ export class PayrollService {
   }
 
   static async deleteRun(id: string, userId: string): Promise<void> {
-    const run = await PayrollRun.findById(id);
-    if (!run) throw new AppError('Payroll run not found', 404);
-    if (run.status === 'finalized') throw new AppError('Cannot delete finalized payroll', 400);
+    const session = await mongoose.startSession();
+    session.startTransaction();
 
-    await LoanRepayment.updateMany(
-      { payrollRun: run._id, status: 'deducted' },
-      { $set: { status: 'pending' }, $unset: { payrollRun: '', repaidAt: '' } },
-    );
-    await PayrollItem.deleteMany({ payrollRun: id });
-    await PayrollRun.findByIdAndDelete(id);
+    try {
+      const run = await PayrollRun.findById(id).session(session);
+      if (!run) throw new AppError('Payroll run not found', 404);
+      if (run.status === 'finalized') throw new AppError('Cannot delete finalized payroll', 400);
 
-    await AuditService.log({
-      action: 'delete',
-      module: 'payroll',
-      userId,
-      targetId: id,
-      details: { month: run.month },
-    });
+      await LoanRepayment.updateMany(
+        { payrollRun: run._id, status: 'deducted' },
+        { $set: { status: 'pending' }, $unset: { payrollRun: '', repaidAt: '' } },
+      ).session(session);
+      await PayrollItem.deleteMany({ payrollRun: id }).session(session);
+      await PayrollRun.findByIdAndDelete(id).session(session);
+
+      await session.commitTransaction();
+
+      await AuditService.log({
+        action: 'delete',
+        module: 'payroll',
+        userId,
+        targetId: id,
+        details: { month: run.month },
+      });
+    } catch (err) {
+      await session.abortTransaction();
+      throw err;
+    } finally {
+      session.endSession();
+    }
   }
 
   static async getByEmployee(employeeId: string): Promise<unknown[]> {
@@ -1800,11 +2329,14 @@ export class PayrollService {
       return {
         id: String(item._id),
         month: item.month,
-          employee: item.employee ? {
-            id: String((item.employee as any)._id),
-            name: (item.employee as any).fullName,
-            code: (item.employee as any).employeeCode,
-          } : undefined,
+employee: item.employee ? {
+          id: String((item.employee as any)._id),
+          name: (item.employee as any).fullName,
+          code: (function(){
+            const val = String((item.employee as any).employeeCode);
+            return val.length > 4 ? '*'.repeat(val.length - 4) + val.slice(-4) : '****';
+          })(),
+        } : undefined,
         payrollRun: pr ? {
           id: String(pr._id),
           month: pr.month,

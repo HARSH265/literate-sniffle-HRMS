@@ -33,6 +33,11 @@ const sanitizeEmployee = (emp: Record<string, unknown>, userRole: string): Recor
         sanitized[field] = val.length > 4 ? '*'.repeat(val.length - 4) + val.slice(-4) : '****';
       }
     }
+    // Mask employeeCode as a sensitive identifier for non-privileged roles
+    if (sanitized['employeeCode']) {
+      const val = String(sanitized['employeeCode']);
+      sanitized['employeeCode'] = val.length > 4 ? '*'.repeat(val.length - 4) + val.slice(-4) : '****';
+    }
   }
   
   if (emp.bankDetails) {

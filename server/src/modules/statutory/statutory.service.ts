@@ -85,7 +85,7 @@ export async function calculateStatutoryForEmployee(
 
   if (defaults.pfEnabled && !employee.pfExempted && pfApplicableWages > 0) {
     result.employeePf = Math.round(pfApplicableWages * (defaults.pfEmployeeRate / 100));
-    const epsAmount = Math.round(Math.min(pfApplicableWages, 15000) * (defaults.epsRate / 100));
+    const epsAmount = Math.round(Math.min(pfApplicableWages, defaults.pfWageCeiling) * (defaults.epsRate / 100));
     result.eps = epsAmount;
     result.employerPf = Math.round(pfApplicableWages * (defaults.pfEmployerRate / 100)) - epsAmount;
     result.edli = Math.round(pfApplicableWages * (defaults.edliRate / 100));
@@ -153,7 +153,7 @@ export async function generatePFChallan(month: string, userId: string) {
     totalWages += pfWages;
     employeeCount++;
     totalEmployeePf += Math.round(pfWages * (defaults.pfEmployeeRate / 100));
-    const epsAmt = Math.round(Math.min(pfWages, 15000) * (defaults.epsRate / 100));
+    const epsAmt = Math.round(Math.min(pfWages, defaults.pfWageCeiling) * (defaults.epsRate / 100));
     totalEps += epsAmt;
     totalEmployerPf += Math.round(pfWages * (defaults.pfEmployerRate / 100)) - epsAmt;
     totalEdli += Math.round(pfWages * (defaults.edliRate / 100));
@@ -216,29 +216,34 @@ export async function generateStatutoryReport(
   month: string,
   userId: string
 ) {
-  const payrollItems = await PayrollItem.find({
-    month,
-    status: { $in: ['submitted', 'approved', 'finalized'] },
-  })
-    .populate('employee', 'employeeCode fullName pfUAN esiNumber department pfExempted esiExempted ptState ptExempted')
-    .lean();
+  const BATCH_SIZE = 500;
+  let skip = 0;
+  let hasMore = true;
+  const allRecords: Record<string, unknown>[] = [];
 
   const [year, mon] = month.split('-');
   const financialYear = parseInt(mon, 10) >= 4
     ? `${year}-${parseInt(year) + 1}`
     : `${parseInt(year) - 1}-${year}`;
 
-  let reportData: any = {};
+  while (hasMore) {
+    const payrollItems = await PayrollItem.find({
+      month,
+      status: { $in: ['submitted', 'approved', 'finalized'] },
+    })
+      .populate('employee', 'employeeCode fullName pfUAN esiNumber department pfExempted esiExempted ptState ptExempted')
+      .skip(skip)
+      .limit(BATCH_SIZE)
+      .lean();
 
-  switch (reportType) {
-    case 'pf-ecr': {
-      reportData = {
-        month,
-        financialYear,
-        totalEmployees: payrollItems.length,
-        records: payrollItems.map((item) => {
-          const emp = item.employee as any;
-          return {
+    if (payrollItems.length < BATCH_SIZE) hasMore = false;
+    skip += BATCH_SIZE;
+
+    for (const item of payrollItems) {
+      const emp = item.employee as unknown as Record<string, unknown>;
+      switch (reportType) {
+        case 'pf-ecr':
+          allRecords.push({
             employeeCode: emp?.employeeCode || '',
             employeeName: emp?.fullName || '',
             uan: emp?.pfUAN || '',
@@ -247,19 +252,10 @@ export async function generateStatutoryReport(
             employerPf: 0,
             eps: 0,
             daysWorked: item.presentDays,
-          };
-        }),
-      };
-      break;
-    }
-    case 'esi-return': {
-      reportData = {
-        month,
-        financialYear,
-        totalEmployees: payrollItems.length,
-        records: payrollItems.map((item) => {
-          const emp = item.employee as any;
-          return {
+          });
+          break;
+        case 'esi-return':
+          allRecords.push({
             employeeCode: emp?.employeeCode || '',
             employeeName: emp?.fullName || '',
             esiNumber: emp?.esiNumber || '',
@@ -267,55 +263,30 @@ export async function generateStatutoryReport(
             employeeEsi: item.deductions.find((d) => d.name.toUpperCase() === 'ESI')?.calculatedValue || 0,
             employerEsi: 0,
             daysWorked: item.presentDays,
-          };
-        }),
-      };
-      break;
-    }
-    case 'pf-form-5':
-    case 'pf-form-10': {
-      reportData = {
-        month,
-        financialYear,
-        reportType,
-        records: payrollItems.map((item) => {
-          const emp = item.employee as any;
-          return {
+          });
+          break;
+        case 'pt-return':
+          allRecords.push({
             employeeCode: emp?.employeeCode || '',
             employeeName: emp?.fullName || '',
-            uan: emp?.pfUAN || '',
-            joiningDate: emp?.joiningDate || '',
+            ptState: emp?.ptState || '',
             grossWages: item.grossEarnings,
-            employeePf: item.deductions.find((d) => d.name.toUpperCase() === 'PF')?.calculatedValue || 0,
-          };
-        }),
-      };
-      break;
+            professionalTax: item.deductions.find((d) => d.name.toUpperCase() === 'PT' || d.name.toUpperCase() === 'PROFESSIONAL TAX')?.calculatedValue || 0,
+          });
+          break;
+        default:
+          allRecords.push({ employeeCode: emp?.employeeCode || '', grossWages: item.grossEarnings });
+          break;
+      }
     }
-    case 'pt-return': {
-      reportData = {
-        month,
-        financialYear,
-        records: payrollItems.map((item) => {
-          const emp = item.employee as any;
-          return {
-            employeeCode: emp?.employeeCode || '',
-            employeeName: emp?.fullName || '',
-            state: emp?.ptState || '',
-            grossWages: item.grossEarnings,
-            professionalTax: item.deductions.find((d) => d.name.toUpperCase() === 'PT')?.calculatedValue || 0,
-          };
-        }),
-      };
-      break;
-    }
-    default:
-      reportData = {
-        month,
-        financialYear,
-        records: payrollItems,
-      };
   }
+
+  const reportData = {
+    month,
+    financialYear,
+    totalEmployees: allRecords.length,
+    records: allRecords,
+  };
 
   const report = await StatutoryReport.create({
     reportType,
@@ -382,7 +353,7 @@ export async function getStatutorySummary(month: string) {
       totalPfWages += pfWages;
       pfCount++;
       totalEmployeePf += Math.round(pfWages * (defaults.pfEmployeeRate / 100));
-      const epsAmt = Math.round(Math.min(pfWages, 15000) * (defaults.epsRate / 100));
+      const epsAmt = Math.round(Math.min(pfWages, defaults.pfWageCeiling) * (defaults.epsRate / 100));
       totalEps += epsAmt;
       totalEmployerPf += Math.round(pfWages * (defaults.pfEmployerRate / 100)) - epsAmt;
       totalEdli += Math.round(pfWages * (defaults.edliRate / 100));

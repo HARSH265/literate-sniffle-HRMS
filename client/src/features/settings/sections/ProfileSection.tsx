@@ -16,7 +16,7 @@ export function ProfileSection({ form }: { form: any }) {
       await apiClient.post('/auth/logout-all-devices');
       logout();
       message.success('Logged out from all devices');
-      navigate('/login');
+      navigate('/');
     } catch {
       message.error('Failed to logout from all devices');
     } finally {
