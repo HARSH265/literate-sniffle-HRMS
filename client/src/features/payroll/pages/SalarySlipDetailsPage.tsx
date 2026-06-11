@@ -6,8 +6,9 @@ import { Button, Descriptions, Card, message, Breadcrumb } from 'antd';
 import { FilePdfOutlined } from '@ant-design/icons';
 import { salarySlipService } from '../services/salarySlipService';
 import { ROUTES } from '../../../core/constants/routes';
+import { formatCurrency } from '../../../core/constants/currency';
+import { downloadPdfBlob } from '../../../core/utils/downloadPdfBlob';
 import dayjs from 'dayjs';
-import apiClient from '../../../core/api/apiClient';
 
 export function SalarySlipDetailsPage() {
   const { id } = useParams<{ id: string }>();
@@ -20,29 +21,21 @@ export function SalarySlipDetailsPage() {
       return result.data;
     },
     enabled: !!id,
+    refetchOnWindowFocus: false,
   });
 
   const handleDownloadPdf = async (employeeId?: string) => {
     try {
-      const params = employeeId ? { employeeId } : {};
-      const response = await apiClient.get(`/salary-slips/${id}/pdf`, {
-        params,
-        responseType: 'blob',
-      });
-      
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
+      const params = employeeId ? { employeeId } : undefined;
       const suffix = employeeId ? `_${employeeId}` : '';
-      link.setAttribute('download', `SalarySlip_${slipData?.month?.replace('-', '_')}${suffix}.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-      
+      await downloadPdfBlob(
+        `/salary-slips/${id}/pdf`,
+        `SalarySlip_${slipData?.month?.replace('-', '_')}${suffix}.pdf`,
+        params,
+      );
       message.success('PDF downloaded successfully');
-    } catch (err: any) {
-      message.error(err?.response?.data?.message || 'Failed to download PDF');
+    } catch (err: unknown) {
+      message.error((err as any)?.response?.data?.message || 'Failed to download PDF');
     }
   };
 
@@ -50,14 +43,14 @@ export function SalarySlipDetailsPage() {
     { title: 'Employee', dataIndex: 'name', key: 'name' },
     { title: 'Code', dataIndex: 'employeeCode', key: 'employeeCode' },
     { title: 'Dept', dataIndex: 'department', key: 'department' },
-    { title: 'Basic', dataIndex: 'basicSalary', key: 'basicSalary', render: (v: number) => `₹${v?.toLocaleString()}` },
-    { title: 'Earnings', dataIndex: 'totalEarnings', key: 'totalEarnings', render: (v: number) => `₹${v?.toLocaleString()}` },
-    { title: 'Deductions', dataIndex: 'totalDeductions', key: 'totalDeductions', render: (v: number) => `₹${v?.toLocaleString()}` },
-    { title: 'Net Pay', dataIndex: 'netPay', key: 'netPay', render: (v: number) => <b style={{ color: 'var(--hrms-success)' }}>₹{v?.toLocaleString()}</b> },
+    { title: 'Basic', dataIndex: 'basicSalary', key: 'basicSalary', render: (v: number) => formatCurrency(v || 0) },
+    { title: 'Earnings', dataIndex: 'totalEarnings', key: 'totalEarnings', render: (v: number) => formatCurrency(v || 0) },
+    { title: 'Deductions', dataIndex: 'totalDeductions', key: 'totalDeductions', render: (v: number) => formatCurrency(v || 0) },
+    { title: 'Net Pay', dataIndex: 'netPay', key: 'netPay', render: (v: number) => <b style={{ color: 'var(--hrms-success)' }}>{formatCurrency(v || 0)}</b> },
     {
       title: 'Action',
       key: 'action',
-      render: (_: any, record: any) => (
+      render: (_: unknown, record: { id: string }) => (
         <Button type="link" size="small" icon={<FilePdfOutlined />} onClick={() => handleDownloadPdf(record.id)}>
           PDF
         </Button>
@@ -65,12 +58,12 @@ export function SalarySlipDetailsPage() {
     },
   ];
 
-  const totals = slipData?.employees?.reduce((acc: any, emp: any) => ({
+  const totals: { basic: number; earnings: number; deductions: number; net: number } = slipData?.employees?.reduce<{ basic: number; earnings: number; deductions: number; net: number }>((acc, emp) => ({
     basic: acc.basic + (emp.basicSalary || 0),
     earnings: acc.earnings + (emp.totalEarnings || 0),
     deductions: acc.deductions + (emp.totalDeductions || 0),
     net: acc.net + (emp.netPay || 0),
-  }), { basic: 0, earnings: 0, deductions: 0, net: 0 }) || {};
+  }), { basic: 0, earnings: 0, deductions: 0, net: 0 }) ?? { basic: 0, earnings: 0, deductions: 0, net: 0 };
 
   return (
     <div>
@@ -110,7 +103,7 @@ export function SalarySlipDetailsPage() {
         pagination={{ pageSize: 20 }}
         toolbarRight={
           <span style={{ fontWeight: 600 }}>
-            Total — Basic: ₹{totals.basic?.toLocaleString()} &nbsp;|&nbsp; Earnings: ₹{totals.earnings?.toLocaleString()} &nbsp;|&nbsp; Deductions: ₹{totals.deductions?.toLocaleString()} &nbsp;|&nbsp; <span style={{ color: 'var(--hrms-success)' }}>Net: ₹{totals.net?.toLocaleString()}</span>
+            Total — Basic: {formatCurrency(totals.basic)} &nbsp;|&nbsp; Earnings: {formatCurrency(totals.earnings)} &nbsp;|&nbsp; Deductions: {formatCurrency(totals.deductions)} &nbsp;|&nbsp; <span style={{ color: 'var(--hrms-success)' }}>Net: {formatCurrency(totals.net)}</span>
           </span>
         }
       />

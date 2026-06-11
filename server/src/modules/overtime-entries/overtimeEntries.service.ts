@@ -66,44 +66,45 @@ export class OvertimeEntriesService {
     return { ...entry, id: entry._id.toString(), _id: undefined };
   }
 
-  static async create(data: Record<string, unknown>, userId: string) {
-    const employeeExists = await Employee.exists({ _id: data.employee });
-    if (!employeeExists) {
-      throw new AppError('Employee not found', 400);
-    }
-
-    const overtimeDate = new Date(data.date as string);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    if (overtimeDate > today) {
-      throw new AppError('Cannot create overtime for future dates', 400);
-    }
-
-    const hours = data.hours as number;
-    if (hours <= 0 || hours > 24) {
-      throw new AppError('Overtime hours must be between 0.5 and 24 per day', 400);
-    }
-
-    const existingRuleId = data.overtimeRule as string;
-    let rule = null;
-    if (existingRuleId) {
-      rule = await OvertimeRule.findById(existingRuleId).lean();
-    } else {
-      rule = await OvertimeRule.findOne({ isActive: true, applicableTo: 'all' }).lean();
-      if (!rule) {
-        rule = await OvertimeRule.findOne({ isActive: true }).sort({ createdAt: -1 }).lean();
-      }
-    }
-
+static async create(data: Record<string, unknown>, userId: string) {
     const session = await mongoose.startSession();
     session.startTransaction();
 
     try {
-      if (rule) {
-        const entryDate = new Date(data.date as string);
+      // Validate employee existence
+      const employee = await Employee.findById(data.employee).lean();
+      if (!employee) throw new AppError('Employee not found', 404);
+
+        // Validate overtime rule if provided
+        let rule = null;
+        if (data.overtimeRule) {
+          rule = await OvertimeRule.findById(data.overtimeRule).lean();
+        } else {
+          rule = await OvertimeRule.findOne({ isActive: true, applicableTo: 'all' }).lean();
+          if (!rule) {
+            rule = await OvertimeRule.findOne({ isActive: true }).sort({ createdAt: -1 }).lean();
+          }
+        }
+
+        // Validate overtime date is not in future
+        const overtimeDate = new Date(data.date as string);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (overtimeDate > today) {
+          throw new AppError('Cannot create overtime for future dates', 400);
+        }
+
+        const hours = data.hours as number;
+        if (hours < 0.5 || hours > 24) {
+          throw new AppError('Overtime hours must be between 0.5 and 24', 400);
+        }
+
+        const entryDate = overtimeDate;
         const startOfMonth = new Date(entryDate.getFullYear(), entryDate.getMonth(), 1);
         const endOfMonth = new Date(entryDate.getFullYear(), entryDate.getMonth() + 1, 0);
 
+      if (rule) {
+        // Compute existing total within the same session for atomicity
         const existingHoursResult = await OvertimeEntry.aggregate([
           {
             $match: {
@@ -143,6 +144,31 @@ export class OvertimeEntriesService {
         enteredBy: userId,
       }], { session });
 
+      // Re‑validate after insertion to ensure no race condition broke the limit
+      if (rule) {
+        const postInsertHoursResult = await OvertimeEntry.aggregate([
+          {
+            $match: {
+              employee: data.employee as any,
+              date: { $gte: startOfMonth, $lte: endOfMonth },
+            },
+          },
+          {
+            $group: {
+              _id: null,
+              totalHours: { $sum: '$hours' },
+            },
+          },
+        ]).session(session);
+        const totalAfter = postInsertHoursResult[0]?.totalHours || 0;
+        if (rule.maxHoursPerMonth && totalAfter > rule.maxHoursPerMonth) {
+          throw new AppError(
+            `Overtime limit exceeded after insertion. Total ${totalAfter} hours exceeds allowed ${rule.maxHoursPerMonth} hours/month for "${rule.name}".`,
+            400
+          );
+        }
+      }
+
       await AuditService.log({
         action: 'create',
         module: 'overtime-entries',
@@ -162,22 +188,22 @@ export class OvertimeEntriesService {
     }
   }
 
+
   static async update(id: string, data: Record<string, unknown>, userId: string) {
     const session = await mongoose.startSession();
     session.startTransaction();
-
     try {
       const entry = await OvertimeEntry.findById(id).session(session);
       if (!entry) throw new AppError('Overtime entry not found or already deleted', 404);
 
+      let rule = null;
       if (data.hours !== undefined) {
         const hours = data.hours as number;
-        if (hours <= 0 || hours > 24) {
-          throw new AppError('Overtime hours must be between 0 and 24', 400);
+        if (hours < 0.5 || hours > 24) {
+          throw new AppError('Overtime hours must be between 0.5 and 24', 400);
         }
 
         const ruleId = data.overtimeRule as string | undefined;
-        let rule = null;
         if (ruleId) {
           rule = await OvertimeRule.findById(ruleId).lean();
         } else {
@@ -193,21 +219,9 @@ export class OvertimeEntriesService {
           const endOfMonth = new Date(entryDate.getFullYear(), entryDate.getMonth() + 1, 0);
 
           const existingHoursResult = await OvertimeEntry.aggregate([
-            {
-              $match: {
-                employee: entry.employee,
-                _id: { $ne: entry._id },
-                date: { $gte: startOfMonth, $lte: endOfMonth },
-              },
-            },
-            {
-              $group: {
-                _id: null,
-                totalHours: { $sum: '$hours' },
-              },
-            },
+            { $match: { employee: entry.employee, _id: { $ne: entry._id }, date: { $gte: startOfMonth, $lte: endOfMonth } } },
+            { $group: { _id: null, totalHours: { $sum: '$hours' } } },
           ]).session(session);
-
           const existingHours = existingHoursResult[0]?.totalHours || 0;
           const newTotal = existingHours + hours;
 
@@ -217,7 +231,6 @@ export class OvertimeEntriesService {
               400
             );
           }
-
           if (rule.maxHoursPerDay && hours > rule.maxHoursPerDay) {
             throw new AppError(
               `Cannot update to ${hours} hours. Maximum ${rule.maxHoursPerDay} hours per day allowed as per "${rule.name}" rule.`,
@@ -229,6 +242,24 @@ export class OvertimeEntriesService {
 
       Object.assign(entry, data, { updatedBy: userId });
       await entry.save({ session });
+
+      // Re‑validate total after update to guard against race conditions
+      if (rule) {
+        const entryDate = data.date ? new Date(data.date as string) : entry.date;
+        const startOfMonth = new Date(entryDate.getFullYear(), entryDate.getMonth(), 1);
+        const endOfMonth = new Date(entryDate.getFullYear(), entryDate.getMonth() + 1, 0);
+        const totalAfterResult = await OvertimeEntry.aggregate([
+          { $match: { employee: entry.employee, date: { $gte: startOfMonth, $lte: endOfMonth } } },
+          { $group: { _id: null, totalHours: { $sum: '$hours' } } },
+        ]).session(session);
+        const totalAfter = totalAfterResult[0]?.totalHours || 0;
+        if (rule.maxHoursPerMonth && totalAfter > rule.maxHoursPerMonth) {
+          throw new AppError(
+            `Overtime limit exceeded after update. Total ${totalAfter} hours exceeds allowed ${rule.maxHoursPerMonth} hours/month for "${rule.name}".`,
+            400
+          );
+        }
+      }
 
       await AuditService.log({
         action: 'update',

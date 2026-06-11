@@ -68,4 +68,11 @@ export const payrollEmployeeParamSchema = z.object({
   employeeId: objectIdSchema,
 });
 
+export const supplementaryPayrollSchema = z.object({
+  month: z.number().int().min(1).max(12),
+  year: z.number().int().min(2020).max(2100),
+  employeeIds: z.array(objectIdSchema).min(1, 'At least one employee is required'),
+  reason: z.string().trim().min(1, 'Reason is required').max(500),
+});
+
 

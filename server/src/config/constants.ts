@@ -85,6 +85,12 @@ export const PAYROLL = {
   DEFAULT_WORKING_DAYS: 30,
   DEFAULT_STANDARD_HOURS_PER_DAY: 8,
   MINIMUM_WAGE_DEFAULT: 10000,
+  MINIMUM_WAGE_BY_STATE: {
+    'Karnataka': 15000,
+    'Maharashtra': 12000,
+    'Tamil Nadu': 12000,
+    'Delhi': 16000,
+  } as Record<string, number>,
 } as const;
 
 export const RATE_LIMITS = {

@@ -2,24 +2,32 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '../../../core/components/PageHeader';
 import { DataTable } from '../../../core/components/DataTable';
-import { Button, Modal, Form, DatePicker, message, Tag, Popconfirm, Space, Input } from 'antd';
+import { Button, Modal, Form, DatePicker, message, Tag, Popconfirm, Space, Input, Tooltip } from 'antd';
 import { PlayCircleOutlined, CheckCircleOutlined, EyeOutlined, DeleteOutlined, UndoOutlined, SendOutlined, StopOutlined, ExperimentOutlined } from '@ant-design/icons';
-import { payrollService, PayrollRun } from '../services/payrollService';
+import { payrollService, PayrollRun, PayrollItem } from '../services/payrollService';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useAuthStore } from '../../../core/stores/authStore';
+import { PAYROLL_STATUS_COLORS } from '../../../core/constants/statusColors';
+import { formatCurrency } from '../../../core/constants/currency';
 import dayjs from 'dayjs';
 
-const STATUS_COLORS: Record<string, string> = {
-  draft: 'orange',
-  submitted: 'blue',
-  approved: 'purple',
-  finalized: 'green',
-};
+interface PreviewData {
+  month: string;
+  totalEmployees: number;
+  totalNetPay: number;
+  totalGrossPay: number;
+  totalDeductions: number;
+  items: PayrollItem[];
+}
+
 
 export function PayrollPage() {
   const navigate = useNavigate();
+  const user = useAuthStore((s) => s.user);
+  const canProcessPayroll = user?.role === 'super-admin' || user?.role === 'hr-admin' || user?.role === 'accounts';
   const [isRunModalOpen, setIsRunModalOpen] = useState(false);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
-  const [previewData, setPreviewData] = useState<any>(null);
+  const [previewData, setPreviewData] = useState<PreviewData | null>(null);
   const [unfinalizeRunId, setUnfinalizeRunId] = useState<string | null>(null);
   const [form] = Form.useForm();
   const [previewForm] = Form.useForm();
@@ -43,41 +51,41 @@ export function PayrollPage() {
       queryClient.invalidateQueries({ queryKey: ['payroll-runs'] });
       navigate(`/payroll/${res.data.id}`);
     },
-    onError: (err: any) => message.error(err?.response?.data?.message || 'Failed to run payroll'),
+    onError: (err: Error) => message.error((err as any)?.response?.data?.message || 'Failed to run payroll'),
   });
 
   const previewMutation = useMutation({
     mutationFn: ({ month, year }: { month: number; year: number }) => payrollService.previewRun(month, year),
     onSuccess: (res) => {
-      setPreviewData(res.data);
+      setPreviewData({ ...res.data, items: res.data.items || [] });
       setIsPreviewModalOpen(true);
       previewForm.resetFields();
     },
-    onError: (err: any) => message.error(err?.response?.data?.message || 'Failed to preview'),
+    onError: (err: Error) => message.error((err as any)?.response?.data?.message || 'Failed to preview'),
   });
 
   const submitMutation = useMutation({
     mutationFn: (id: string) => payrollService.submitRun(id),
     onSuccess: () => { message.success('Payroll submitted for approval'); queryClient.invalidateQueries({ queryKey: ['payroll-runs'] }); },
-    onError: (err: any) => message.error(err?.response?.data?.message || 'Failed to submit'),
+    onError: (err: Error) => message.error((err as any)?.response?.data?.message || 'Failed to submit'),
   });
 
   const approveMutation = useMutation({
     mutationFn: (id: string) => payrollService.approveRun(id),
     onSuccess: () => { message.success('Payroll approved'); queryClient.invalidateQueries({ queryKey: ['payroll-runs'] }); },
-    onError: (err: any) => message.error(err?.response?.data?.message || 'Failed to approve'),
+    onError: (err: Error) => message.error((err as any)?.response?.data?.message || 'Failed to approve'),
   });
 
   const rejectMutation = useMutation({
     mutationFn: (id: string) => payrollService.rejectRun(id),
     onSuccess: () => { message.success('Payroll rejected, returned to draft'); queryClient.invalidateQueries({ queryKey: ['payroll-runs'] }); },
-    onError: (err: any) => message.error(err?.response?.data?.message || 'Failed to reject'),
+    onError: (err: Error) => message.error((err as any)?.response?.data?.message || 'Failed to reject'),
   });
 
   const finalizeMutation = useMutation({
     mutationFn: (id: string) => payrollService.finalizeRun(id),
     onSuccess: () => { message.success('Payroll finalized'); queryClient.invalidateQueries({ queryKey: ['payroll-runs'] }); },
-    onError: (err: any) => message.error(err?.response?.data?.message || 'Failed to finalize'),
+    onError: (err: Error) => message.error((err as any)?.response?.data?.message || 'Failed to finalize'),
   });
 
   const unfinalizeMutation = useMutation({
@@ -88,13 +96,13 @@ export function PayrollPage() {
       unfinalizeForm.resetFields();
       queryClient.invalidateQueries({ queryKey: ['payroll-runs'] });
     },
-    onError: (err: any) => message.error(err?.response?.data?.message || 'Failed to unfinalize'),
+    onError: (err: Error) => message.error((err as any)?.response?.data?.message || 'Failed to unfinalize'),
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => payrollService.deleteRun(id),
     onSuccess: () => { message.success('Payroll run deleted'); queryClient.invalidateQueries({ queryKey: ['payroll-runs'] }); },
-    onError: (err: any) => message.error(err?.response?.data?.message || 'Failed to delete'),
+    onError: (err: Error) => message.error((err as any)?.response?.data?.message || 'Failed to delete'),
   });
 
   const handleRun = () => {
@@ -125,19 +133,19 @@ export function PayrollPage() {
     },
     {
       title: 'Status', dataIndex: 'status', key: 'status',
-      render: (s: string) => <Tag color={STATUS_COLORS[s]} style={{ textTransform: 'capitalize' }}>{s}</Tag>,
+      render: (s: string) => <Tag color={PAYROLL_STATUS_COLORS[s]} style={{ textTransform: 'capitalize' }}>{s}</Tag>,
     },
     { title: 'Employees', dataIndex: 'totalEmployees', key: 'totalEmployees' },
     {
       title: 'Total Net Pay', dataIndex: 'totalNetPay', key: 'totalNetPay',
-      render: (v: number) => <span style={{ fontWeight: 600, color: 'var(--hrms-success)' }}>₹{v.toLocaleString()}</span>,
+      render: (v: number) => <span style={{ fontWeight: 600, color: 'var(--hrms-success)' }}>{formatCurrency(v)}</span>,
     },
     {
       title: 'Actions', key: 'actions',
       render: (_: unknown, record: PayrollRun) => (
         <Space size={4}>
           <Button size="small" icon={<EyeOutlined />} onClick={() => navigate(`/payroll/${record.id}`)}>View</Button>
-          {record.status === 'draft' && (
+          {canProcessPayroll && record.status === 'draft' && (
             <>
               <Button size="small" type="primary" icon={<SendOutlined />} onClick={() => submitMutation.mutate(record.id)}>Submit</Button>
               <Popconfirm title="Delete this payroll run?" onConfirm={() => deleteMutation.mutate(record.id)} okText="Delete" okButtonProps={{ danger: true }}>
@@ -145,7 +153,7 @@ export function PayrollPage() {
               </Popconfirm>
             </>
           )}
-          {record.status === 'submitted' && (
+          {canProcessPayroll && record.status === 'submitted' && (
             <>
               <Button size="small" type="primary" icon={<CheckCircleOutlined />} onClick={() => approveMutation.mutate(record.id)}>Approve</Button>
               <Popconfirm title="Reject this payroll run? It will return to draft status." onConfirm={() => rejectMutation.mutate(record.id)} okText="Reject" okButtonProps={{ danger: true }}>
@@ -153,11 +161,13 @@ export function PayrollPage() {
               </Popconfirm>
             </>
           )}
-          {record.status === 'approved' && (
+          {canProcessPayroll && record.status === 'approved' && (
             <Button size="small" type="primary" icon={<CheckCircleOutlined />} onClick={() => finalizeMutation.mutate(record.id)}>Finalize</Button>
           )}
-          {record.status === 'finalized' && (
-            <Button size="small" icon={<UndoOutlined />} onClick={() => setUnfinalizeRunId(record.id)}>Unfinalize</Button>
+          {canProcessPayroll && record.status === 'finalized' && (
+            <Tooltip title={record.unfinalizeLocked ? `Unfinalize window of ${record.unfinalizeWindowDays} days has expired (finalized on ${dayjs(record.finalizedAt).format('DD-MMM-YYYY')})` : 'Revert payroll to draft for edits'}>
+              <Button size="small" icon={<UndoOutlined />} disabled={record.unfinalizeLocked} onClick={() => setUnfinalizeRunId(record.id)}>Unfinalize</Button>
+            </Tooltip>
           )}
         </Space>
       ),
@@ -171,8 +181,8 @@ export function PayrollPage() {
         subtitle="Process and manage monthly payroll"
         actions={
           <Space>
-            <Button icon={<ExperimentOutlined />} onClick={() => setIsPreviewModalOpen(true)}>Preview</Button>
-            <Button type="primary" icon={<PlayCircleOutlined />} onClick={() => setIsRunModalOpen(true)}>Run Payroll</Button>
+            {canProcessPayroll && <Button icon={<ExperimentOutlined />} onClick={() => setIsPreviewModalOpen(true)}>Preview</Button>}
+            {canProcessPayroll && <Button type="primary" icon={<PlayCircleOutlined />} onClick={() => setIsRunModalOpen(true)}>Run Payroll</Button>}
           </Space>
         }
       />
@@ -210,20 +220,20 @@ export function PayrollPage() {
           <div>
             <p><strong>Month:</strong> {dayjs(previewData.month + '-01').format('MMMM YYYY')}</p>
             <p><strong>Employees:</strong> {previewData.totalEmployees}</p>
-            <p><strong>Estimated Total Net Pay:</strong> ₹{previewData.totalNetPay.toLocaleString()}</p>
+            <p><strong>Estimated Total Net Pay:</strong> {formatCurrency(previewData.totalNetPay)}</p>
             <p style={{ fontSize: 12, color: '#888' }}>This is a what-if preview. No data has been saved.</p>
             <DataTable
               dataSource={previewData.items?.slice(0, 10) || []}
               loading={previewMutation.isPending}
               columns={[
-                { title: 'Employee', key: 'name', render: (_: any, r: any) => r.employee?.name },
-                { title: 'Basic', dataIndex: 'basicEarnings', key: 'basic', render: (v: number) => `₹${v.toLocaleString()}` },
-                { title: 'Allowances', dataIndex: 'allowancesTotal', key: 'allow', render: (v: number) => `₹${v.toLocaleString()}` },
-                { title: 'OT', dataIndex: 'overtimeAmount', key: 'ot', render: (v: number) => `₹${v.toLocaleString()}` },
-                { title: 'Deductions', dataIndex: 'totalDeductions', key: 'ded', render: (v: number) => `₹${v.toLocaleString()}` },
-                { title: 'Net Pay', dataIndex: 'netPay', key: 'net', render: (v: number) => <strong>₹{v.toLocaleString()}</strong> },
+                { title: 'Employee', key: 'name', render: (_: unknown, r: PayrollItem) => r.employee?.name },
+                { title: 'Basic', dataIndex: 'basicEarnings', key: 'basic', render: (v: number) => formatCurrency(v) },
+                { title: 'Allowances', dataIndex: 'allowancesTotal', key: 'allow', render: (v: number) => formatCurrency(v) },
+                { title: 'OT', dataIndex: 'overtimeAmount', key: 'ot', render: (v: number) => formatCurrency(v) },
+                { title: 'Deductions', dataIndex: 'totalDeductions', key: 'ded', render: (v: number) => formatCurrency(v) },
+                { title: 'Net Pay', dataIndex: 'netPay', key: 'net', render: (v: number) => <strong>{formatCurrency(v)}</strong> },
               ]}
-              rowKey={(r: any) => r.employee?.id || r.id || String(Math.random())}
+              rowKey={(r: PayrollItem) => r.id || String(Math.random())}
               hidePagination
               disableRowClick
               noCard

@@ -21,7 +21,7 @@ export function SalaryStructureSection() {
 
   const { data: employeesData, isLoading: employeesLoading } = useQuery({
     queryKey: ['employeesSimple'],
-    queryFn: () => employeeService.list({ limit: 1000, status: 'active' }),
+    queryFn: () => employeeService.list({ limit: 5000, status: 'active' }),
   });
 
   const createMutation = useMutation({
@@ -90,7 +90,14 @@ const openEdit = (record: SalaryStructure) => {
   };
 
   const columns = [
-    { title: 'Employee', dataIndex: 'employee', key: 'employee' },
+    { 
+      title: 'Employee', dataIndex: 'employee', key: 'employee',
+      render: (val: any, _record: any) => {
+        if (typeof val === 'object' && val?.fullName) return `${val.fullName} (${val.employeeCode || ''})`;
+        const emp = employeesData?.data?.find((e: Employee) => e.id === val);
+        return emp ? `${emp.fullName} (${emp.employeeCode})` : String(val || '-');
+      },
+    },
     { title: 'Effective From', dataIndex: 'effectiveFrom', key: 'effectiveFrom' },
     { title: 'Effective To', dataIndex: 'effectiveTo', key: 'effectiveTo' },
     { title: 'Active', dataIndex: 'isCurrent', key: 'isCurrent', render: (v: boolean) => <Tag color={v ? 'green' : 'red'}>{v ? 'Current' : 'Past'}</Tag> },
@@ -199,7 +206,7 @@ const openEdit = (record: SalaryStructure) => {
 </Form.List>
 
 <Form.Item>
-  <Button type="primary" htmlType="submit">{editRecord ? 'Update' : 'Create'}</Button>
+  <Button type="primary" htmlType="submit" loading={createMutation.isPending || updateMutation.isPending}>{editRecord ? 'Update' : 'Create'}</Button>
 </Form.Item>
         </Form>
       </Modal>

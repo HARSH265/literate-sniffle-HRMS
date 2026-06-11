@@ -1,6 +1,8 @@
-import { Card, Table, Tag, Button, Space, Spin, Empty } from 'antd';
+import { Card, Table, Tag, Button, Space, Spin, Empty, message } from 'antd';
 import { DownloadOutlined, EyeOutlined } from '@ant-design/icons';
 import { useEssPayslips } from '../hooks/useEssPayslips';
+import apiClient from '../../../core/api/apiClient';
+import dayjs from 'dayjs';
 
 const cardStyle = { borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' };
 
@@ -8,16 +10,46 @@ export function EssPayslipsPage() {
   const { data, isLoading } = useEssPayslips();
   const payslips = data?.data || [];
 
+  const handleView = (record: any) => {
+    const runId = record.payrollRun?.id || record.id;
+    if (runId) window.open(`/payroll/${runId}`, '_blank');
+  };
+
+  const handleDownload = async (record: any) => {
+    try {
+      const runId = record.payrollRun?.id || record.id;
+      const employeeId = record.employee?.id || record.employee;
+      if (!runId) { message.error('Unable to download payslip'); return; }
+      const response = await apiClient.get(`/salary-slips/${runId}/pdf`, {
+        params: employeeId ? { employeeId } : undefined,
+        responseType: 'blob',
+      });
+      const blob = response.data instanceof Blob ? response.data : new Blob([response.data]);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `payslip_${record.month || 'payroll'}.pdf`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+      message.success('Payslip downloaded');
+    } catch {
+      message.error('Failed to download payslip');
+    }
+  };
+
   const columns = [
     {
       title: 'Period',
       dataIndex: 'period',
       key: 'period',
       width: 130,
-      render: (_: any, record: any) => {
-        const month = record.month || record.payrollRun?.month || '';
-        const year = record.year || record.payrollRun?.year || '';
-        return <span style={{ fontSize: 13 }}>{`${month} ${year}`}</span>;
+      render: (_: unknown, record: { payrollRun?: { month?: string }; month?: string; netPay: number }) => {
+        const monthStr = record.payrollRun?.month || record.month || '';
+        if (monthStr && monthStr.includes('-')) {
+          const parsed = dayjs(monthStr + '-01');
+          return <span style={{ fontSize: 13 }}>{parsed.isValid() ? parsed.format('MMM YYYY') : monthStr}</span>;
+        }
+        return <span style={{ fontSize: 13 }}>{monthStr || '-'}</span>;
       },
     },
     {
@@ -42,10 +74,10 @@ export function EssPayslipsPage() {
       title: '',
       key: 'actions',
       width: 80,
-      render: (_: any, _record: any) => (
+      render: (_: any, record: any) => (
         <Space size="small">
-          <Button type="link" icon={<EyeOutlined />} size="small" style={{ padding: 0 }} />
-          <Button type="link" icon={<DownloadOutlined />} size="small" style={{ padding: 0 }} />
+          <Button type="link" icon={<EyeOutlined />} size="small" style={{ padding: 0 }} onClick={() => handleView(record)} />
+          <Button type="link" icon={<DownloadOutlined />} size="small" style={{ padding: 0 }} onClick={() => handleDownload(record)} />
         </Space>
       ),
     },

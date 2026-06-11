@@ -7,6 +7,7 @@ import { AuditService } from '../../core/audit/AuditService.js';
 import { AppError } from '../../core/errors/AppError.js';
 import AuditLog from '../../models/AuditLog.model.js';
 import mongoose from 'mongoose';
+import { PAYROLL } from '../../config/constants.js';
 
 interface ComplianceCheck {
   check: string;
@@ -67,15 +68,7 @@ async function getCompanySettings() {
 function minWageCheck(
   basicEarnings: number, state: string, _category: string,
 ): ComplianceCheck {
-  // Default minimum wage threshold — in production, fetch from state-wise master
-  const minWageByState: Record<string, number> = {
-    'Karnataka': 15000,
-    'Maharashtra': 12000,
-    'Tamil Nadu': 12000,
-    'Delhi': 16000,
-    'default': 10000,
-  };
-  const threshold = minWageByState[state] || minWageByState.default;
+  const threshold = PAYROLL.MINIMUM_WAGE_BY_STATE[state] || PAYROLL.MINIMUM_WAGE_DEFAULT;
   const gap = threshold - basicEarnings;
   return {
     check: 'minimum-wage',

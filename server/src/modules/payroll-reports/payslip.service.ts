@@ -205,7 +205,7 @@ export async function generatePayslipPdf(
   }
 }
 
-function numberToWords(n: number): string {
+function numberToWords(n: number, locale: 'IN' | 'Gulf' = 'IN'): string {
   if (n <= 0) return 'Zero';
   const units = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
   const teens = ['Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
@@ -227,14 +227,26 @@ function numberToWords(n: number): string {
 
   let num = Math.round(n);
   const result: string[] = [];
-  const crores = Math.floor(num / 10000000);
-  if (crores > 0) { result.push(`${convertLessThan1000(crores)} Crore`); num %= 10000000; }
-  const lakhs = Math.floor(num / 100000);
-  if (lakhs > 0) { result.push(`${convertLessThan1000(lakhs)} Lakh`); num %= 100000; }
-  const thousands = Math.floor(num / 1000);
-  if (thousands > 0) { result.push(`${convertLessThan1000(thousands)} Thousand`); num %= 1000; }
+
+  if (locale === 'Gulf') {
+    const billions = Math.floor(num / 1000000000);
+    if (billions > 0) { result.push(`${convertLessThan1000(billions)} Billion`); num %= 1000000000; }
+    const millions = Math.floor(num / 1000000);
+    if (millions > 0) { result.push(`${convertLessThan1000(millions)} Million`); num %= 1000000; }
+    const thousands = Math.floor(num / 1000);
+    if (thousands > 0) { result.push(`${convertLessThan1000(thousands)} Thousand`); num %= 1000; }
+  } else {
+    const crores = Math.floor(num / 10000000);
+    if (crores > 0) { result.push(`${convertLessThan1000(crores)} Crore`); num %= 10000000; }
+    const lakhs = Math.floor(num / 100000);
+    if (lakhs > 0) { result.push(`${convertLessThan1000(lakhs)} Lakh`); num %= 100000; }
+    const thousands = Math.floor(num / 1000);
+    if (thousands > 0) { result.push(`${convertLessThan1000(thousands)} Thousand`); num %= 1000; }
+  }
+
   const hundreds = Math.floor(num / 100);
   if (hundreds > 0) { result.push(`${convertLessThan1000(hundreds)} Hundred`); num %= 100; }
   if (num > 0) result.push(convertLessThan1000(num));
-  return result.join(' ') + ' Rupees Only';
+  const currency = locale === 'Gulf' ? 'Dirhams' : 'Rupees';
+  return result.join(' ') + ` ${currency} Only`;
 }

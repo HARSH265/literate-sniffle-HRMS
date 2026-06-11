@@ -108,6 +108,7 @@ const PayrollRunSchema = new Schema<IPayrollRun>(
 );
 
 PayrollRunSchema.index({ status: 1 });
+PayrollRunSchema.index({ month: 1, status: 1 });
 
 const PayrollRun = mongoose.model<IPayrollRun, PayrollRunModel>('PayrollRun', PayrollRunSchema);
 

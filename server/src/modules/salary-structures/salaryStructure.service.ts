@@ -47,6 +47,12 @@ export class SalaryStructureService {
   }
 
   static async create(data: Record<string, unknown>, userId: string) {
+    if (data.effectiveFrom && data.effectiveTo) {
+      const from = new Date(data.effectiveFrom as string);
+      const to = new Date(data.effectiveTo as string);
+      if (from >= to) throw new AppError('effectiveFrom must be before effectiveTo', 400);
+    }
+
     if (data.isCurrent === undefined || data.isCurrent === true) {
       await SalaryStructure.updateMany(
         { employee: data.employee, isCurrent: true },
@@ -77,7 +83,11 @@ export class SalaryStructureService {
     const structure = await SalaryStructure.findById(id);
     if (!structure) throw new AppError('Salary structure not found or already deleted', 404);
 
-    const updateData = { ...data };
+    const allowedFields = ['effectiveFrom', 'effectiveTo', 'totalCtc', 'components', 'isCurrent', 'remarks'];
+    const updateData: Record<string, unknown> = {};
+    for (const key of allowedFields) {
+      if (key in data) updateData[key] = data[key];
+    }
     if (updateData.effectiveFrom) updateData.effectiveFrom = new Date(updateData.effectiveFrom as string);
     if (updateData.effectiveTo) updateData.effectiveTo = new Date(updateData.effectiveTo as string);
 

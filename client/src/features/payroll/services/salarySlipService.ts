@@ -9,19 +9,45 @@ export interface SalarySlip {
   generatedAt: string;
 }
 
+export interface SalarySlipPreview {
+  month: string;
+  companyName: string;
+  companyAddress?: string;
+  generatedDate: string;
+  employees: Array<{
+    id: string;
+    employeeCode: string;
+    fullName: string;
+    department: string;
+    basicSalary: number;
+    totalEarnings: number;
+    totalDeductions: number;
+    netPay: number;
+    presentDays: number;
+    effectiveWorkingDays: number;
+  }>;
+}
+
+function validateResponse<T>(data: unknown): T {
+  if (!data || typeof data !== 'object') {
+    throw new Error('Invalid API response format');
+  }
+  return data as T;
+}
+
 export const salarySlipService = {
   async list(params?: Record<string, unknown>): Promise<{ success: boolean; data: SalarySlip[] }> {
     const { data } = await apiClient.get('/salary-slips', { params });
-    return data;
+    return validateResponse(data);
   },
 
-  async generatePdf(runId: string, employeeId?: string): Promise<{ success: boolean; data: any }> {
+  async generatePdf(runId: string, employeeId?: string): Promise<{ success: boolean; data: SalarySlipPreview }> {
     const { data } = await apiClient.get(`/salary-slips/${runId}/pdf`, { params: employeeId ? { employeeId } : undefined });
-    return data;
+    return validateResponse(data);
   },
 
-  async preview(runId: string, employeeId?: string): Promise<{ success: boolean; data: any }> {
+  async preview(runId: string, employeeId?: string): Promise<{ success: boolean; data: SalarySlipPreview }> {
     const { data } = await apiClient.get(`/salary-slips/${runId}/preview`, { params: employeeId ? { employeeId } : undefined });
-    return data;
+    return validateResponse(data);
   },
 };

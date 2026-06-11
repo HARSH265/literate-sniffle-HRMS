@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import rateLimit from 'express-rate-limit';
 import { authenticate } from '../../core/permissions/authenticate.middleware.js';
 import { authorize } from '../../core/permissions/authorize.middleware.js';
 import { validate } from '../../core/validation/validate.middleware.js';
@@ -25,7 +26,16 @@ import {
 
 const router = Router();
 
+const statutoryRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  message: 'Too many statutory requests, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 router.use(authenticate);
+router.use(statutoryRateLimit);
 
 router.get('/defaults', authorize('view-statutory'), getDefaultsHandler);
 

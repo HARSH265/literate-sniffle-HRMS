@@ -150,9 +150,19 @@ export async function getLoanOutstandingReport(): Promise<Record<string, unknown
     .populate('employee', 'fullName employeeCode')
     .lean();
 
+  const loanIds = loans.map((l: any) => l._id);
+  const LoanRepayment = (await import('../../models/LoanRepayment.model.js')).default;
+  const repayments = await LoanRepayment.find({ loan: { $in: loanIds }, status: 'deducted' }).lean();
+
+  const paidByLoan = new Map<string, number>();
+  for (const r of repayments) {
+    const loanId = String(r.loan);
+    paidByLoan.set(loanId, (paidByLoan.get(loanId) || 0) + (r.amount || 0));
+  }
+
   let totalOutstanding = 0;
   const details = loans.map((loan: any) => {
-    const totalPaid = 0; // Would need LoanRepayment aggregation
+    const totalPaid = paidByLoan.get(String(loan._id)) || 0;
     const outstanding = (loan.amount || 0) - totalPaid;
     totalOutstanding += outstanding;
     return {
@@ -180,7 +190,7 @@ export async function getBudgetVsActual(runId: string): Promise<Record<string, u
     .lean();
 
   const byDept: Record<string, { budgeted: number; actual: number; variance: number; variancePct: number }> = {};
-  const employees = await Employee.find().populate('department', 'name').lean();
+  const employees = await Employee.find({ status: 'active' }).populate('department', 'name').lean();
   const deptBudget: Record<string, number> = {};
   for (const emp of employees) {
     const deptName = (emp.department as any)?.name || 'Unassigned';

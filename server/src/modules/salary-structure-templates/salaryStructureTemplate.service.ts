@@ -58,7 +58,13 @@ export class SalaryStructureTemplateService {
       if (existing) throw new AppError(`Template with name "${data.name}" already exists`, 409);
     }
 
-    Object.assign(template, data, { updatedBy: userId });
+    const allowedFields = ['name', 'description', 'components', 'isActive'];
+    const updateData: Record<string, unknown> = {};
+    for (const key of allowedFields) {
+      if (key in data) updateData[key] = data[key];
+    }
+
+    Object.assign(template, updateData, { updatedBy: userId });
     await template.save();
 
     await AuditService.log({

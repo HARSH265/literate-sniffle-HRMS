@@ -73,15 +73,18 @@ export interface TaxComputation {
   rebate87a: number;
 }
 
-export interface ArrearsDetails {
-  earningArrears: number;
-  deductionArrears: number;
-  pfArrears: number;
-  esiArrears: number;
-  taxArrears: number;
-  previousMonthAdjustment: number;
-  reason?: string;
+export interface ArrearLineItem {
+  component: { code: string; name: string; id: string };
+  month: string;
+  previousAmount: number;
+  currentAmount: number;
+  difference: number;
+  isPositive: boolean;
+  applicableArrearDays: number;
+  effectiveArrearAmount: number;
 }
+
+export type ArrearsDetails = ArrearLineItem[];
 
 export interface LopDetails {
   lopDays: number;
@@ -262,15 +265,20 @@ const taxComputationSchema = new Schema(
   { _id: false },
 );
 
-const arrearsSchema = new Schema(
+const arrearsLineItemSchema = new Schema(
   {
-    earningArrears: { type: Number, default: 0 },
-    deductionArrears: { type: Number, default: 0 },
-    pfArrears: { type: Number, default: 0 },
-    esiArrears: { type: Number, default: 0 },
-    taxArrears: { type: Number, default: 0 },
-    previousMonthAdjustment: { type: Number, default: 0 },
-    reason: { type: String },
+    component: {
+      code: { type: String },
+      name: { type: String },
+      id: { type: String },
+    },
+    month: { type: String },
+    previousAmount: { type: Number, default: 0 },
+    currentAmount: { type: Number, default: 0 },
+    difference: { type: Number, default: 0 },
+    isPositive: { type: Boolean, default: false },
+    applicableArrearDays: { type: Number, default: 0 },
+    effectiveArrearAmount: { type: Number, default: 0 },
   },
   { _id: false },
 );
@@ -397,7 +405,7 @@ const PayrollItemSchema = new Schema<IPayrollItem>(
     componentWiseDeductions: { type: [componentDeductionSchema], default: [] },
     paidDaysBreakdown: { type: paidDaysBreakdownSchema },
     taxComputation: { type: taxComputationSchema },
-    arrears: { type: arrearsSchema },
+    arrears: { type: [arrearsLineItemSchema], default: [] },
     lopDetails: { type: lopDetailsSchema },
     proRataDetails: { type: proRataDetailsSchema },
     complianceFlags: { type: [complianceCheckSchema], default: [] },

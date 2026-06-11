@@ -4,16 +4,15 @@ import { PageHeader } from '../../../core/components/PageHeader';
 import { DataTable } from '../../../core/components/DataTable';
 import { Button, Select, message, Tag } from 'antd';
 import { FilePdfOutlined, EyeOutlined } from '@ant-design/icons';
-import { salarySlipService } from '../services/salarySlipService';
+import { salarySlipService, SalarySlip } from '../services/salarySlipService';
 import { useQuery } from '@tanstack/react-query';
 import { ROUTES } from '../../../core/constants/routes';
-import apiClient from '../../../core/api/apiClient';
+import { SALARY_SLIP_STATUS_COLORS } from '../../../core/constants/statusColors';
+import { formatCurrency } from '../../../core/constants/currency';
+import { downloadPdfBlob } from '../../../core/utils/downloadPdfBlob';
 import dayjs from 'dayjs';
 
-const STATUS_COLORS: Record<string, string> = {
-  draft: 'orange',
-  finalized: 'green',
-};
+const STATUS_COLORS: Record<string, string> = SALARY_SLIP_STATUS_COLORS;
 
 export function SalarySlipsPage() {
   const [monthFilter, setMonthFilter] = useState<string | undefined>(undefined);
@@ -37,25 +36,16 @@ export function SalarySlipsPage() {
 
   const handleDownloadPdf = async (runId: string, month: string, employeeId?: string) => {
     try {
-      const params = employeeId ? { employeeId } : {};
-      const response = await apiClient.get(`/salary-slips/${runId}/pdf`, {
-        params,
-        responseType: 'blob',
-      });
-      
+      const params = employeeId ? { employeeId } : undefined;
       const empSuffix = employeeId ? `_${employeeId}` : '';
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `SalarySlip_${month.replace('-', '_')}${empSuffix}.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-      
+      await downloadPdfBlob(
+        `/salary-slips/${runId}/pdf`,
+        `SalarySlip_${month.replace('-', '_')}${empSuffix}.pdf`,
+        params,
+      );
       message.success('PDF downloaded successfully');
-    } catch (err: any) {
-      message.error(err?.response?.data?.message || 'Failed to download PDF');
+    } catch (err: unknown) {
+      message.error((err as any)?.response?.data?.message || 'Failed to download PDF');
     }
   };
 
@@ -87,7 +77,7 @@ export function SalarySlipsPage() {
       title: 'Total Net Pay',
       dataIndex: 'totalNetPay',
       key: 'totalNetPay',
-      render: (v: number) => `₹${v?.toLocaleString()}`,
+      render: (v: number) => formatCurrency(v || 0),
     },
     {
       title: 'Generated',
@@ -98,7 +88,7 @@ export function SalarySlipsPage() {
     {
       title: 'Actions',
       key: 'actions',
-      render: (_: any, record: any) => (
+      render: (_: unknown, record: SalarySlip) => (
         <div style={{ display: 'flex', gap: 8 }}>
           <Button 
             type="primary" 
