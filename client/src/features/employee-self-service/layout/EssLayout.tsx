@@ -47,7 +47,7 @@ export function EssLayout() {
   const handleLogout = useCallback(() => {
     apiClient.post('/auth/logout').finally(() => {
       logout();
-      navigate('/login', { replace: true });
+      navigate('/', { replace: true });
     });
   }, [logout, navigate]);
 

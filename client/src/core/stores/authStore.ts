@@ -28,7 +28,7 @@ function startSessionTimer() {
   if (activityTimer) clearTimeout(activityTimer);
   activityTimer = setTimeout(() => {
     useAuthStore.getState().logout();
-    window.location.href = '/login';
+    window.location.href = '/';
   }, SESSION_TIMEOUT_MS);
 }
 

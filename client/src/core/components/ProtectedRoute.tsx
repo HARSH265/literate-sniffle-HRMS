@@ -22,7 +22,7 @@ export function ProtectedRoute({
   const { hasPermission } = usePermission();
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/" replace />;
   }
 
   if (permission && !hasPermission(permission)) {

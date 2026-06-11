@@ -97,7 +97,7 @@ const PageLoader = () => (
 function RedirectToLogin() {
   const location = useLocation();
   sessionStorage.setItem('returnUrl', location.pathname + location.search);
-  return <Navigate to="/login" replace />;
+  return <Navigate to="/" replace />;
 }
 
 function App() {

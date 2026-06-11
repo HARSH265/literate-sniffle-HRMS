@@ -38,7 +38,7 @@ export function Header() {
   const handleLogout = () => {
     apiClient.post('/auth/logout').finally(() => {
       logout();
-      navigate('/login');
+      navigate('/');
     });
   };
 
