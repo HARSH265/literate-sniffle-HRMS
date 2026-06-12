@@ -126,6 +126,7 @@ interface EmployeeSeed {
   joiningDate: string;
   salaryType: 'monthly' | 'daily';
   baseSalary: number;
+  dailyWage: number;
   overtimeEligible: boolean;
   status: 'active';
   contactNumber?: string;
@@ -160,6 +161,8 @@ function generateEmployees(
       const year = randomBetween(startYear, 2025);
       const month = randomBetween(1, 12);
       const day = randomBetween(1, 28);
+      const isMonthly = category !== 'worker';
+      const base = randomBetween(salaryMin, salaryMax);
       employees.push({
         employeeCode: `ORN${pad(empNum++)}`,
         fullName: `${first} ${last}`,
@@ -170,8 +173,9 @@ function generateEmployees(
         designation: desMap[desName] as unknown as mongoose.Types.ObjectId,
         shift: shiftMap[shiftName] as unknown as mongoose.Types.ObjectId,
         joiningDate: `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`,
-        salaryType: category === 'worker' ? 'daily' : 'monthly',
-        baseSalary: randomBetween(salaryMin, salaryMax),
+        salaryType: isMonthly ? 'monthly' : 'daily',
+        baseSalary: base,
+        dailyWage: isMonthly ? 0 : Math.round((base / 26) * 100) / 100,
         overtimeEligible: otEligible,
         status: 'active',
         contactNumber: `9${randomBetween(100000000, 999999999)}`,
