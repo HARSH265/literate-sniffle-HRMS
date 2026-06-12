@@ -188,7 +188,7 @@ function App() {
             <Route path="employees/:id/edit" element={<ProtectedRoute permission="manage-employees"><EmployeeEditPage /></ProtectedRoute>} />
             <Route path="departments" element={<DepartmentsPage />} />
             <Route path="designations" element={<DesignationsPage />} />
-            <Route path="shifts" element={<ShiftsPage />} />
+            <Route path="shifts" element={<ProtectedRoute permission="view-shifts"><ShiftsPage /></ProtectedRoute>} />
             <Route path="holidays" element={<HolidaysPage />} />
             <Route path="weekly-off-rules" element={<WeeklyOffRulesPage />} />
             <Route path="attendance" element={<ProtectedRoute permission="manage-attendance"><AttendancePage /></ProtectedRoute>} />

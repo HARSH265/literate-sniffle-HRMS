@@ -9,10 +9,10 @@ const router = Router();
 
 router.use(authenticate);
 
-router.get('/', authorize('view-departments'), shiftsController.list);
-router.get('/:id', authorize('view-departments'), shiftsController.getById);
-router.post('/', authorize('manage-departments'), validate(createShiftSchema), shiftsController.create);
-router.patch('/:id', authorize('manage-departments'), validate(updateShiftSchema), shiftsController.update);
-router.delete('/:id', authorize('manage-departments'), shiftsController.remove);
+router.get('/', authorize('view-shifts'), shiftsController.list);
+router.get('/:id', authorize('view-shifts'), shiftsController.getById);
+router.post('/', authorize('manage-shifts'), validate(createShiftSchema), shiftsController.create);
+router.patch('/:id', authorize('manage-shifts'), validate(updateShiftSchema), shiftsController.update);
+router.delete('/:id', authorize('manage-shifts'), shiftsController.remove);
 
 export default router;
