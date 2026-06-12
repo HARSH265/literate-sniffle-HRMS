@@ -110,6 +110,10 @@ export class SalarySlipsService {
           absentDays: item.absentDays || 0,
           halfDays: item.halfDays || 0,
           workingDays: item.effectiveWorkingDays || 0,
+          overtimeHours: item.overtimeHours || 0,
+          overtimeAmount: item.overtimeAmount || 0,
+          weeklyOffs: item.weeklyOffs || 0,
+          holidays: item.holidays || 0,
         };
       }),
     };

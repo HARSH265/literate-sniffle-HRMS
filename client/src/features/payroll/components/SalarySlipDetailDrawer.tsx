@@ -18,6 +18,8 @@ interface SalarySlipRecord {
   workingDays?: number;
   weeklyOffs?: number;
   holidays?: number;
+  overtimeHours?: number;
+  overtimeAmount?: number;
 }
 
 const fmt = (v: number) => `₹${(v || 0).toLocaleString('en-IN')}`;
@@ -111,6 +113,13 @@ export function SalarySlipDetailDrawer({ record }: { record: SalarySlipRecord })
                 <span style={{ fontSize: 13, fontWeight: 500, color: '#262626' }}>{fmt(a.calculatedValue || a.value || 0)}</span>
               </div>
             ))}
+
+            {(record.overtimeHours ?? 0) > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0' }}>
+                <span style={{ fontSize: 13, color: '#595959' }}>Overtime ({record.overtimeHours} hrs)</span>
+                <span style={{ fontSize: 13, fontWeight: 500, color: '#262626' }}>{fmt(record.overtimeAmount || 0)}</span>
+              </div>
+            )}
 
             <Divider style={{ margin: '8px 0' }} />
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
