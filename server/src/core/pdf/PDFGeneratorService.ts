@@ -190,23 +190,23 @@ function renderSingleEmployeeSlip(doc: PDFKit.PDFDocument, data: SalarySlipPdfDa
   const RM = pageW - LM;
   const W = RM - LM;
 
-  let y = 40;
+  let y = 36;
 
   // ── Company Header ──
   doc.fontSize(18).font('Helvetica-Bold').fillColor(C.primary).text(data.companyName, LM, y, { align: 'center', width: W });
-  y += 24;
+  y += 26;
   doc.fontSize(9).font('Helvetica').fillColor(C.muted);
   const addrParts = [data.companyAddress, data.companyPhone, data.companyEmail].filter(Boolean);
   doc.text(addrParts.join(' | '), LM, y, { align: 'center', width: W });
-  y += 16;
+  y += 18;
 
   // Divider
   drawLine(doc, LM, y, RM, C.primary);
-  y += 10;
+  y += 14;
 
   // ── Title ──
   doc.fontSize(13).font('Helvetica-Bold').fillColor(C.text).text(`Salary Slip — ${data.month}`, LM, y, { align: 'center', width: W });
-  y += 22;
+  y += 28;
 
   // ── Employee Info (2-column layout) ──
   const infoBoxH = 48;
@@ -239,7 +239,7 @@ function renderSingleEmployeeSlip(doc: PDFKit.PDFDocument, data: SalarySlipPdfDa
   doc.font('Helvetica').text(`${emp.presentDays || 0} / ${emp.workingDays || 0}`, col2X + labelW, iy + 14);
   doc.text(`${emp.absentDays || 0} / ${emp.halfDays || 0}`, col2X + labelW, iy + 28);
 
-  y += infoBoxH + 18;
+  y += infoBoxH + 22;
 
   // ── Earnings ──
   doc.fontSize(11).font('Helvetica-Bold').fillColor(C.primary).text('Earnings', LM, y);
@@ -277,7 +277,7 @@ function renderSingleEmployeeSlip(doc: PDFKit.PDFDocument, data: SalarySlipPdfDa
   doc.text('Total Earnings', LM + 12, ey + 2, { width: 300 });
   doc.text(fmt(emp.totalEarnings), RM - 120, ey + 2, { width: 100, align: 'right' });
 
-  y += earnBoxH + 16;
+  y += earnBoxH + 20;
 
   // ── Deductions ──
   doc.fontSize(11).font('Helvetica-Bold').fillColor(C.primary).text('Deductions', LM, y);
@@ -309,7 +309,7 @@ function renderSingleEmployeeSlip(doc: PDFKit.PDFDocument, data: SalarySlipPdfDa
   doc.text('Total Deductions', LM + 12, dy + 2, { width: 300 });
   doc.text(fmt(emp.totalDeductions), RM - 120, dy + 2, { width: 100, align: 'right' });
 
-  y += dedBoxH + 18;
+  y += dedBoxH + 22;
 
   // ── Net Pay ──
   doc.roundedRect(LM, y, W, 40, 4).fill(C.primary);
@@ -317,7 +317,7 @@ function renderSingleEmployeeSlip(doc: PDFKit.PDFDocument, data: SalarySlipPdfDa
   doc.text('Net Pay', LM + 16, y + 12, { width: 200 });
   doc.text(fmt(emp.netPay), RM - 140, y + 12, { width: 120, align: 'right' });
 
-  y += 55;
+  y += 58;
 
   // ── Footer ──
   drawLine(doc, LM, y, RM, C.border);
