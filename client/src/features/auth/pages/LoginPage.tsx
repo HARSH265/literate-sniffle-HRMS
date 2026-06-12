@@ -21,6 +21,19 @@ export function LoginPage() {
       const res = await apiClient.post('/auth/login', values);
       const { user, token } = res.data.data;
       login(user, token);
+
+      // Fetch effective permissions for the user's role
+      try {
+        const permRes = await apiClient.get(`/permissions/roles/${user.role}`);
+        const roleData = permRes.data.data;
+        if (roleData?.permissions) {
+          const { setPermissions } = useAuthStore.getState();
+          setPermissions(roleData.permissions);
+        }
+      } catch {
+        // Permission fetch failed — will use static defaults
+      }
+
       message.success('Welcome back! Login successful.');
       const returnUrl = sessionStorage.getItem('returnUrl');
       sessionStorage.removeItem('returnUrl');

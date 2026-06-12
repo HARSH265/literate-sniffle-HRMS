@@ -9,6 +9,7 @@ import {
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { permissionsService } from '../services/permissionsService';
+import { useAuthStore } from '../../../core/stores/authStore';
 
 const { Text } = Typography;
 
@@ -28,6 +29,8 @@ interface PermissionsSectionProps {
 
 export function PermissionsSection(_props: PermissionsSectionProps) {
   const queryClient = useQueryClient();
+  const currentUser = useAuthStore((state) => state.user);
+  const setPermissions = useAuthStore((state) => state.setPermissions);
   const [activeRole, setActiveRole] = useState('hr-admin');
   const [editedPermissions, setEditedPermissions] = useState<Record<string, string[]>>({});
   const [hasChanges, setHasChanges] = useState(false);
@@ -57,10 +60,15 @@ export function PermissionsSection(_props: PermissionsSectionProps) {
   const updateMutation = useMutation({
     mutationFn: ({ role, permissions }: { role: string; permissions: string[] }) =>
       permissionsService.updateRolePermissions(role, permissions),
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       message.success('Permissions updated successfully');
       queryClient.invalidateQueries({ queryKey: ['role-permissions'] });
       setHasChanges(false);
+
+      // If admin modified their own role, refresh stored permissions
+      if (currentUser?.role === variables.role) {
+        setPermissions(variables.permissions);
+      }
     },
     onError: (err: any) => {
       message.error(err?.response?.data?.message || 'Failed to update permissions');
@@ -69,9 +77,19 @@ export function PermissionsSection(_props: PermissionsSectionProps) {
 
   const resetMutation = useMutation({
     mutationFn: (role: string) => permissionsService.resetRolePermissions(role),
-    onSuccess: () => {
+    onSuccess: (_data, role) => {
       message.success('Permissions reset to defaults');
       queryClient.invalidateQueries({ queryKey: ['role-permissions'] });
+
+      // If admin reset their own role, refetch permissions from API
+      if (currentUser?.role === role) {
+        permissionsService.getRolePermissions().then((allPerms) => {
+          const roleData = allPerms[role];
+          if (roleData?.permissions) {
+            setPermissions(roleData.permissions);
+          }
+        }).catch(() => {});
+      }
     },
     onError: (err: any) => {
       message.error(err?.response?.data?.message || 'Failed to reset permissions');

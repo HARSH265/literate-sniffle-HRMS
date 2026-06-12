@@ -11,7 +11,9 @@ export function usePermission() {
 
   const hasPermission = (permission: string) => {
     if (!user) return false;
-    const userPermissions = ROLE_PERMISSIONS[user.role];
+
+    // Use DB permissions if available (fetched from API), fallback to static defaults
+    const userPermissions = user.permissions || ROLE_PERMISSIONS[user.role];
     if (!userPermissions) return false;
     return userPermissions.includes(permission);
   };
