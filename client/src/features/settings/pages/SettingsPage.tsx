@@ -8,6 +8,7 @@ import {
   BankOutlined, MailOutlined, DollarOutlined, CalendarOutlined,
   GiftOutlined, CodeOutlined, BarChartOutlined, BellOutlined,
   SwapOutlined, LaptopOutlined, FolderOutlined, LockOutlined,
+  KeyOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { settingsService, CompanySettings } from '../services/settingsService';
@@ -22,7 +23,8 @@ import {
   AttendanceSection, AllowancesSection, OvertimeSection, WeeklyOffSection,
   HolidaysSection, CodeConfigSection, LeaveSection, ReportsSection,
   LoanConfigSection, StatutoryConfigSection, EssSection, AnnouncementSection,
-  ShiftSwapSection, AssetSection, DocumentSection,  ComponentMasterSection,SalaryStructureSection, PermissionsSection,
+  ShiftSwapSection, AssetSection, DocumentSection, ComponentMasterSection, SalaryStructureSection, PermissionsSection,
+  ApiKeysSection,
 } from '../sections';
 import { TotpSection } from '../sections/TotpSection';
 import { SettingsModals } from '../components/SettingsModals';
@@ -52,6 +54,7 @@ const SETTINGS_MENU = [
   { key: 'documents', label: 'Document Repository', icon: <FolderOutlined />, group: 'features' },
   { key: 'totp', label: 'TOTP Enrollment', icon: <SafetyCertificateOutlined />, group: 'security' },
   { key: 'permissions', label: 'Role Permissions', icon: <LockOutlined />, group: 'security' },
+  { key: 'apiKeys', label: 'API Keys', icon: <KeyOutlined />, group: 'security' },
 ];
 
 const MENU_GROUPS = [
@@ -198,6 +201,8 @@ case 'statutory':
         return <TotpSection employees={employees?.data || []} />;
       case 'permissions':
         return <PermissionsSection form={companyForm} onSave={handleSaveCompany} />;
+      case 'apiKeys':
+        return <ApiKeysSection />;
       default:
         return null;
     }

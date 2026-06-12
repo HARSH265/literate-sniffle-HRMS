@@ -23,3 +23,4 @@ export { DocumentSection } from './DocumentSection';
 export { PermissionsSection } from './PermissionsSection';
 export { SalaryStructureSection } from './SalaryStructureSection';
 export { ComponentMasterSection } from './ComponentMasterSection';
+export { ApiKeysSection } from './ApiKeysSection';
