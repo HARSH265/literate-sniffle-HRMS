@@ -112,6 +112,15 @@ interface DataTableProps<T extends object> {
   toolbarRight?: React.ReactNode;
 
   noCard?: boolean;
+
+  /** Custom detail renderer for the row-click drawer. If provided, replaces the default key-value drawer. */
+  customDetailRenderer?: (record: T, onClose: () => void) => React.ReactNode;
+
+  /** Custom drawer title. Defaults to "Record Details". */
+  detailDrawerTitle?: string;
+
+  /** Custom drawer width. Defaults to 720. */
+  detailDrawerWidth?: number;
 }
 
 export function DataTable<T extends object>({
@@ -134,6 +143,9 @@ export function DataTable<T extends object>({
   toolbarLeft,
   toolbarRight,
   noCard = false,
+  customDetailRenderer,
+  detailDrawerTitle = 'Record Details',
+  detailDrawerWidth = 720,
 }: DataTableProps<T>) {
   const [showFilters, setShowFilters] = useState(false);
   const [detailRecord, setDetailRecord] = useState<T | null>(null);
@@ -245,13 +257,15 @@ export function DataTable<T extends object>({
       </div>
 
       <Drawer
-        title={detailRecord ? `Record Details` : ''}
+        title={detailRecord ? detailDrawerTitle : ''}
         open={detailOpen}
         onClose={() => setDetailOpen(false)}
-        width={720}
+        width={detailDrawerWidth}
         styles={{ body: { padding: 0 } }}
       >
-        {detailRecord && (
+        {detailRecord && customDetailRenderer
+          ? customDetailRenderer(detailRecord, () => setDetailOpen(false))
+          : detailRecord && (
           <div style={{ padding: 24 }}>
             <Descriptions
               column={{ xs: 1, sm: 2 }}

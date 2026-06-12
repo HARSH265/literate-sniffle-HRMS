@@ -2,6 +2,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { PageHeader } from '../../../core/components/PageHeader';
 import { DataTable } from '../../../core/components/DataTable';
+import { SalarySlipDetailDrawer } from '../components/SalarySlipDetailDrawer';
 import { Button, Descriptions, Card, message, Breadcrumb } from 'antd';
 import { FilePdfOutlined } from '@ant-design/icons';
 import { salarySlipService } from '../services/salarySlipService';
@@ -101,6 +102,9 @@ export function SalarySlipDetailsPage() {
         loading={isLoading}
         columns={columns}
         pagination={{ pageSize: 20 }}
+        detailDrawerTitle="Salary Slip Details"
+        detailDrawerWidth={780}
+        customDetailRenderer={(record) => <SalarySlipDetailDrawer record={record as any} />}
         toolbarRight={
           <span style={{ fontWeight: 600 }}>
             Total — Basic: {formatCurrency(totals.basic)} &nbsp;|&nbsp; Earnings: {formatCurrency(totals.earnings)} &nbsp;|&nbsp; Deductions: {formatCurrency(totals.deductions)} &nbsp;|&nbsp; <span style={{ color: 'var(--hrms-success)' }}>Net: {formatCurrency(totals.net)}</span>
