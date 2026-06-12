@@ -4,7 +4,7 @@ import { PageHeader } from '../../../core/components/PageHeader';
 import { DataTable } from '../../../core/components/DataTable';
 import { SalarySlipDetailDrawer } from '../components/SalarySlipDetailDrawer';
 import { Button, Descriptions, Card, message, Breadcrumb } from 'antd';
-import { FilePdfOutlined } from '@ant-design/icons';
+import { FilePdfOutlined, FileExcelOutlined } from '@ant-design/icons';
 import { salarySlipService } from '../services/salarySlipService';
 import { ROUTES } from '../../../core/constants/routes';
 import { formatCurrency } from '../../../core/constants/currency';
@@ -37,6 +37,18 @@ export function SalarySlipDetailsPage() {
       message.success('PDF downloaded successfully');
     } catch (err: unknown) {
       message.error((err as any)?.response?.data?.message || 'Failed to download PDF');
+    }
+  };
+
+  const handleDownloadExcel = async () => {
+    try {
+      await downloadPdfBlob(
+        `/salary-slips/${id}/excel`,
+        `SalarySlips_${slipData?.month?.replace('-', '_')}.xlsx`,
+      );
+      message.success('Excel downloaded successfully');
+    } catch (err: unknown) {
+      message.error((err as any)?.response?.data?.message || 'Failed to download Excel');
     }
   };
 
@@ -79,8 +91,8 @@ export function SalarySlipDetailsPage() {
       <PageHeader
         title={slipData?.month ? `Salary Slip - ${slipData.month}` : 'Salary Slip Details'}
         actions={[
-          <Button key="download-all" type="primary" icon={<FilePdfOutlined />} onClick={() => handleDownloadPdf()}>
-            Download All
+          <Button key="download-all" type="primary" icon={<FileExcelOutlined />} onClick={handleDownloadExcel}>
+            Download All (Excel)
           </Button>,
         ]}
       />

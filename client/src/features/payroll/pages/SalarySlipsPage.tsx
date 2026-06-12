@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '../../../core/components/PageHeader';
 import { DataTable } from '../../../core/components/DataTable';
 import { Button, Select, message, Tag } from 'antd';
-import { FilePdfOutlined, EyeOutlined } from '@ant-design/icons';
+import { FileExcelOutlined, EyeOutlined } from '@ant-design/icons';
 import { salarySlipService, SalarySlip } from '../services/salarySlipService';
 import { useQuery } from '@tanstack/react-query';
 import { ROUTES } from '../../../core/constants/routes';
@@ -34,18 +34,15 @@ export function SalarySlipsPage() {
     refetchOnWindowFocus: false,
   });
 
-  const handleDownloadPdf = async (runId: string, month: string, employeeId?: string) => {
+  const handleDownloadExcel = async (runId: string, month: string) => {
     try {
-      const params = employeeId ? { employeeId } : undefined;
-      const empSuffix = employeeId ? `_${employeeId}` : '';
       await downloadPdfBlob(
-        `/salary-slips/${runId}/pdf`,
-        `SalarySlip_${month.replace('-', '_')}${empSuffix}.pdf`,
-        params,
+        `/salary-slips/${runId}/excel`,
+        `SalarySlips_${month.replace('-', '_')}.xlsx`,
       );
-      message.success('PDF downloaded successfully');
+      message.success('Excel downloaded successfully');
     } catch (err: unknown) {
-      message.error((err as any)?.response?.data?.message || 'Failed to download PDF');
+      message.error((err as any)?.response?.data?.message || 'Failed to download Excel');
     }
   };
 
@@ -101,10 +98,10 @@ export function SalarySlipsPage() {
           <Button 
             type="default" 
             size="small" 
-            icon={<FilePdfOutlined />}
-            onClick={() => handleDownloadPdf(record.id, record.month)}
+            icon={<FileExcelOutlined />}
+            onClick={() => handleDownloadExcel(record.id, record.month)}
           >
-            PDF
+            Excel
           </Button>
         </div>
       ),
