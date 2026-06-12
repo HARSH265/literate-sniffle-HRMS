@@ -1,5 +1,6 @@
 import RolePermission from '../../models/RolePermission.model.js';
 import { permissions as defaultPermissions, ALL_PERMISSIONS, PERMISSION_GROUPS, type Permission } from '../../core/permissions/permissions.config.js';
+import { invalidatePermissionCache } from '../../core/permissions/authorize.middleware.js';
 import { ROLES } from '../../config/constants.js';
 import { AppError } from '../../core/errors/AppError.js';
 import { AuditService } from '../../core/audit/AuditService.js';
@@ -119,6 +120,8 @@ export class PermissionManagementService {
       details: { role, permissionCount: permissionsList.length, isCustom },
     });
 
+    invalidatePermissionCache(role);
+
     return { role, permissions: permissionsList, isCustom };
   }
 
@@ -143,6 +146,8 @@ export class PermissionManagementService {
       targetId: role,
       details: { role, action: 'reset to defaults' },
     });
+
+    invalidatePermissionCache(role);
 
     return {
       role,

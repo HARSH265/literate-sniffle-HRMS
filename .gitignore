@@ -8,4 +8,4 @@ server/vault-config.hcl
 *.log
 .DS_Store
 Thumbs.db
-docs/
+

@@ -21,6 +21,19 @@ export function LoginPage() {
       const res = await apiClient.post('/auth/login', values);
       const { user, token } = res.data.data;
       login(user, token);
+
+      // Fetch effective permissions for the user's role
+      try {
+        const permRes = await apiClient.get(`/permissions/roles/${user.role}`);
+        const roleData = permRes.data.data;
+        if (roleData?.permissions) {
+          const { setPermissions } = useAuthStore.getState();
+          setPermissions(roleData.permissions);
+        }
+      } catch {
+        // Permission fetch failed — will use static defaults
+      }
+
       message.success('Welcome back! Login successful.');
       const returnUrl = sessionStorage.getItem('returnUrl');
       sessionStorage.removeItem('returnUrl');
@@ -55,7 +68,7 @@ export function LoginPage() {
               background: 'linear-gradient(135deg, var(--hrms-primary) 0%, #7c3aed 100%)',
               boxShadow: '0 4px 12px rgba(79,70,229,0.3)',
             }}>
-              <span style={{ fontSize: 18, fontWeight: 700, color: 'white', letterSpacing: -1 }}>Or</span>
+              <span style={{ fontSize: 18, fontWeight: 700, color: 'white', letterSpacing: -1 }}>O</span>
             </div>
             <h2>Welcome back</h2>
             <p>Sign in to your Orian account</p>
@@ -63,24 +76,6 @@ export function LoginPage() {
 
           <LoginForm onSubmit={handleLogin} loading={loading} />
 
-          {import.meta.env.DEV && (
-            <div className="hrms-login-defaults">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--hrms-primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-              </svg>
-              <div>
-                <div>
-                  <span className="hrms-login-defaults-label">Demo credentials</span>
-                </div>
-                <div className="hrms-login-defaults-codes">
-                  <code>admin@hrms.com</code>
-                  <span style={{ color: 'var(--hrms-text-muted)' }}>/</span>
-                  <code>Admin@1234</code>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
@@ -123,7 +118,7 @@ function BrandPanel() {
   return (
     <div className="hrms-brand-panel">
       <div className="hrms-brand-logo">
-        <div className="hrms-brand-logo-icon">Or</div>
+        <div className="hrms-brand-logo-icon">O</div>
         <span className="hrms-brand-logo-text">Orian HRMS</span>
       </div>
 

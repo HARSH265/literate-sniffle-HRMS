@@ -7,6 +7,7 @@ interface User {
   email: string;
   role: string;
   employeeId?: string | null;
+  permissions?: string[];
 }
 
 interface AuthState {
@@ -17,6 +18,7 @@ interface AuthState {
   login: (user: User, token: string) => void;
   logout: () => void;
   updateUser: (user: User) => void;
+  setPermissions: (permissions: string[]) => void;
   touchActivity: () => void;
 }
 
@@ -49,6 +51,12 @@ export const useAuthStore = create<AuthState>()(
         set({ user: null, token: null, isAuthenticated: false, lastActivity: 0 });
       },
       updateUser: (user) => set({ user }),
+      setPermissions: (permissions) => {
+        const state = get();
+        if (state.user) {
+          set({ user: { ...state.user, permissions } });
+        }
+      },
       touchActivity: () => {
         const state = get();
         if (state.isAuthenticated) {

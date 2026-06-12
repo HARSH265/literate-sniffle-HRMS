@@ -169,9 +169,33 @@ export class EmployeesService {
     return `${prefix}${String(nextNumber).padStart(padding, '0')}`;
   }
 
+  private static async getWorkingDaysPerMonth(): Promise<number> {
+    const settings = await CompanySettings.findOne().lean() as any;
+    return settings?.payrollConfig?.defaultWorkingDays || 26;
+  }
+
+  private static autoCalculateSalary(data: Record<string, unknown>, workingDays: number): void {
+    const salaryType = data.salaryType as string | undefined;
+    const baseSalary = data.baseSalary as number | undefined;
+    const dailyWage = data.dailyWage as number | undefined;
+
+    if (salaryType === 'monthly') {
+      if (typeof baseSalary === 'number' && baseSalary > 0 && (!dailyWage || dailyWage === 0)) {
+        data.dailyWage = Math.round((baseSalary / workingDays) * 100) / 100;
+      }
+    } else if (salaryType === 'daily') {
+      if (typeof dailyWage === 'number' && dailyWage > 0 && (!baseSalary || baseSalary === 0)) {
+        data.baseSalary = Math.round(dailyWage * 30);
+      }
+    }
+  }
+
   static async create(data: Record<string, unknown>, createdById: string, userRole: string) {
     const settings = await CompanySettings.findOne().lean() as any;
     const isAutoGenerate = settings?.employeeCodeConfig?.isAutoGenerate !== false;
+
+    const workingDays = settings?.payrollConfig?.defaultWorkingDays || 26;
+    this.autoCalculateSalary(data, workingDays);
 
     const minimumWage = settings?.payrollConfig?.minimumWage;
     if (minimumWage && typeof data.baseSalary === 'number' && data.baseSalary < minimumWage) {
@@ -259,6 +283,9 @@ export class EmployeesService {
     if (!emp) {
       throw new AppError('Employee not found', 404);
     }
+
+    const workingDays = await this.getWorkingDaysPerMonth();
+    this.autoCalculateSalary(data, workingDays);
 
     if (data.baseSalary !== undefined) {
       const settings = await CompanySettings.findOne().lean() as any;

@@ -69,6 +69,22 @@ export function EmployeeEditPage() {
     }
   }, [empLoading, employeeData, navigate]);
 
+  const salaryType = Form.useWatch('salaryType', form);
+  const baseSalary = Form.useWatch('baseSalary', form);
+  const dailyWage = Form.useWatch('dailyWage', form);
+
+  useEffect(() => {
+    if (salaryType === 'monthly' && baseSalary && baseSalary > 0 && (!dailyWage || dailyWage === 0)) {
+      form.setFieldValue('dailyWage', Math.round((baseSalary / 26) * 100) / 100);
+    }
+  }, [salaryType, baseSalary]);
+
+  useEffect(() => {
+    if (salaryType === 'daily' && dailyWage && dailyWage > 0 && (!baseSalary || baseSalary === 0)) {
+      form.setFieldValue('baseSalary', Math.round(dailyWage * 30));
+    }
+  }, [salaryType, dailyWage]);
+
   if (empLoading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
