@@ -55,7 +55,7 @@ export function LoginPage() {
               background: 'linear-gradient(135deg, var(--hrms-primary) 0%, #7c3aed 100%)',
               boxShadow: '0 4px 12px rgba(79,70,229,0.3)',
             }}>
-              <span style={{ fontSize: 18, fontWeight: 700, color: 'white', letterSpacing: -1 }}>Or</span>
+              <span style={{ fontSize: 18, fontWeight: 700, color: 'white', letterSpacing: -1 }}>O</span>
             </div>
             <h2>Welcome back</h2>
             <p>Sign in to your Orian account</p>
@@ -123,7 +123,7 @@ function BrandPanel() {
   return (
     <div className="hrms-brand-panel">
       <div className="hrms-brand-logo">
-        <div className="hrms-brand-logo-icon">Or</div>
+        <div className="hrms-brand-logo-icon">O</div>
         <span className="hrms-brand-logo-text">Orian HRMS</span>
       </div>
 
