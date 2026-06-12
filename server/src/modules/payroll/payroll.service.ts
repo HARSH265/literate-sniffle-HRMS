@@ -773,7 +773,7 @@ async function calculatePayrollForEmployee(
 
   const basicEarnings = isMonthly
     ? Math.round(baseSalary * (effectiveWorkingDays / payableDaysBase))
-    : dailyWage * presentDays;
+    : dailyWage * (presentDays + paidWeeklyOffs + paidHolidaysCount);
 
   const appliedAllowances = calculateAllowances(basicEarnings, category, employmentType, allowances);
   const allowancesTotal = appliedAllowances.reduce((sum, a) => sum + a.calculatedValue, 0);
