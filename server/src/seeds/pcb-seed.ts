@@ -174,7 +174,7 @@ function generateEmployees(
         shift: shiftMap[shiftName] as unknown as mongoose.Types.ObjectId,
         joiningDate: `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`,
         salaryType: isMonthly ? 'monthly' : 'daily',
-        baseSalary: base,
+        baseSalary: isMonthly ? base : Math.round((base / 26) * 30),
         dailyWage: isMonthly ? 0 : Math.round((base / 26) * 100) / 100,
         overtimeEligible: otEligible,
         status: 'active',

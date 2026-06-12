@@ -185,7 +185,7 @@ export class EmployeesService {
       }
     } else if (salaryType === 'daily') {
       if (typeof dailyWage === 'number' && dailyWage > 0 && (!baseSalary || baseSalary === 0)) {
-        data.baseSalary = Math.round(dailyWage * workingDays);
+        data.baseSalary = Math.round(dailyWage * 30);
       }
     }
   }

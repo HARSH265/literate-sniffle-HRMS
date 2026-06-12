@@ -81,7 +81,7 @@ export function EmployeeEditPage() {
 
   useEffect(() => {
     if (salaryType === 'daily' && dailyWage && dailyWage > 0 && (!baseSalary || baseSalary === 0)) {
-      form.setFieldValue('baseSalary', Math.round(dailyWage * 26));
+      form.setFieldValue('baseSalary', Math.round(dailyWage * 30));
     }
   }, [salaryType, dailyWage]);
 
