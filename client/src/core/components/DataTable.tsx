@@ -36,8 +36,29 @@ function TableSkeleton({ columns, rows = 5 }: { columns: number; rows?: number }
 function formatValue(value: unknown): React.ReactNode {
   if (value === null || value === undefined) return <span style={{ color: '#999' }}>—</span>;
   if (typeof value === 'boolean') return <Tag color={value ? 'green' : 'default'}>{value ? 'Yes' : 'No'}</Tag>;
+  if (typeof value === 'string' && value.includes('<tr')) {
+    // HTML content (salary slip HTML) — render as HTML
+    return <div dangerouslySetInnerHTML={{ __html: value }} style={{ fontSize: 12 }} />;
+  }
   if (typeof value === 'object') {
-    if (Array.isArray(value)) return value.join(', ') || <span style={{ color: '#999' }}>—</span>;
+    if (Array.isArray(value)) {
+      if (value.length === 0) return <span style={{ color: '#999' }}>—</span>;
+      // Array of objects (allowances/deductions) — show name + calculatedValue
+      if (typeof value[0] === 'object' && value[0] !== null && 'name' in value[0]) {
+        return (
+          <div style={{ fontSize: 12 }}>
+            {value.map((item: any, i: number) => (
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0' }}>
+                <span>{item.name}</span>
+                <span style={{ fontWeight: 600 }}>₹{(item.calculatedValue ?? item.value ?? 0).toLocaleString()}</span>
+              </div>
+            ))}
+          </div>
+        );
+      }
+      // Array of primitives
+      return value.map(String).join(', ');
+    }
     const obj = value as Record<string, unknown>;
     if ('name' in obj && typeof obj.name === 'string') return obj.name;
     if ('label' in obj && typeof obj.label === 'string') return obj.label;
@@ -52,6 +73,7 @@ const SKIP_KEYS = new Set([
   'lastLogin', 'lastActivity', 'lastActivityAt',
   'twoFactorSecret', 'totpSecret', 'otpSecret', 'otp',
   'resetPasswordToken', 'emailVerificationToken', 'apiKey',
+  'allowancesHtml', 'deductionsHtml',
 ]);
 
 function formatLabel(key: string): string {
