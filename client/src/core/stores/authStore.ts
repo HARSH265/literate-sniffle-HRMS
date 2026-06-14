@@ -45,11 +45,13 @@ export const useAuthStore = create<AuthState>()(
         set({ user, token, isAuthenticated: true, lastActivity: Date.now() });
         startSessionTimer();
       },
-      logout: () => {
-        if (activityTimer) clearTimeout(activityTimer);
-        activityTimer = null;
-        set({ user: null, token: null, isAuthenticated: false, lastActivity: 0 });
-      },
+logout: () => {
+          if (activityTimer) clearTimeout(activityTimer);
+          activityTimer = null;
+          set({ user: null, token: null, isAuthenticated: false, lastActivity: 0 });
+          // Clear persisted auth slice to avoid ghost sessions
+          useAuthStore.persist.clearStorage();
+        },
       updateUser: (user) => set({ user }),
       setPermissions: (permissions) => {
         const state = get();
@@ -67,7 +69,27 @@ startSessionTimer();
     }),
     {
       name: 'hrms-auth',
-      partialize: (state) => ({ user: state.user, token: state.token, isAuthenticated: state.isAuthenticated }),
+      partialize: (state) => ({
+        user: state.user,
+        token: state.token,
+        isAuthenticated: state.isAuthenticated,
+        lastActivity: state.lastActivity,
+      }),
+      onRehydrateStorage: (state: any) => {
+        if (state && typeof state.lastActivity === 'number') {
+          const now = Date.now();
+          const timeout = 30 * 60 * 1000; // SESSION_TIMEOUT_MS
+          if (state.lastActivity + timeout < now) {
+            // Session timed out while app was closed
+            useAuthStore.persist.clearStorage();
+            // Reset in‑memory auth state
+            useAuthStore.getState().logout();
+            if (typeof window !== 'undefined') {
+              window.location.href = '/login';
+            }
+          }
+        }
+      },
     }
   )
 );

@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { AuthService } from './auth.service.js';
 import { ResponseHandler } from '../../core/response/ResponseHandler.js';
 import { asyncHandler } from '../../core/errors/asyncHandler.js';
+import { AuditService } from '../../core/audit/AuditService.js';
 import { env } from '../../config/env.js';
 
 const login = asyncHandler(async (req: Request, res: Response) => {
@@ -76,7 +77,16 @@ const refreshToken = asyncHandler(async (req: Request, res: Response) => {
 const logout = asyncHandler(async (req: Request, res: Response) => {
   if (req.user) {
     const token = req.cookies?.jwt || req.headers.authorization?.split(' ')[1];
+    const ipAddress = req.ip || req.socket.remoteAddress;
+    const userAgent = req.headers['user-agent'];
     await AuthService.logout(req.user.id, token);
+    await AuditService.log({
+      action: 'logout',
+      module: 'auth',
+      userId: req.user.id,
+      ipAddress,
+      userAgent,
+    });
   }
   res.clearCookie('jwt');
   res.clearCookie('refreshToken', { path: '/' });
@@ -88,6 +98,14 @@ const logoutAllDevices = asyncHandler(async (req: Request, res: Response) => {
   const userAgent = req.headers['user-agent'];
   const token = req.cookies?.jwt || req.headers.authorization?.split(' ')[1];
   const result = await AuthService.logoutAllDevices(req.user!.id, token, ipAddress, userAgent);
+  // Additional audit log for logout-all-devices (controller level)
+  await AuditService.log({
+    action: 'logout-all-devices',
+    module: 'auth',
+    userId: req.user!.id,
+    ipAddress,
+    userAgent,
+  });
   res.clearCookie('jwt');
   res.clearCookie('refreshToken', { path: '/' });
   ResponseHandler.success(res, null, result.message);

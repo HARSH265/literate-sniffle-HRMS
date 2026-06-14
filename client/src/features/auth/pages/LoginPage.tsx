@@ -42,13 +42,23 @@ export function LoginPage() {
       navigate(returnUrl || (user.employeeId && !isBackOfficeRole ? '/ess' : '/dashboard'));
     } catch (err) {
       const error = err as AxiosError<{ message?: string }>;
-      const status = error.response?.status;
-      const serverMessage = error.response?.data?.message;
-      const fallbackMessage = error.request && !error.response
-        ? 'Cannot reach the server. Check that your phone is on the same network and the API URL is reachable.'
-        : 'Invalid email or password. Please try again.';
-
-      message.error(status === 429 ? 'Too many login attempts. Please try again later.' : serverMessage || fallbackMessage);
+const status = error.response?.status;
+       const serverMessage = error.response?.data?.message;
+       const fallbackMessage = error.request && !error.response
+       ? 'Cannot reach the server. Check that your phone is on the same network and the API URL is reachable.'
+       : 'Invalid email or password. Please try again.';
+ 
+       let errorMessage = fallbackMessage;
+       if (status === 429) {
+         errorMessage = 'Too many login attempts. Please try again later.';
+       } else if (status === 423) {
+         // Account locked error from server
+         errorMessage = serverMessage || 'Account locked. Please try again later.';
+       } else if (serverMessage) {
+         errorMessage = serverMessage;
+       }
+ 
+       message.error(errorMessage);
     } finally {
       setLoading(false);
     }
