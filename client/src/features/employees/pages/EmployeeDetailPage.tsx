@@ -227,11 +227,7 @@ export function EmployeeDetailPage() {
               <Descriptions column={{ xs: 1, sm: 2, md: 3 }} size="small">
                 <Descriptions.Item label="Department">{employee.department?.name || '—'}</Descriptions.Item>
                 <Descriptions.Item label="Department Head">
-                  {employee.department?.head ? (
-                    <span>
-                      {employee.department.name} - {employee.department.head?.fullName}
-                    </span>
-                  ) : '—'}
+                  {employee.department?.name || '—'}
                 </Descriptions.Item>
                 <Descriptions.Item label="Designation">{employee.designation?.name || '—'}</Descriptions.Item>
                 <Descriptions.Item label="Shift">{employee.shift?.name || '—'}</Descriptions.Item>
