@@ -7,8 +7,11 @@ import { DataTable } from '../../../core/components/DataTable';
 import { employeeService } from '../services/employeeService';
 import { attendanceService } from '../../attendance/services/attendanceService';
 import { payrollService } from '../../payroll/services/payrollService';
+import { EMPLOYEE_STATUS_COLORS } from '../../../core/constants/statusColors';
+import { formatCurrency } from '../../../core/constants/currency';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
+import styles from '../employees.module.css';
 
 const docTypeLabels: Record<string, string> = {
   aadhar: 'Aadhar Card',
@@ -19,11 +22,7 @@ const docTypeLabels: Record<string, string> = {
   other: 'Other',
 };
 
-const STATUS_COLORS: Record<string, string> = {
-  active: 'green', inactive: 'default', terminated: 'red', archived: 'orange',
-};
-
-const CATEGORY_LABELS: Record<string, string> = {
+const CATEGORY_LABELS: Record<'worker' | 'office-staff', string> = {
   worker: 'Worker', 'office-staff': 'Office Staff',
 };
 
@@ -33,6 +32,7 @@ export function EmployeeDetailPage() {
   const queryClient = useQueryClient();
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [selectedDocType, setSelectedDocType] = useState('aadhar');
+  const [activeTab, setActiveTab] = useState('overview');
 
   const queryEnabled = !!(id && id !== 'new');
 
@@ -46,7 +46,7 @@ export function EmployeeDetailPage() {
   });
 
   const uploadMutation = useMutation({
-    mutationFn: ({ file, docType }: { file: File; docType: string }) => 
+    mutationFn: ({ file, docType }: { file: File; docType: string }) =>
       employeeService.uploadDocument(id!, file, docType),
     onSuccess: () => {
       message.success('Document uploaded');
@@ -68,13 +68,13 @@ export function EmployeeDetailPage() {
   const { data: attendanceData, isLoading: attendanceLoading } = useQuery({
     queryKey: ['employee-attendance', id],
     queryFn: () => attendanceService.getByEmployee(id!, undefined, undefined),
-    enabled: !!id && id !== 'new',
+    enabled: !!id && id !== 'new' && activeTab === 'attendance',
   });
 
   const { data: payrollData, isLoading: payrollLoading } = useQuery({
     queryKey: ['employee-payroll', id],
     queryFn: () => payrollService.getByEmployee(id!),
-    enabled: !!id && id !== 'new',
+    enabled: !!id && id !== 'new' && activeTab === 'payroll',
   });
 
   const attendanceColumns = useMemo(() => [
@@ -89,16 +89,16 @@ export function EmployeeDetailPage() {
   const payrollColumns = useMemo(() => [
     { title: 'Month', dataIndex: 'month', key: 'month', render: (m: string) => dayjs(m + '-01').format('MMM YYYY') },
     { title: 'Present Days', dataIndex: 'presentDays', key: 'presentDays' },
-    { title: 'Basic', dataIndex: 'basicEarnings', key: 'basicEarnings', render: (v: number) => `₹${v?.toLocaleString()}` },
-    { title: 'Allowances', dataIndex: 'allowancesTotal', key: 'allowancesTotal', render: (v: number) => `₹${v?.toLocaleString()}` },
-    { title: 'Deductions', dataIndex: 'totalDeductions', key: 'totalDeductions', render: (v: number) => `₹${v?.toLocaleString()}` },
-    { title: 'Net Pay', dataIndex: 'netPay', key: 'netPay', render: (v: number) => <span style={{ fontWeight: 600, color: 'var(--hrms-success)' }}>₹{v?.toLocaleString()}</span> },
+    { title: 'Basic', dataIndex: 'basicEarnings', key: 'basicEarnings', render: (v: number) => formatCurrency(v ?? 0) },
+    { title: 'Allowances', dataIndex: 'allowancesTotal', key: 'allowancesTotal', render: (v: number) => formatCurrency(v ?? 0) },
+    { title: 'Deductions', dataIndex: 'totalDeductions', key: 'totalDeductions', render: (v: number) => formatCurrency(v ?? 0) },
+    { title: 'Net Pay', dataIndex: 'netPay', key: 'netPay', render: (v: number) => <span className={styles.salaryBold}>{formatCurrency(v ?? 0)}</span> },
     { title: 'Status', dataIndex: 'status', key: 'status', render: (s: string) => <Tag color={s === 'finalized' ? 'green' : 'orange'}>{s}</Tag> },
   ], []);
 
   if (!queryEnabled || isLoading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
+      <div className={styles.loadingCenter}>
         <Spin size="large" />
       </div>
     );
@@ -108,7 +108,7 @@ export function EmployeeDetailPage() {
 
   if (hasError) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '50vh', gap: 16 }}>
+      <div className={styles.errorCenter}>
         <div>Something went wrong</div>
         <Button type="primary" onClick={() => refetch()}>
           Retry
@@ -119,7 +119,7 @@ export function EmployeeDetailPage() {
 
   if (!data?.data) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '50vh', gap: 16 }}>
+      <div className={styles.errorCenter}>
         <div>Employee not found</div>
         <Button type="primary" onClick={() => navigate('/employees')}>
           Go Back
@@ -130,13 +130,19 @@ export function EmployeeDetailPage() {
 
   const employee = data.data;
 
+  const DOC_MAX_SIZE = 5 * 1024 * 1024;
+
   const handleUpload = (file: File) => {
+    if (file.size > DOC_MAX_SIZE) {
+      message.error(`File size exceeds 5MB limit (${(file.size / 1024 / 1024).toFixed(1)}MB)`);
+      return false;
+    }
     uploadMutation.mutate({ file, docType: selectedDocType });
     return false;
   };
 
   return (
-    <div style={{ padding: '0 4px' }}>
+    <div className={styles.pageWrap}>
       <PageHeader
         title={employee.fullName}
         breadcrumbs={[
@@ -144,57 +150,58 @@ export function EmployeeDetailPage() {
           { label: employee.employeeCode },
         ]}
         actions={
-          <div style={{ display: 'flex', gap: 8 }}>
-            <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/employees')}>
+          <div className={styles.actionGroup}>
+            <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/employees')} aria-label="Go back to employees list">
               Back
             </Button>
-            <Button 
-              type="primary" 
-              icon={<EditOutlined />} 
+            <Button
+              type="primary"
+              icon={<EditOutlined />}
               onClick={() => navigate(`/employees/${employee.id}/edit`)}
+              aria-label="Edit employee"
             >
               Edit Employee
             </Button>
           </div>
         }
         subtitle={
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 8 }}>
-            <Tag color={STATUS_COLORS[employee.status]} style={{ margin: 0 }}>
+          <div className={styles.employeeRow} style={{ marginTop: 8 }}>
+            <Tag color={EMPLOYEE_STATUS_COLORS[employee.status as keyof typeof EMPLOYEE_STATUS_COLORS]} className={styles.statusTag}>
               {employee.status?.toUpperCase()}
             </Tag>
-            <span style={{ color: 'var(--hrms-text-muted)', fontSize: 13 }}>
+            <span className={styles.statusText}>
               {employee.employeeCode}
             </span>
           </div>
         }
       />
 
-      <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+      <div className={styles.detailContent}>
         <Row gutter={24}>
           <Col xs={24} lg={8}>
             <Card style={{ borderRadius: 12, marginBottom: 24 }}>
-              <div style={{ textAlign: 'center', padding: '20px 0' }}>
+              <div className={styles.profileHeader}>
                 <Avatar
                   size={100}
                   src={employee.photo}
                   icon={<UserOutlined />}
-                  style={{ background: 'linear-gradient(135deg, #4f46e5, #7c3aed)' }}
+                  className={styles.avatarGradient}
                 />
-                <div style={{ fontSize: 20, fontWeight: 700, marginTop: 16, color: 'var(--hrms-text-primary)' }}>
+                <div className={styles.profileName}>
                   {employee.fullName}
                 </div>
-                <div style={{ fontSize: 14, color: 'var(--hrms-text-muted)', marginTop: 4 }}>
+                <div className={styles.profileSub}>
                   {employee.fatherName ? `S/o ${employee.fatherName}` : ''}
                 </div>
-                <div style={{ marginTop: 16 }}>
-                  <Tag color={employee.category === 'worker' ? 'blue' : 'purple'} style={{ fontSize: 12, padding: '4px 12px' }}>
+                <div className={styles.profileTagWrap}>
+                  <Tag color={employee.category === 'worker' ? 'blue' : 'purple'} className={styles.profileTag}>
                     {CATEGORY_LABELS[employee.category] || employee.category}
                   </Tag>
                 </div>
               </div>
 
-              <div style={{ borderTop: '1px solid var(--hrms-border-light)', paddingTop: 20, marginTop: 20 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--hrms-text-muted)', marginBottom: 12 }}>
+              <div className={styles.profileDivider}>
+                <div className={styles.sectionLabel}>
                   Employment Details
                 </div>
                 <Descriptions column={1} size="small" colon={false}>
@@ -205,8 +212,8 @@ export function EmployeeDetailPage() {
                     {employee.joiningDate ? dayjs(employee.joiningDate).format('DD MMM YYYY') : '—'}
                   </Descriptions.Item>
                   <Descriptions.Item label="Overtime Eligible">
-                    {employee.overtimeEligible 
-                      ? <CheckCircleOutlined style={{ color: '#22c55e' }} /> 
+                    {employee.overtimeEligible
+                      ? <CheckCircleOutlined style={{ color: '#22c55e' }} />
                       : <CloseCircleOutlined style={{ color: '#9ca3af' }} />
                     }
                   </Descriptions.Item>
@@ -230,13 +237,13 @@ export function EmployeeDetailPage() {
                   <Tag color="cyan">{employee.salaryType === 'monthly' ? 'Monthly' : 'Daily'}</Tag>
                 </Descriptions.Item>
                 <Descriptions.Item label="Base Salary">
-                  <span style={{ fontWeight: 600, color: 'var(--hrms-success)' }}>
-                    ₹{employee.baseSalary?.toLocaleString()}/month
+                  <span className={styles.salaryBold}>
+                    {formatCurrency(employee.baseSalary || 0)}/month
                   </span>
                 </Descriptions.Item>
                 {employee.dailyWage && (
                   <Descriptions.Item label="Daily Wage">
-                    <span style={{ fontWeight: 600 }}>₹{employee.dailyWage}/day</span>
+                    <span className={styles.salaryDaily}>{formatCurrency(employee.dailyWage || 0)}/day</span>
                   </Descriptions.Item>
                 )}
               </Descriptions>
@@ -246,7 +253,15 @@ export function EmployeeDetailPage() {
               <Descriptions column={{ xs: 1, sm: 2 }} size="small">
                 <Descriptions.Item label="Contact Number">{employee.contactNumber || '—'}</Descriptions.Item>
                 <Descriptions.Item label="Email">{employee.email || '—'}</Descriptions.Item>
+                <Descriptions.Item label="Emergency Contact">{employee.emergencyContact || '—'}</Descriptions.Item>
+                <Descriptions.Item label="Gender">{employee.gender || '—'}</Descriptions.Item>
+                <Descriptions.Item label="Blood Group">{employee.bloodGroup || '—'}</Descriptions.Item>
+                <Descriptions.Item label="Marital Status">{employee.maritalStatus || '—'}</Descriptions.Item>
+                <Descriptions.Item label="Date of Birth">{employee.dateOfBirth ? dayjs(employee.dateOfBirth).format('DD MMM YYYY') : '—'}</Descriptions.Item>
                 <Descriptions.Item label="Address" span={2}>{employee.address || '—'}</Descriptions.Item>
+                {employee.permanentAddress && (
+                  <Descriptions.Item label="Permanent Address" span={2}>{employee.permanentAddress}</Descriptions.Item>
+                )}
               </Descriptions>
             </Card>
 
@@ -256,6 +271,7 @@ export function EmployeeDetailPage() {
                   <Descriptions.Item label="Bank Name">{employee.bankDetails.bankName || '—'}</Descriptions.Item>
                   <Descriptions.Item label="Account Number">{employee.bankDetails.accountNumber || '—'}</Descriptions.Item>
                   <Descriptions.Item label="IFSC Code">{employee.bankDetails.ifscCode || '—'}</Descriptions.Item>
+                  <Descriptions.Item label="Account Holder">{employee.bankDetails.accountHolderName || '—'}</Descriptions.Item>
                   <Descriptions.Item label="Account Type">
                     {employee.bankDetails.accountType ? (
                       <Tag>{employee.bankDetails.accountType}</Tag>
@@ -283,40 +299,39 @@ export function EmployeeDetailPage() {
               </Descriptions>
             </Card>
 
-
-
             <Card style={{ borderRadius: 12, marginTop: 24 }}>
               <Tabs
-                defaultActiveKey="overview"
+                activeKey={activeTab}
+                onChange={setActiveTab}
                 items={[
                   {
                     key: 'overview',
                     label: <span><FileTextOutlined /> Documents</span>,
                     children: (
                       <div>
-                        <Button type="primary" icon={<UploadOutlined />} onClick={() => setUploadModalOpen(true)} style={{ marginBottom: 16 }}>
+                        <Button type="primary" icon={<UploadOutlined />} onClick={() => setUploadModalOpen(true)} className={styles.errorMargin} aria-label="Upload document">
                           Add Document
                         </Button>
                         {employee.documents && employee.documents.length > 0 ? (
                           <Row gutter={16}>
-                            {employee.documents.map((doc: any) => (
+                            {employee.documents.map((doc) => (
                               <Col xs={24} sm={12} md={8} key={doc._id}>
                                 <Card size="small" style={{ marginBottom: 12 }}
                                   actions={[
-                                    <EyeOutlined key="view" onClick={() => window.open(doc.filePath, '_blank')} />,
-                                    <DownloadOutlined key="download" onClick={() => window.open(employeeService.getDocumentUrl(employee.id, doc._id), '_blank')} />,
+                                    <EyeOutlined key="view" onClick={() => window.open(doc.filePath, '_blank,noopener,noreferrer')} />,
+                                    <DownloadOutlined key="download" onClick={() => window.open(employeeService.getDocumentUrl(employee.id, doc._id), '_blank,noopener,noreferrer')} />,
                                     <Popconfirm key="delete" title="Delete this document?" onConfirm={() => deleteMutation.mutate(doc._id)}>
-                                      <DeleteOutlined style={{ color: '#ff4d4f' }} />
+                                      <DeleteOutlined className={styles.docDeleteIcon} />
                                     </Popconfirm>
                                   ]}
                                 >
-                                  <Card.Meta avatar={<FileTextOutlined style={{ fontSize: 24, color: '#4f46e5' }} />} title={docTypeLabels[doc.type] || doc.type} description={doc.fileName} />
+                                  <Card.Meta avatar={<FileTextOutlined className={styles.docIcon} />} title={docTypeLabels[doc.type] || doc.type} description={doc.fileName} />
                                 </Card>
                               </Col>
                             ))}
                           </Row>
                         ) : (
-                          <div style={{ textAlign: 'center', color: 'var(--hrms-text-muted)', padding: 24 }}>No documents uploaded yet</div>
+                          <div className={styles.emptyDocs}>No documents uploaded yet</div>
                         )}
                       </div>
                     ),
@@ -363,8 +378,8 @@ export function EmployeeDetailPage() {
           onCancel={() => setUploadModalOpen(false)}
           footer={null}
         >
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ display: 'block', marginBottom: 8 }}>Document Type</label>
+          <div className={styles.modalField}>
+            <label className={styles.modalLabel}>Document Type</label>
             <Select
               style={{ width: '100%' }}
               value={selectedDocType}

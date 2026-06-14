@@ -1,4 +1,5 @@
 import apiClient from '../../../core/api/apiClient';
+import { API_ENDPOINTS } from '../../../core/constants/api.endpoints';
 import { PaginatedResponse } from '@/types/shared';
 
 export interface Employee {
@@ -6,6 +7,13 @@ export interface Employee {
   employeeCode: string;
   fullName: string;
   fatherName: string;
+  dateOfBirth?: string;
+  gender?: 'male' | 'female' | 'other';
+  bloodGroup?: string;
+  maritalStatus?: 'single' | 'married' | 'divorced' | 'widowed';
+  email?: string;
+  emergencyContact?: string;
+  permanentAddress?: string;
   category: 'worker' | 'office-staff';
   employmentType: 'permanent' | 'contract' | 'temporary' | 'trainee';
   department: { id: string; name: string } | null;
@@ -18,12 +26,12 @@ export interface Employee {
   overtimeEligible: boolean;
   status: 'active' | 'inactive' | 'terminated' | 'archived';
   contactNumber?: string;
-  email?: string;
   address?: string;
   bankDetails?: {
     bankName?: string;
     accountNumber?: string;
     ifscCode?: string;
+    accountHolderName?: string;
     accountType?: 'savings' | 'current';
   };
   photo?: string;
@@ -41,6 +49,8 @@ export interface Employee {
   esiExempted?: boolean;
   ptExempted?: boolean;
   ptState?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface CreateEmployee {
@@ -84,70 +94,81 @@ export interface CreateEmployee {
 
 export const employeeService = {
   async getNextCode(): Promise<string> {
-    const { data } = await apiClient.get('/employees/next-code');
+    const { data } = await apiClient.get(API_ENDPOINTS.employees.nextCode);
     return data.data.employeeCode;
   },
 
   async list(params?: Record<string, unknown>): Promise<PaginatedResponse<Employee>> {
-    const { data } = await apiClient.get<PaginatedResponse<Employee>>('/employees', { params });
+    const { data } = await apiClient.get<PaginatedResponse<Employee>>(API_ENDPOINTS.employees.list, { params });
     return data;
   },
 
   async getById(id: string): Promise<{ success: boolean; data: Employee }> {
-    const { data } = await apiClient.get(`/employees/${id}`);
+    const { data } = await apiClient.get(API_ENDPOINTS.employees.get(id));
     return data;
   },
 
   async create(payload: CreateEmployee): Promise<{ success: boolean; data: Employee }> {
-    const { data } = await apiClient.post('/employees', payload);
+    const { data } = await apiClient.post(API_ENDPOINTS.employees.create, payload);
     return data;
   },
 
   async update(id: string, payload: Partial<CreateEmployee>): Promise<{ success: boolean; data: Employee }> {
-    const { data } = await apiClient.put(`/employees/${id}`, payload);
+    const { data } = await apiClient.put(API_ENDPOINTS.employees.update(id), payload);
     return data;
   },
 
   async delete(id: string): Promise<void> {
-    await apiClient.delete(`/employees/${id}`);
+    await apiClient.delete(API_ENDPOINTS.employees.delete(id));
+  },
+
+  async restore(id: string): Promise<{ success: boolean; data: Employee }> {
+    const { data } = await apiClient.post(API_ENDPOINTS.employees.restore(id));
+    return data;
   },
 
   async export(): Promise<Blob> {
-    const response = await apiClient.get('/employees/export', { responseType: 'blob' });
+    const response = await apiClient.get(API_ENDPOINTS.employees.export, { responseType: 'blob' });
     return response.data;
   },
 
   async downloadTemplate(): Promise<Blob> {
-    const response = await apiClient.get('/employees/template', { responseType: 'blob' });
+    const response = await apiClient.get(API_ENDPOINTS.employees.template, { responseType: 'blob' });
     return response.data;
   },
 
   async import(file: File): Promise<{ success: number; failed: number; errors: string[] }> {
     const formData = new FormData();
     formData.append('file', file);
-    const { data } = await apiClient.post('/employees/import', formData, {
+    const { data } = await apiClient.post(API_ENDPOINTS.employees.import, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
-    return data;
+    // Unwrap the nested response: { success: true, data: { success, failed, errors } }
+    const result = data.data || data;
+    return {
+      success: typeof result.success === 'number' ? result.success : 0,
+      failed: typeof result.failed === 'number' ? result.failed : 0,
+      errors: Array.isArray(result.errors) ? result.errors : [],
+    };
   },
 
   async uploadDocument(employeeId: string, file: File, documentType: string): Promise<any> {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('documentType', documentType);
-    const { data } = await apiClient.post(`/employees/${employeeId}/documents`, formData, {
+    const { data } = await apiClient.post(API_ENDPOINTS.employees.uploadDocument(employeeId), formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
     return data;
   },
 
   async deleteDocument(employeeId: string, docId: string): Promise<any> {
-    const { data } = await apiClient.delete(`/employees/${employeeId}/documents/${docId}`);
+    const { data } = await apiClient.delete(API_ENDPOINTS.employees.removeDocument(employeeId, docId));
     return data;
   },
 
   getDocumentUrl(employeeId: string, docId: string): string {
     const baseURL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
-    return `${baseURL}/employees/${employeeId}/documents/${docId}`;
+    return `${baseURL}${API_ENDPOINTS.employees.downloadDocument(employeeId, docId)}`;
   },
 };

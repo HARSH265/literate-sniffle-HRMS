@@ -1,4 +1,5 @@
 import apiClient from '../../../core/api/apiClient';
+import { API_ENDPOINTS } from '../../../core/constants/api.endpoints';
 
 export interface CompanySettings {
   id: string;
@@ -9,6 +10,8 @@ export interface CompanySettings {
     email?: string;
     logo?: string;
     financialYearStart: number;
+    appName?: string;
+    currency?: string;
   };
   payrollConfig: {
     overtimeBase: 'basic' | 'basicPlusAllowances';
@@ -63,6 +66,11 @@ export interface CompanySettings {
     autoCheckoutGraceMinutes: number;
     breakMinutes: number;
     breakDeductionThresholdMinutes: number;
+    sandwichRuleEnabled?: boolean;
+    compOffEarnRule?: 'holiday-work' | 'overtime' | 'both';
+    compOffValidityDays?: number;
+    regularizationAllowed?: boolean;
+    regularizationDeadlineDays?: number;
   };
   allowanceConfig: Array<{
     name: string;
@@ -144,24 +152,24 @@ export interface CompanySettings {
 
 export const settingsService = {
   async get(): Promise<{ success: boolean; data: CompanySettings }> {
-    const { data } = await apiClient.get('/settings');
+    const { data } = await apiClient.get(API_ENDPOINTS.settings.get);
     return data;
   },
 
   async update(payload: Partial<CompanySettings>): Promise<{ success: boolean; data: CompanySettings }> {
-    const { data } = await apiClient.patch('/settings', payload);
+    const { data } = await apiClient.patch(API_ENDPOINTS.settings.update, payload);
     return data;
   },
 
   async testEmail(email: string): Promise<{ success: boolean; message?: string }> {
-    const { data } = await apiClient.post('/settings/test-email', null, { params: { email } });
+    const { data } = await apiClient.post(API_ENDPOINTS.settings.testEmail, null, { params: { email } });
     return data;
   },
 
   async uploadLogo(file: File): Promise<{ success: boolean; logoUrl?: string; message?: string }> {
     const formData = new FormData();
     formData.append('logo', file);
-    const { data } = await apiClient.post('/settings/logo', formData, {
+    const { data } = await apiClient.post(API_ENDPOINTS.settings.uploadLogo, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
     return data;

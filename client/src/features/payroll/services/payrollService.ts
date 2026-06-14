@@ -1,4 +1,5 @@
 import apiClient from '../../../core/api/apiClient';
+import { API_ENDPOINTS } from '../../../core/constants/api.endpoints';
 import type { Meta } from '../../../types/shared';
 
 export interface PayrollRevision {
@@ -78,67 +79,67 @@ function validateResponse<T>(data: unknown, _requiredKeys: string[] = []): T {
 
 export const payrollService = {
   async listRuns(params?: Record<string, unknown>): Promise<{ success: boolean; data: PayrollRun[]; meta: Meta }> {
-    const { data } = await apiClient.get('/payroll/runs', { params });
+    const { data } = await apiClient.get(API_ENDPOINTS.payroll.runs.list, { params });
     return validateResponse(data);
   },
 
   async runPayroll(month: number, year: number): Promise<{ success: boolean; data: PayrollRun }> {
-    const { data } = await apiClient.post('/payroll/run', { month, year });
+    const { data } = await apiClient.post(API_ENDPOINTS.payroll.runs.create, { month, year });
     return validateResponse(data);
   },
 
   async previewRun(month: number, year: number): Promise<{ success: boolean; data: PayrollRun }> {
-    const { data } = await apiClient.post('/payroll/preview', { month, year });
+    const { data } = await apiClient.post(API_ENDPOINTS.payroll.runs.preview, { month, year });
     return validateResponse(data);
   },
 
   async getRunDetails(id: string): Promise<{ success: boolean; data: PayrollRun }> {
-    const { data } = await apiClient.get(`/payroll/run/${id}`);
+    const { data } = await apiClient.get(API_ENDPOINTS.payroll.runs.get(id));
     return validateResponse(data);
   },
 
   async submitRun(id: string): Promise<{ success: boolean; data: PayrollRun }> {
-    const { data } = await apiClient.post(`/payroll/run/${id}/submit`);
+    const { data } = await apiClient.post(API_ENDPOINTS.payroll.runs.submit(id));
     return validateResponse(data);
   },
 
   async approveRun(id: string): Promise<{ success: boolean; data: PayrollRun }> {
-    const { data } = await apiClient.post(`/payroll/run/${id}/approve`);
+    const { data } = await apiClient.post(API_ENDPOINTS.payroll.runs.approve(id));
     return validateResponse(data);
   },
 
   async rejectRun(id: string, reason?: string): Promise<{ success: boolean; data: PayrollRun }> {
-    const { data } = await apiClient.post(`/payroll/run/${id}/reject`, { reason });
+    const { data } = await apiClient.post(API_ENDPOINTS.payroll.runs.reject(id), { reason });
     return validateResponse(data);
   },
 
   async updatePayrollItem(runId: string, itemId: string, payload: Partial<PayrollItem>): Promise<{ success: boolean; data: PayrollItem }> {
-    const { data } = await apiClient.patch(`/payroll/run/${runId}/item/${itemId}`, payload);
+    const { data } = await apiClient.patch(API_ENDPOINTS.payroll.items.updateInRun(runId, itemId), payload);
     return validateResponse(data);
   },
 
   async batchUpdateItems(runId: string, items: Array<{ itemId: string; data: Record<string, unknown> }>): Promise<{ success: boolean; data: PayrollRun }> {
-    const { data } = await apiClient.patch(`/payroll/run/${runId}/items/batch`, { items });
+    const { data } = await apiClient.patch(API_ENDPOINTS.payroll.items.batch(runId), { items });
     return validateResponse(data);
   },
 
   async finalizeRun(id: string, remarks?: string): Promise<{ success: boolean; data: PayrollRun }> {
-    const { data } = await apiClient.post(`/payroll/run/${id}/finalize`, { remarks });
+    const { data } = await apiClient.post(API_ENDPOINTS.payroll.runs.finalize(id), { remarks });
     return validateResponse(data);
   },
 
   async unfinalizeRun(id: string, reason: string): Promise<{ success: boolean; data: PayrollRun }> {
-    const { data } = await apiClient.post(`/payroll/run/${id}/unfinalize`, { reason });
+    const { data } = await apiClient.post(API_ENDPOINTS.payroll.runs.unfinalize(id), { reason });
     return validateResponse(data);
   },
 
   async deleteRun(id: string): Promise<{ success: boolean }> {
-    const { data } = await apiClient.delete(`/payroll/run/${id}`);
+    const { data } = await apiClient.delete(API_ENDPOINTS.payroll.runs.delete(id));
     return validateResponse(data);
   },
 
   async getByEmployee(employeeId: string): Promise<PayrollItem[]> {
-    const { data } = await apiClient.get(`/payroll/runs/employee/${employeeId}`);
+    const { data } = await apiClient.get(API_ENDPOINTS.payroll.employee(employeeId));
     const response = validateResponse(data, ['success', 'data']) as { success: boolean; data: PayrollItem[] };
     return response.data;
   },

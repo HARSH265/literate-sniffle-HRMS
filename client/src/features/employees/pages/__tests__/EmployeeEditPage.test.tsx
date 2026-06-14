@@ -95,8 +95,12 @@ describe('EmployeeEditPage', () => {
     await waitFor(() => { expect(screen.getByText('Back to Details')).toBeInTheDocument(); });
   });
 
-  it('renders employee code input as disabled', async () => {
+  it('renders employee code as disabled input', async () => {
     renderPage();
-    await waitFor(() => { expect(screen.getByDisplayValue('EMP001')).toBeInTheDocument(); });
+    await waitFor(() => {
+      const inputs = screen.getAllByRole('textbox');
+      const disabledInput = inputs.find(i => i.getAttribute('disabled') !== null);
+      expect(disabledInput).toBeDefined();
+    });
   });
 });

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Form, Input, Button, message, Result } from 'antd';
 import { MailOutlined } from '@ant-design/icons';
 import apiClient from '../../../core/api/apiClient';
+import { API_ENDPOINTS } from '../../../core/constants/api.endpoints';
 import { AxiosError } from 'axios';
 
 export function ForgotPasswordPage() {
@@ -11,7 +12,7 @@ export function ForgotPasswordPage() {
   const handleSubmit = async (values: { email: string }) => {
     setLoading(true);
     try {
-      await apiClient.post('/auth/forgot-password', values);
+      await apiClient.post(API_ENDPOINTS.auth.forgotPassword, values);
       setSent(true);
     } catch (err) {
       const error = err as AxiosError<{ message?: string }>;

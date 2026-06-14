@@ -5,6 +5,7 @@ import { BellOutlined, LogoutOutlined, UserOutlined, CheckOutlined } from '@ant-
 import { EssBottomNav } from './EssBottomNav';
 import { useAuthStore } from '../../../core/stores/authStore';
 import apiClient from '../../../core/api/apiClient';
+import { API_ENDPOINTS } from '../../../core/constants/api.endpoints';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 
@@ -30,8 +31,8 @@ export function EssLayout() {
   const fetchNotifications = async () => {
     try {
       const [{ data: notifs }, { data: count }] = await Promise.all([
-        apiClient.get('/notifications?limit=20'),
-        apiClient.get('/notifications/unread-count'),
+        apiClient.get(`${API_ENDPOINTS.notifications.list}?limit=20`),
+        apiClient.get(API_ENDPOINTS.notifications.unreadCount),
       ]);
       setNotifications(notifs.data);
       setUnreadCount(count.data.count);
@@ -45,20 +46,20 @@ export function EssLayout() {
   }, []);
 
   const handleLogout = useCallback(() => {
-    apiClient.post('/auth/logout').finally(() => {
+    apiClient.post(API_ENDPOINTS.auth.logout).finally(() => {
       logout();
       navigate('/', { replace: true });
     });
   }, [logout, navigate]);
 
   const handleMarkAllRead = async () => {
-    await apiClient.patch('/notifications/mark-all-read');
+    await apiClient.patch(API_ENDPOINTS.notifications.markAllRead);
     setUnreadCount(0);
     setNotifications(notifications.map(n => ({ ...n, isRead: true })));
   };
 
   const handleMarkAsRead = async (notificationId: string) => {
-    await apiClient.patch(`/notifications/${notificationId}/read`);
+    await apiClient.patch(API_ENDPOINTS.notifications.markRead(notificationId));
     setNotifications(notifications.map(n => n.id === notificationId || n._id === notificationId ? { ...n, isRead: true } : n));
     setUnreadCount(Math.max(0, unreadCount - 1));
   };

@@ -319,7 +319,7 @@ export class AttendanceService {
       };
     });
 
-    return { data, meta: { page, limit, total } };
+    return { data, meta: { page, limit, total, totalPages: Math.ceil(total / limit) } };
   }
 
   static async bulkCreate(data: { date: string; entries: Array<Record<string, unknown>> }, userId: string) {

@@ -1,4 +1,5 @@
 import apiClient from '../../../core/api/apiClient';
+import { API_ENDPOINTS } from '../../../core/constants/api.endpoints';
 
 export interface TrainingProgram {
   _id: string;
@@ -67,12 +68,12 @@ interface ListParams {
 
 export const trainingService = {
   async listPrograms(params?: ListParams): Promise<{ success: boolean; data: TrainingProgram[]; meta: any }> {
-    const { data } = await apiClient.get('/training/programs', { params });
+    const { data } = await apiClient.get(API_ENDPOINTS.training.programs.list, { params });
     return data;
   },
 
   async getProgram(id: string): Promise<{ success: boolean; data: TrainingProgram }> {
-    const { data } = await apiClient.get(`/training/programs/${id}`);
+    const { data } = await apiClient.get(API_ENDPOINTS.training.programs.get(id));
     return data;
   },
 
@@ -83,7 +84,7 @@ export const trainingService = {
     cost?: number; certificationOffered?: boolean; certificationValidForDays?: number;
     prerequisites?: string[]; tags?: string[];
   }): Promise<{ success: boolean; data: TrainingProgram; message: string }> {
-    const { data } = await apiClient.post('/training/programs', payload);
+    const { data } = await apiClient.post(API_ENDPOINTS.training.programs.create, payload);
     return data;
   },
 
@@ -93,72 +94,72 @@ export const trainingService = {
     startDate: string; endDate: string; trainer: string; location: string;
     cost: number; status: string;
   }>): Promise<{ success: boolean; data: TrainingProgram; message: string }> {
-    const { data } = await apiClient.patch(`/training/programs/${id}`, payload);
+    const { data } = await apiClient.patch(API_ENDPOINTS.training.programs.update(id), payload);
     return data;
   },
 
   async cancelProgram(id: string): Promise<{ success: boolean; data: TrainingProgram; message: string }> {
-    const { data } = await apiClient.delete(`/training/programs/${id}`);
+    const { data } = await apiClient.delete(API_ENDPOINTS.training.programs.cancel(id));
     return data;
   },
 
   async getMyEnrollments(): Promise<{ success: boolean; data: TrainingEnrollment[] }> {
-    const { data } = await apiClient.get('/training/enrollments/my');
+    const { data } = await apiClient.get(API_ENDPOINTS.training.enrollments.my);
     return data;
   },
 
   async listEnrollments(params?: ListParams & { programId?: string; employeeId?: string }): Promise<{ success: boolean; data: TrainingEnrollment[]; meta: any }> {
-    const { data } = await apiClient.get('/training/enrollments', { params });
+    const { data } = await apiClient.get(API_ENDPOINTS.training.enrollments.list, { params });
     return data;
   },
 
   async enrollEmployee(payload: { trainingId: string; employeeId: string }): Promise<{ success: boolean; data: TrainingEnrollment; message: string }> {
-    const { data } = await apiClient.post('/training/enrollments', payload);
+    const { data } = await apiClient.post(API_ENDPOINTS.training.enrollments.create, payload);
     return data;
   },
 
   async batchEnroll(payload: { trainingId: string; employeeIds: string[] }): Promise<{ success: boolean; data: any; message: string }> {
-    const { data } = await apiClient.post('/training/enrollments/batch', payload);
+    const { data } = await apiClient.post(API_ENDPOINTS.training.enrollments.batch, payload);
     return data;
   },
 
   async completeEnrollment(id: string, payload?: { score?: number; feedback?: string; rating?: number; certificationExpiry?: string }): Promise<{ success: boolean; data: TrainingEnrollment; message: string }> {
-    const { data } = await apiClient.patch(`/training/enrollments/${id}/complete`, payload || {});
+    const { data } = await apiClient.patch(API_ENDPOINTS.training.enrollments.complete(id), payload || {});
     return data;
   },
 
   async dropEnrollment(id: string): Promise<{ success: boolean; data: TrainingEnrollment; message: string }> {
-    const { data } = await apiClient.patch(`/training/enrollments/${id}/drop`);
+    const { data } = await apiClient.patch(API_ENDPOINTS.training.enrollments.drop(id));
     return data;
   },
 
   async recordAttendance(id: string, attendance: { date: string; present: boolean }[]): Promise<{ success: boolean; data: TrainingEnrollment; message: string }> {
-    const { data } = await apiClient.post(`/training/enrollments/${id}/attendance`, { attendance });
+    const { data } = await apiClient.post(API_ENDPOINTS.training.enrollments.attendance(id), { attendance });
     return data;
   },
 
   async listEmployeeSkills(employeeId: string): Promise<{ success: boolean; data: EmployeeSkill[] }> {
-    const { data } = await apiClient.get(`/training/skills/employee/${employeeId}`);
+    const { data } = await apiClient.get(API_ENDPOINTS.training.skills.employee(employeeId));
     return data;
   },
 
   async listSkills(params?: { search?: string; category?: string }): Promise<{ success: boolean; data: Skill[] }> {
-    const { data } = await apiClient.get('/training/skills', { params });
+    const { data } = await apiClient.get(API_ENDPOINTS.training.skills.list, { params });
     return data;
   },
 
   async createSkill(payload: { name: string; category: string; description?: string }): Promise<{ success: boolean; data: Skill; message: string }> {
-    const { data } = await apiClient.post('/training/skills', payload);
+    const { data } = await apiClient.post(API_ENDPOINTS.training.skills.create, payload);
     return data;
   },
 
   async updateEmployeeSkill(employeeId: string, skillId: string, payload: { proficiency: string; yearsOfExperience?: number; certified?: boolean }): Promise<{ success: boolean; data: EmployeeSkill; message: string }> {
-    const { data } = await apiClient.patch(`/training/skills/employee/${employeeId}/${skillId}`, payload);
+    const { data } = await apiClient.patch(API_ENDPOINTS.training.skills.update(employeeId, skillId), payload);
     return data;
   },
 
   async getStats(): Promise<{ success: boolean; data: { totalPrograms: number; activePrograms: number; totalEnrollments: number; completionRate: number } }> {
-    const { data } = await apiClient.get('/training/stats');
+    const { data } = await apiClient.get(API_ENDPOINTS.training.stats);
     return data;
   },
 };

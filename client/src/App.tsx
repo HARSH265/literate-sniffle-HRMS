@@ -9,6 +9,7 @@ import { EssLayout } from './features/employee-self-service/layout/EssLayout';
 import { lazy, Suspense, useEffect, useState } from 'react';
 import apiClient from './core/api/apiClient';
 import { ProtectedRoute } from './core/components/ProtectedRoute';
+import { API_ENDPOINTS } from './core/constants/api.endpoints';
 
 const LoginPage = lazy(() => import('./features/auth/pages/LoginPage').then(m => ({ default: m.LoginPage })));
 const LandingPage = lazy(() => import('./features/auth/pages/LandingPage').then(m => ({ default: m.LandingPage })));
@@ -29,23 +30,27 @@ const OvertimePage = lazy(() => import('./features/overtime/pages/OvertimePage')
 const OvertimeRulesPage = lazy(() => import('./features/overtime-rules/pages/OvertimeRulesPage').then(m => ({ default: m.OvertimeRulesPage })));
 const WeeklyOffRulesPage = lazy(() => import('./features/weekly-off-rules/pages/WeeklyOffRulesPage').then(m => ({ default: m.WeeklyOffRulesPage })));
 const PayrollPage = lazy(() => import('./features/payroll/pages/PayrollPage').then(m => ({ default: m.PayrollPage })));
+const PayrollReportsPageLazy = lazy(() => import('./features/payroll-reports/pages/PayrollReportsPage').then(m => ({ default: m.PayrollReportsPage })));
 const PayrollDetailsPage = lazy(() => import('./features/payroll/pages/PayrollDetailsPage').then(m => ({ default: m.PayrollDetailsPage })));
 const SalarySlipsPage = lazy(() => import('./features/payroll/pages/SalarySlipsPage').then(m => ({ default: m.SalarySlipsPage })));
 const SalarySlipDetailsPage = lazy(() => import('./features/payroll/pages/SalarySlipDetailsPage').then(m => ({ default: m.SalarySlipDetailsPage })));
 const ReportsPage = lazy(() => import('./features/reports/pages/ReportsPage').then(m => ({ default: m.ReportsPage })));
+const SalaryStructureTemplatesPageLazy = lazy(() => import('./features/salary-structure-templates/pages/SalaryStructureTemplatesPage').then(m => ({ default: m.SalaryStructureTemplatesPage })));
 const StatutoryDashboard = lazy(() => import('./features/statutory/pages/StatutoryDashboard').then(m => ({ default: m.StatutoryDashboard })));
 const LoansPage = lazy(() => import('./features/loans/pages/LoansPage').then(m => ({ default: m.LoansPage })));
+const LoanTypesPageLazy = lazy(() => import('./features/loans/pages/LoanTypesPage').then(m => ({ default: m.LoanTypesPage })));
 const LoanApplyPage = lazy(() => import('./features/loans/pages/LoanApplyPage').then(m => ({ default: m.LoanApplyPage })));
 const LoanDetailPage = lazy(() => import('./features/loans/pages/LoanDetailPage').then(m => ({ default: m.LoanDetailPage })));
 const LeaveApprovalsPage = lazy(() => import('./features/leave/pages/LeaveApprovalsPage').then(m => ({ default: m.LeaveApprovalsPage })));
 const LeaveBalancesPage = lazy(() => import('./features/leave/pages/LeaveBalancesPage').then(m => ({ default: m.LeaveBalancesPage })));
 const LeaveApplicationsPage = lazy(() => import('./features/leave/pages/LeaveApplicationsPage').then(m => ({ default: m.LeaveApplicationsPage })));
 const SettingsPage = lazy(() => import('./features/settings/pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
+const UserNewPageLazy = lazy(() => import('./features/users/pages/UserNewPage').then(m => ({ default: m.UserNewPage })));
+const UserEditPageLazy = lazy(() => import('./features/users/pages/UserEditPage').then(m => ({ default: m.UserEditPage })));
 const UsersPage = lazy(() => import('./features/users/pages/UsersPage').then(m => ({ default: m.UsersPage })));
 const UserActivityPage = lazy(() => import('./features/users/pages/UserActivityPage').then(m => ({ default: m.UserActivityPage })));
 const AuditLogsPage = lazy(() => import('./features/audit/pages/AuditLogsPage').then(m => ({ default: m.AuditLogsPage })));
 const NotificationsPage = lazy(() => import('./features/notifications/pages/NotificationsPage').then(m => ({ default: m.NotificationsPage })));
-const RuleBookPage = lazy(() => import('./features/rule-book/pages/RuleBookPage').then(m => ({ default: m.RuleBookPage })));
 const KioskPage = lazy(() => import('./features/kiosk/pages/KioskPage').then(m => ({ default: m.KioskPage })));
 const KioskDevicesPage = lazy(() => import('./features/kiosk/pages/KioskDevicesPage').then(m => ({ default: m.KioskDevicesPage })));
 const ScanPage = lazy(() => import('./features/attendance-qr/pages/ScanPage').then(m => ({ default: m.ScanPage })));
@@ -67,6 +72,7 @@ const TrainingProgramDetailPage = lazy(() => import('./features/training/pages/T
 const SkillMatrixPage = lazy(() => import('./features/training/pages/SkillMatrixPage').then(m => ({ default: m.SkillMatrixPage })));
 const SkillGapPage = lazy(() => import('./features/training/pages/SkillGapPage').then(m => ({ default: m.SkillGapPage })));
 const CertificationsPage = lazy(() => import('./features/training/pages/CertificationsPage').then(m => ({ default: m.CertificationsPage })));
+const CompliancePageLazy = lazy(() => import('./features/compliance/pages/CompliancePage').then(m => ({ default: m.CompliancePage })));
 const AssetsPage = lazy(() => import('./features/assets/pages/AssetsPage').then(m => ({ default: m.AssetsPage })));
 const AssetDetailPage = lazy(() => import('./features/assets/pages/AssetDetailPage').then(m => ({ default: m.AssetDetailPage })));
 const AssetFormPage = lazy(() => import('./features/assets/pages/AssetFormPage').then(m => ({ default: m.AssetFormPage })));
@@ -87,6 +93,8 @@ const EssLoansPageLazy = lazy(() => import('./features/employee-self-service/pag
 const EssLoanApplyPageLazy = lazy(() => import('./features/employee-self-service/pages/EssLoanApplyPage').then(m => ({ default: m.EssLoanApplyPage })));
 
 import { Spin } from 'antd';
+import { setCurrencySymbol } from './core/constants/currency';
+import { setAppName } from './core/constants/app.constants';
 
 const PageLoader = () => (
   <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
@@ -123,13 +131,25 @@ function App() {
       setAuthValidated(true);
       return;
     }
-    apiClient.get('/auth/me')
+    apiClient.get(API_ENDPOINTS.auth.me)
       .then(() => setAuthValidated(true))
       .catch(() => {
         useAuthStore.getState().logout();
         setAuthValidated(true);
       });
   }, [hydrated, isAuthenticated]);
+
+  // Sync currency and app name from company settings
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    import('./features/settings/services/settingsService')
+      .then(m => m.settingsService.get())
+      .then(({ data }) => {
+        if (data.companyInfo?.currency) setCurrencySymbol(data.companyInfo.currency);
+        if (data.companyInfo?.appName) setAppName(data.companyInfo.appName);
+      })
+      .catch(() => {});
+  }, [isAuthenticated]);
 
   if (!hydrated || !authValidated) {
     return (
@@ -197,6 +217,7 @@ function App() {
             <Route path="overtime/rules" element={<OvertimeRulesPage />} />
             <Route path="payroll" element={<ProtectedRoute permission="process-payroll"><PayrollPage /></ProtectedRoute>} />
             <Route path="payroll/:id" element={<ProtectedRoute permission="process-payroll"><PayrollDetailsPage /></ProtectedRoute>} />
+            <Route path="salary-structure-templates" element={<ProtectedRoute permission="process-payroll"><SalaryStructureTemplatesPageLazy /></ProtectedRoute>} />
             <Route path="salary-slips" element={<SalarySlipsPage />} />
             <Route path="salary-slips/:id" element={<SalarySlipDetailsPage />} />
             <Route path="leave/approvals" element={<LeaveApprovalsPage />} />
@@ -205,11 +226,15 @@ function App() {
             <Route path="loans" element={<LoansPage />} />
             <Route path="loans/apply" element={<LoanApplyPage />} />
             <Route path="loans/:id" element={<LoanDetailPage />} />
+            <Route path="loan-types" element={<ProtectedRoute permission="manage-users"><LoanTypesPageLazy /></ProtectedRoute>} />
             <Route path="statutory" element={<StatutoryDashboard />} />
+            <Route path="compliance" element={<ProtectedRoute permission="view-payroll"><CompliancePageLazy /></ProtectedRoute>} />
             <Route path="reports" element={<ReportsPage />} />
+            <Route path="payroll-reports" element={<ProtectedRoute permission="view-payroll"><PayrollReportsPageLazy /></ProtectedRoute>} />
             <Route path="settings" element={<ProtectedRoute permission="manage-settings"><SettingsPage /></ProtectedRoute>} />
-            <Route path="rule-book" element={<RuleBookPage />} />
             <Route path="users" element={<ProtectedRoute permission="manage-users"><UsersPage /></ProtectedRoute>} />
+            <Route path="users/new" element={<ProtectedRoute permission="manage-users"><UserNewPageLazy /></ProtectedRoute>} />
+            <Route path="users/:id/edit" element={<ProtectedRoute permission="manage-users"><UserEditPageLazy /></ProtectedRoute>} />
             <Route path="users/:id" element={<ProtectedRoute permission="manage-users"><Navigate to="activity" replace /></ProtectedRoute>} />
             <Route path="users/:id/activity" element={<ProtectedRoute permission="manage-users"><UserActivityPage /></ProtectedRoute>} />
             <Route path="audit-logs" element={<ProtectedRoute permission="view-audit"><AuditLogsPage /></ProtectedRoute>} />

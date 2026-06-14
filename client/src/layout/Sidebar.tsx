@@ -16,7 +16,6 @@ import {
   SettingOutlined,
   UserOutlined,
   FileDoneOutlined,
-  BookOutlined,
   BellOutlined,
   MessageOutlined,
   AppstoreOutlined,
@@ -64,7 +63,7 @@ export function Sidebar({ collapsed }: SidebarProps) {
     else if (path.includes('/payroll') || path.includes('/salary-slips')) { setOpenKeys(['payroll']); }
     else if (path.includes('/performance')) { setOpenKeys(['performance']); }
     else if (path.includes('/training')) { setOpenKeys(['training']); }
-    else if (path.includes('/assets') || path.includes('/documents') || path.includes('/rule-book')) { setOpenKeys(['resources']); }
+    else if (path.includes('/assets') || path.includes('/documents')) { setOpenKeys(['resources']); }
     else if (path.includes('/reports') || path.includes('/statutory')) { setOpenKeys(['analytics']); }
     else if (path.includes('/users') || path.includes('/audit-logs') || path.includes('/settings')) { setOpenKeys(['administration']); }
     else if (path.includes('/announcements') || path.includes('/helpdesk') || path.includes('/notifications')) { setOpenKeys(['communication']); }
@@ -124,7 +123,6 @@ export function Sidebar({ collapsed }: SidebarProps) {
       if (path.includes('/training/certifications')) return '/training/certifications';
       return '/training';
     }
-    if (path.includes('/rule-book')) return '/rule-book';
     return path;
   };
 
@@ -177,7 +175,6 @@ export function Sidebar({ collapsed }: SidebarProps) {
         children: [
           { key: '/assets', icon: <LaptopOutlined />, label: 'Assets', permission: 'view-assets' },
           { key: '/documents', icon: <FileTextOutlined />, label: 'Documents', permission: 'view-documents' },
-          { key: '/rule-book', icon: <BookOutlined />, label: 'User Guide' },
         ]
       },
       {

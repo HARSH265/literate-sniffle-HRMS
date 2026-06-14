@@ -1,5 +1,15 @@
+let _appName = 'Orian';
+
+export function setAppName(name: string) {
+  _appName = name || 'Orian';
+}
+
+export function getAppName(): string {
+  return _appName;
+}
+
 export const APP_CONSTANTS = {
-  APP_NAME: 'Orian',
+  get APP_NAME() { return _appName; },
 
   DEFAULT_PAGE_SIZE: 10,
   PAGE_SIZE_OPTIONS: [10, 20, 50, 100] as const,

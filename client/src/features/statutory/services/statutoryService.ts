@@ -1,4 +1,5 @@
 import apiClient from '../../../core/api/apiClient';
+import { API_ENDPOINTS } from '../../../core/constants/api.endpoints';
 
 export interface StatutoryDefaults {
   pfEnabled: boolean;
@@ -90,57 +91,57 @@ export interface StatutorySummary {
 
 export const statutoryService = {
   getDefaults: async (): Promise<StatutoryDefaults> => {
-    const res = await apiClient.get('/statutory/defaults');
+    const res = await apiClient.get(API_ENDPOINTS.statutory.defaults);
     return res.data.data;
   },
 
   calculate: async (employeeId: string, grossPay: number, month: string): Promise<StatutoryCalculation> => {
-    const res = await apiClient.post('/statutory/calculate', { employeeId, grossPay, month });
+    const res = await apiClient.post(API_ENDPOINTS.statutory.calculate, { employeeId, grossPay, month });
     return res.data.data;
   },
 
   getSummary: async (month: string): Promise<StatutorySummary> => {
-    const res = await apiClient.get(`/statutory/summary/${month}`);
+    const res = await apiClient.get(API_ENDPOINTS.statutory.summary(month));
     return res.data.data;
   },
 
   generateChallan: async (month: string): Promise<PFChallan> => {
-    const res = await apiClient.post(`/statutory/challans/generate/${month}`);
+    const res = await apiClient.post(API_ENDPOINTS.statutory.challans.generate(month));
     return res.data.data;
   },
 
   listChallans: async (params?: { month?: string; status?: string; financialYear?: string }): Promise<PFChallan[]> => {
-    const res = await apiClient.get('/statutory/challans', { params });
+    const res = await apiClient.get(API_ENDPOINTS.statutory.challans.list, { params });
     return res.data.data;
   },
 
   getChallan: async (id: string): Promise<PFChallan> => {
-    const res = await apiClient.get(`/statutory/challans/${id}`);
+    const res = await apiClient.get(API_ENDPOINTS.statutory.challans.get(id));
     return res.data.data;
   },
 
   updateChallan: async (id: string, data: Partial<PFChallan>): Promise<PFChallan> => {
-    const res = await apiClient.patch(`/statutory/challans/${id}`, data);
+    const res = await apiClient.patch(API_ENDPOINTS.statutory.challans.update(id), data);
     return res.data.data;
   },
 
   generateReport: async (reportType: string, month: string): Promise<StatutoryReport> => {
-    const res = await apiClient.post('/statutory/reports/generate', { reportType, month });
+    const res = await apiClient.post(API_ENDPOINTS.statutory.reports.generate, { reportType, month });
     return res.data.data;
   },
 
   listReports: async (params?: { reportType?: string; month?: string; financialYear?: string }): Promise<StatutoryReport[]> => {
-    const res = await apiClient.get('/statutory/reports', { params });
+    const res = await apiClient.get(API_ENDPOINTS.statutory.reports.list, { params });
     return res.data.data;
   },
 
   getReport: async (id: string): Promise<StatutoryReport> => {
-    const res = await apiClient.get(`/statutory/reports/${id}`);
+    const res = await apiClient.get(API_ENDPOINTS.statutory.reports.get(id));
     return res.data.data;
   },
 
   updateReport: async (id: string, data: Partial<StatutoryReport>): Promise<StatutoryReport> => {
-    const res = await apiClient.patch(`/statutory/reports/${id}`, data);
+    const res = await apiClient.patch(API_ENDPOINTS.statutory.reports.update(id), data);
     return res.data.data;
   },
 };

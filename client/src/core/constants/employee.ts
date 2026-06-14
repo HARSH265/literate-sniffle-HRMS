@@ -32,7 +32,6 @@ export const STATUS_OPTIONS = [
   { label: 'Active', value: 'active' },
   { label: 'Inactive', value: 'inactive' },
   { label: 'Terminated', value: 'terminated' },
-  { label: 'Archived', value: 'archived' },
 ];
 
 export const MARITAL_STATUS_OPTIONS = [
@@ -40,6 +39,17 @@ export const MARITAL_STATUS_OPTIONS = [
   { label: 'Married', value: 'married' },
   { label: 'Divorced', value: 'divorced' },
   { label: 'Widowed', value: 'widowed' },
+];
+
+export const PT_STATE_OPTIONS = [
+  { label: 'Andhra Pradesh', value: 'Andhra Pradesh' },
+  { label: 'Karnataka', value: 'Karnataka' },
+  { label: 'Kerala', value: 'Kerala' },
+  { label: 'Maharashtra', value: 'Maharashtra' },
+  { label: 'Tamil Nadu', value: 'Tamil Nadu' },
+  { label: 'Telangana', value: 'Telangana' },
+  { label: 'West Bengal', value: 'West Bengal' },
+  { label: 'Other', value: 'Other' },
 ];
 
 export { FORM_GRID as FORM_LAYOUT } from './layout';

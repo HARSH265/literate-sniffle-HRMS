@@ -17,7 +17,8 @@ export type AuditAction =
   | 'attendance-checkin' | 'attendance-checkout'
   | 'kiosk-register'
   | 'totp-enroll' | 'totp-disable'
-  | 'generate-challan' | 'generate-report' | 'generate-statutory';
+  | 'generate-challan' | 'generate-report' | 'generate-statutory'
+  | 'upload-document' | 'delete-document' | 'upload-photo';
 
 export interface AuditData {
   action: AuditAction;

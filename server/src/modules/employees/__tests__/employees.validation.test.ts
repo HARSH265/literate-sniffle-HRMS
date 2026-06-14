@@ -105,9 +105,9 @@ describe('employees validation schemas', () => {
       expect(result.success).toBe(true);
     });
 
-    it('accepts empty object', () => {
+    it('rejects empty object', () => {
       const result = updateEmployeeSchema.safeParse({});
-      expect(result.success).toBe(true);
+      expect(result.success).toBe(false);
     });
 
     it('rejects invalid status value', () => {
@@ -115,11 +115,9 @@ describe('employees validation schemas', () => {
       expect(result.success).toBe(false);
     });
 
-    it('accepts valid status values', () => {
-      for (const status of ['active', 'inactive', 'terminated']) {
-        const result = updateEmployeeSchema.safeParse({ status });
-        expect(result.success).toBe(true);
-      }
+    it('does not allow status in generic update (use dedicated endpoints)', () => {
+      const result = updateEmployeeSchema.safeParse({ status: 'active' });
+      expect(result.success).toBe(false);
     });
 
     it('rejects invalid ObjectId for department', () => {

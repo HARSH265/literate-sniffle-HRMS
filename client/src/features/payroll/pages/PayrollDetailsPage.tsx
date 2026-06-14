@@ -8,7 +8,7 @@ import { payrollService, PayrollItem, PayrollRevision } from '../services/payrol
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../../core/stores/authStore';
 import { PAYROLL_STATUS_COLORS } from '../../../core/constants/statusColors';
-import { CURRENCY_SYMBOL, CURRENCY_MAX_AMOUNT, CURRENCY_PRECISION, formatCurrency } from '../../../core/constants/currency';
+import { getCurrencySymbol, CURRENCY_MAX_AMOUNT, CURRENCY_PRECISION, formatCurrency } from '../../../core/constants/currency';
 import dayjs from 'dayjs';
 import apiClient from '../../../core/api/apiClient';
 
@@ -202,11 +202,11 @@ export function PayrollDetailsPage() {
     { title: 'Paid Lv', dataIndex: 'paidLeaveDays', key: 'paidLeaveDays', width: 60, render: (v: number) => <Tag color="green">{v}</Tag> },
     { title: 'Unpd Lv', dataIndex: 'unpaidLeaveDays', key: 'unpaidLeaveDays', width: 60, render: (v: number) => <Tag color="red">{v}</Tag> },
     { title: 'OT Hrs', dataIndex: 'overtimeHours', key: 'overtimeHours', width: 60 },
-    { title: 'Basic', dataIndex: 'basicEarnings', key: 'basicEarnings', width: 100, render: (v: number, r: PayrollItem) => batchEditMode && canEdit ? <InputNumber size="small" style={{ width: 90 }} prefix={CURRENCY_SYMBOL} value={batchChanges[r.id]?.basicEarnings ?? v} onChange={(val) => handleBatchChange(r.id, 'basicEarnings', val ?? v)} /> : formatCurrency(v) },
+    { title: 'Basic', dataIndex: 'basicEarnings', key: 'basicEarnings', width: 100, render: (v: number, r: PayrollItem) => batchEditMode && canEdit ? <InputNumber size="small" style={{ width: 90 }} prefix={getCurrencySymbol()} value={batchChanges[r.id]?.basicEarnings ?? v} onChange={(val) => handleBatchChange(r.id, 'basicEarnings', val ?? v)} /> : formatCurrency(v) },
     { title: 'Allow', dataIndex: 'allowancesTotal', key: 'allowancesTotal', width: 80, render: (v: number) => formatCurrency(v) },
-    { title: 'OT Pay', dataIndex: 'overtimeAmount', key: 'overtimeAmount', width: 80, render: (v: number, r: PayrollItem) => batchEditMode && canEdit ? <InputNumber size="small" style={{ width: 80 }} prefix={CURRENCY_SYMBOL} value={batchChanges[r.id]?.overtimeAmount ?? v} onChange={(val) => handleBatchChange(r.id, 'overtimeAmount', val ?? v)} /> : formatCurrency(v) },
-    { title: 'Dedn', dataIndex: 'totalDeductions', key: 'totalDeductions', width: 80, render: (v: number, r: PayrollItem) => batchEditMode && canEdit ? <InputNumber size="small" style={{ width: 80 }} prefix={CURRENCY_SYMBOL} value={batchChanges[r.id]?.totalDeductions ?? v} onChange={(val) => handleBatchChange(r.id, 'totalDeductions', val ?? v)} /> : formatCurrency(v) },
-    { title: 'Net Pay', dataIndex: 'netPay', key: 'netPay', width: 110, render: (v: number, r: PayrollItem) => batchEditMode && canEdit ? <InputNumber size="small" style={{ width: 100, fontWeight: 600 }} prefix={CURRENCY_SYMBOL} value={batchChanges[r.id]?.netPay ?? v} onChange={(val) => handleBatchChange(r.id, 'netPay', val ?? v)} /> : <span style={{ fontWeight: 600, color: 'var(--hrms-success)' }}>{formatCurrency(v)}</span> },
+    { title: 'OT Pay', dataIndex: 'overtimeAmount', key: 'overtimeAmount', width: 80, render: (v: number, r: PayrollItem) => batchEditMode && canEdit ? <InputNumber size="small" style={{ width: 80 }} prefix={getCurrencySymbol()} value={batchChanges[r.id]?.overtimeAmount ?? v} onChange={(val) => handleBatchChange(r.id, 'overtimeAmount', val ?? v)} /> : formatCurrency(v) },
+    { title: 'Dedn', dataIndex: 'totalDeductions', key: 'totalDeductions', width: 80, render: (v: number, r: PayrollItem) => batchEditMode && canEdit ? <InputNumber size="small" style={{ width: 80 }} prefix={getCurrencySymbol()} value={batchChanges[r.id]?.totalDeductions ?? v} onChange={(val) => handleBatchChange(r.id, 'totalDeductions', val ?? v)} /> : formatCurrency(v) },
+    { title: 'Net Pay', dataIndex: 'netPay', key: 'netPay', width: 110, render: (v: number, r: PayrollItem) => batchEditMode && canEdit ? <InputNumber size="small" style={{ width: 100, fontWeight: 600 }} prefix={getCurrencySymbol()} value={batchChanges[r.id]?.netPay ?? v} onChange={(val) => handleBatchChange(r.id, 'netPay', val ?? v)} /> : <span style={{ fontWeight: 600, color: 'var(--hrms-success)' }}>{formatCurrency(v)}</span> },
     {
       title: 'Actions', key: 'actions', width: 120,
       render: (_: unknown, r: PayrollItem) => (
@@ -272,7 +272,7 @@ export function PayrollDetailsPage() {
 
       <Row gutter={16} style={{ marginBottom: 24 }}>
         <Col span={6}><Card><Statistic title="Employees" value={run?.totalEmployees || 0} /></Card></Col>
-        <Col span={6}><Card><div style={{ fontSize: 14, color: 'rgba(0,0,0,0.45)', marginBottom: 4 }}>Total Net Pay</div><Statistic title="" value={run?.totalNetPay || 0} prefix={CURRENCY_SYMBOL} /></Card></Col>
+        <Col span={6}><Card><div style={{ fontSize: 14, color: 'rgba(0,0,0,0.45)', marginBottom: 4 }}>Total Net Pay</div><Statistic title="" value={run?.totalNetPay || 0} prefix={getCurrencySymbol()} /></Card></Col>
         <Col span={6}><Card><div style={{ fontSize: 14, color: 'rgba(0,0,0,0.45)', marginBottom: 4 }}>Status</div><Tag color={STATUS_COLORS[run?.status || 'draft']} style={{ fontSize: 13, padding: '2px 12px' }}>{run?.status}</Tag></Card></Col>
       </Row>
 
@@ -315,10 +315,10 @@ export function PayrollDetailsPage() {
             <p><strong>Employee:</strong> {editingItem.employee.name} ({editingItem.employee.code})</p>
             <Form form={editForm} layout="vertical">
               <Form.Item name="basicEarnings" label="Basic Earnings" rules={[{ required: true }]}>
-                <InputNumber min={0} max={CURRENCY_MAX_AMOUNT} precision={CURRENCY_PRECISION} prefix={CURRENCY_SYMBOL} style={{ width: '100%' }} />
+                <InputNumber min={0} max={CURRENCY_MAX_AMOUNT} precision={CURRENCY_PRECISION} prefix={getCurrencySymbol()} style={{ width: '100%' }} />
               </Form.Item>
               <Form.Item name="netPay" label="Net Pay" rules={[{ required: true }]}>
-                <InputNumber min={0} max={CURRENCY_MAX_AMOUNT} precision={CURRENCY_PRECISION} prefix={CURRENCY_SYMBOL} style={{ width: '100%' }} />
+                <InputNumber min={0} max={CURRENCY_MAX_AMOUNT} precision={CURRENCY_PRECISION} prefix={getCurrencySymbol()} style={{ width: '100%' }} />
               </Form.Item>
             </Form>
           </div>

@@ -4,6 +4,7 @@ import { BellOutlined, LogoutOutlined, UserOutlined, MenuOutlined, CheckOutlined
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../core/stores/authStore';
 import apiClient from '../core/api/apiClient';
+import { API_ENDPOINTS } from '../core/constants/api.endpoints';
 import { useUIStore } from '../core/stores/uiStore';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -23,8 +24,8 @@ export function Header() {
   const fetchNotifications = async () => {
     try {
       const [{ data: notifs }, { data: count }] = await Promise.all([
-        apiClient.get('/notifications?limit=5'),
-        apiClient.get('/notifications/unread-count'),
+        apiClient.get(`${API_ENDPOINTS.notifications.list}?limit=5`),
+        apiClient.get(API_ENDPOINTS.notifications.unreadCount),
       ]);
       setNotifications(notifs.data);
       setUnreadCount(count.data.count);
@@ -36,20 +37,20 @@ export function Header() {
   }, []);
 
   const handleLogout = () => {
-    apiClient.post('/auth/logout').finally(() => {
+    apiClient.post(API_ENDPOINTS.auth.logout).finally(() => {
       logout();
       navigate('/');
     });
   };
 
   const handleMarkAllRead = async () => {
-    await apiClient.patch('/notifications/mark-all-read');
+    await apiClient.patch(API_ENDPOINTS.notifications.markAllRead);
     setUnreadCount(0);
     setNotifications(notifications.map(n => ({ ...n, isRead: true })));
   };
 
   const handleMarkAsRead = async (notificationId: string) => {
-    await apiClient.patch(`/notifications/${notificationId}/read`);
+    await apiClient.patch(API_ENDPOINTS.notifications.markRead(notificationId));
     setNotifications(notifications.map(n => n.id === notificationId || n._id === notificationId ? { ...n, isRead: true } : n));
     setUnreadCount(Math.max(0, unreadCount - 1));
   };

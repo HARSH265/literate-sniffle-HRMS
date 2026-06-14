@@ -10,6 +10,8 @@ interface OwnershipOptions {
   ownerField?: string;
   /** Field on req.user to compare against (default: 'employeeId') */
   userField?: string;
+  /** Route param name for the resource ID (default: 'id') */
+  paramName?: string;
   /** Roles that bypass ownership checks (default: super-admin, hr-admin, hr-staff) */
   adminBypassRoles?: string[];
 }
@@ -34,6 +36,7 @@ export function authorizeOwnership(options: OwnershipOptions) {
     model,
     ownerField = 'employee',
     userField = 'employeeId',
+    paramName = 'id',
     adminBypassRoles = [ROLES.SUPER_ADMIN, ROLES.HR_ADMIN, ROLES.HR_STAFF],
   } = options;
 
@@ -51,7 +54,7 @@ export function authorizeOwnership(options: OwnershipOptions) {
         return;
       }
 
-      const resourceId = _req.params.id;
+      const resourceId = _req.params[paramName];
 
       if (!resourceId || !mongoose.Types.ObjectId.isValid(resourceId)) {
         throw new AppError('Invalid resource ID', 400);
