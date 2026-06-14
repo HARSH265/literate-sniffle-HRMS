@@ -226,6 +226,13 @@ export function EmployeeDetailPage() {
             <Card title="Organization" style={{ borderRadius: 12, marginBottom: 24 }}>
               <Descriptions column={{ xs: 1, sm: 2, md: 3 }} size="small">
                 <Descriptions.Item label="Department">{employee.department?.name || '—'}</Descriptions.Item>
+                <Descriptions.Item label="Department Head">
+                  {employee.department?.head ? (
+                    <span>
+                      {employee.department.name} - {employee.department.head?.fullName}
+                    </span>
+                  ) : '—'}
+                </Descriptions.Item>
                 <Descriptions.Item label="Designation">{employee.designation?.name || '—'}</Descriptions.Item>
                 <Descriptions.Item label="Shift">{employee.shift?.name || '—'}</Descriptions.Item>
               </Descriptions>

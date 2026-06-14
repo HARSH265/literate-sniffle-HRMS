@@ -44,6 +44,7 @@ const LoanDetailPage = lazy(() => import('./features/loans/pages/LoanDetailPage'
 const LeaveApprovalsPage = lazy(() => import('./features/leave/pages/LeaveApprovalsPage').then(m => ({ default: m.LeaveApprovalsPage })));
 const LeaveBalancesPage = lazy(() => import('./features/leave/pages/LeaveBalancesPage').then(m => ({ default: m.LeaveBalancesPage })));
 const LeaveApplicationsPage = lazy(() => import('./features/leave/pages/LeaveApplicationsPage').then(m => ({ default: m.LeaveApplicationsPage })));
+
 const SettingsPage = lazy(() => import('./features/settings/pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
 const UserNewPageLazy = lazy(() => import('./features/users/pages/UserNewPage').then(m => ({ default: m.UserNewPage })));
 const UserEditPageLazy = lazy(() => import('./features/users/pages/UserEditPage').then(m => ({ default: m.UserEditPage })));
@@ -220,9 +221,10 @@ function App() {
             <Route path="salary-structure-templates" element={<ProtectedRoute permission="process-payroll"><SalaryStructureTemplatesPageLazy /></ProtectedRoute>} />
             <Route path="salary-slips" element={<SalarySlipsPage />} />
             <Route path="salary-slips/:id" element={<SalarySlipDetailsPage />} />
-            <Route path="leave/approvals" element={<LeaveApprovalsPage />} />
-            <Route path="leave/balances" element={<LeaveBalancesPage />} />
-            <Route path="leave/applications" element={<LeaveApplicationsPage />} />
+            <Route path="leave/approvals" element={<Suspense fallback={<PageLoader />}><LeaveApprovalsPage /></Suspense>} />
+            <Route path="leave/balances" element={<Suspense fallback={<PageLoader />}><LeaveBalancesPage /></Suspense>} />
+            <Route path="leave/applications" element={<Suspense fallback={<PageLoader />}><LeaveApplicationsPage /></Suspense>} />
+
             <Route path="loans" element={<LoansPage />} />
             <Route path="loans/apply" element={<LoanApplyPage />} />
             <Route path="loans/:id" element={<LoanDetailPage />} />

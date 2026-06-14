@@ -2,6 +2,7 @@ import LeaveType from '../../models/LeaveType.model.js';
 import LeaveApplication from '../../models/LeaveApplication.model.js';
 import LeaveBalance from '../../models/LeaveBalance.model.js';
 import Employee from '../../models/Employee.model.js';
+import Department from '../../models/Department.model.js';
 import CompanySettings from '../../models/CompanySettings.model.js';
 import User from '../../models/User.model.js';
 import AttendanceEntry from '../../models/AttendanceEntry.model.js';
@@ -78,11 +79,30 @@ async function notifyLeave(recipientId: string, title: string, message: string, 
   } catch { /* noop */ }
 }
 
-async function getApprovers(employeeId: string): Promise<string[]> {
-  const employee = await Employee.findById(employeeId).lean();
-  if (!employee) return [];
-  const users = await User.find({ role: { $in: ['hr-admin', 'hr-staff', 'super-admin'] } }).select('_id').lean();
-  return users.map(u => String(u._id));
+async function getApproverForLevel(employeeId: string, level: number): Promise<string | null> {
+  const employee = await Employee.findById(employeeId).select('reportingTo department').lean();
+  if (!employee) return null;
+
+  if (level === 1 && employee.reportingTo) {
+    const managerUser = await User.findOne({ employee: employee.reportingTo }).select('_id').lean();
+    if (managerUser) return String(managerUser._id);
+  }
+
+  if (level === 2) {
+    const dept = await Department.findById(employee.department).select('head').lean();
+    if (dept?.head) {
+      const headUser = await User.findOne({ employee: dept.head }).select('_id').lean();
+      if (headUser) return String(headUser._id);
+    }
+  }
+
+  const adminUser = await User.findOne({
+    role: { $in: ['hr-admin', 'hr-staff', 'super-admin'] },
+    isActive: true,
+  }).sort({ createdAt: 1 }).select('_id').lean();
+  if (adminUser) return String(adminUser._id);
+
+  return null;
 }
 
 export class LeaveService {
@@ -187,24 +207,32 @@ export class LeaveService {
     return { data, meta };
   }
 
-  static async getEmployeeApplications(employeeId: string, queryParams: Record<string, unknown>): Promise<any[]> {
+  static async getEmployeeApplications(employeeId: string, queryParams: Record<string, unknown>): Promise<{ data: any[]; meta: PaginationMeta }> {
     const filter: Record<string, unknown> = { employee: employeeId };
     if (queryParams.status) filter.status = queryParams.status;
     if (queryParams.year) {
       const year = Number(queryParams.year);
       filter.startDate = { $gte: new Date(year, 0, 1), $lte: new Date(year, 11, 31) };
     }
-    const applications = await LeaveApplication.find(filter)
-      .populate('leaveType', 'name code color isPaid')
-      .populate('approvers.approver', 'name')
-      .sort({ createdAt: -1 })
-      .lean();
-    return applications.map((a: any) => ({
+    const { page, limit } = PaginationUtil.parseFromObject(queryParams);
+    const skip = PaginationUtil.getSkip(page, limit);
+    const [applications, total] = await Promise.all([
+      LeaveApplication.find(filter)
+        .populate('leaveType', 'name code color isPaid')
+        .populate('approvers.approver', 'name')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      LeaveApplication.countDocuments(filter),
+    ]);
+    const data = applications.map((a: any) => ({
       ...a,
       id: String(a._id),
       _id: undefined,
       leaveType: a.leaveType ? { id: String(a.leaveType._id), name: a.leaveType.name, code: a.leaveType.code, color: a.leaveType.color, isPaid: a.leaveType.isPaid } : null,
     }));
+    return { data, meta: PaginationUtil.getMeta(page, limit, total) };
   }
 
   static async createApplication(data: Record<string, unknown>, userId: string): Promise<any> {
@@ -231,8 +259,19 @@ export class LeaveService {
     const settings = await getLeaveSettings();
     const year = getFinancialYear(startDate, settings.financialYearStartMonth);
 
-    const balance = await LeaveBalance.findOne({ employee: data.employee, leaveType: data.leaveType, year });
-    const availableBalance = balance ? balance.balance : 0;
+    let balance = await LeaveBalance.findOne({ employee: data.employee, leaveType: data.leaveType, year });
+    if (!balance) {
+      balance = await LeaveBalance.create({
+        employee: data.employee,
+        leaveType: data.leaveType,
+        year,
+        totalEntitled: 0,
+        balance: 0,
+        totalUsed: 0,
+        totalPending: 0,
+      });
+    }
+    const availableBalance = balance.balance;
     if (totalDays > availableBalance && !leaveType.allowNegativeBalance) {
       throw new AppError(`Insufficient balance. Available: ${availableBalance}, Requested: ${totalDays}`, 400);
     }
@@ -261,9 +300,9 @@ export class LeaveService {
     if (needApproval) {
       applicationStatus = 'pending';
       currentLevel = 1;
-      const approverUserIds = await getApprovers(data.employee as string);
       for (let level = 1; level <= defaultApprovalLevels; level++) {
-        for (const approverId of approverUserIds) {
+        const approverId = await getApproverForLevel(data.employee as string, level);
+        if (approverId) {
           approvers.push({ level, approver: approverId, status: 'pending' });
         }
       }
@@ -286,11 +325,9 @@ export class LeaveService {
       appliedBy: userId,
     });
 
-    if (balance) {
-      balance.totalPending += totalDays;
-      balance.balance = Math.max(0, balance.totalEntitled + balance.carryForwardFromPrev - balance.totalUsed - balance.totalPending);
-      await balance.save();
-    }
+    balance.totalPending += totalDays;
+    balance.balance = Math.max(0, balance.totalEntitled + balance.carryForwardFromPrev - balance.totalUsed - balance.totalPending);
+    await balance.save();
 
     await AuditService.log({
       action: 'create', module: 'leave', userId,
@@ -344,8 +381,9 @@ export class LeaveService {
     const application = await LeaveApplication.findById(id);
     if (!application) throw new AppError('Leave application not found', 404);
 
+    const settings = await getLeaveSettings();
+
     if (application.status === 'approved' || application.status === 'rejected') {
-      const settings = await getLeaveSettings();
       if (!settings.allowCancelAfterApproval) {
         throw new AppError('Cannot cancel an application that has been processed', 400);
       }
@@ -368,7 +406,7 @@ export class LeaveService {
     application.updatedBy = userId as any;
     await application.save();
 
-    const balance = await LeaveBalance.findOne({ employee: application.employee, leaveType: application.leaveType, year: getFinancialYear(application.startDate, 4) });
+    const balance = await LeaveBalance.findOne({ employee: application.employee, leaveType: application.leaveType, year: getFinancialYear(application.startDate, settings.financialYearStartMonth) });
     if (balance) {
       if (wasApproved) {
         balance.totalUsed = Math.max(0, balance.totalUsed - application.totalDays);
@@ -396,6 +434,7 @@ export class LeaveService {
   }
 
   static async approveApplication(data: { applicationId: string; status: 'approved' | 'rejected'; remarks?: string }, userId: string): Promise<any> {
+    const settings = await getLeaveSettings();
     const application = await LeaveApplication.findById(data.applicationId).populate('leaveType');
     if (!application) throw new AppError('Leave application not found', 404);
     if (application.status !== 'pending') throw new AppError('Application is not pending', 400);
@@ -415,23 +454,23 @@ export class LeaveService {
       application.status = 'rejected';
       await application.save();
 
-      const balance = await LeaveBalance.findOne({ employee: application.employee, leaveType: application.leaveType, year: getFinancialYear(application.startDate, 4) });
+      const balance = await LeaveBalance.findOne({ employee: application.employee, leaveType: application.leaveType, year: getFinancialYear(application.startDate, settings.financialYearStartMonth) });
       if (balance) {
         balance.totalPending = Math.max(0, balance.totalPending - application.totalDays);
         balance.balance = balance.totalEntitled + balance.carryForwardFromPrev - balance.totalUsed - balance.totalPending;
         await balance.save();
       }
     } else {
-      const allApprovedAtLevel = application.approvers
+      const levelApproved = application.approvers
         .filter((a: any) => a.level === application.currentApprovalLevel)
-        .every((a: any) => a.status === 'approved');
+        .some((a: any) => a.status === 'approved');
 
-      if (allApprovedAtLevel && application.currentApprovalLevel < application.totalApprovalLevels) {
+      if (levelApproved && application.currentApprovalLevel < application.totalApprovalLevels) {
         application.currentApprovalLevel += 1;
-      } else if (allApprovedAtLevel) {
+      } else if (levelApproved) {
         application.status = 'approved';
 
-        const balance = await LeaveBalance.findOne({ employee: application.employee, leaveType: application.leaveType, year: getFinancialYear(application.startDate, 4) });
+        const balance = await LeaveBalance.findOne({ employee: application.employee, leaveType: application.leaveType, year: getFinancialYear(application.startDate, settings.financialYearStartMonth) });
         if (balance) {
           balance.totalPending = Math.max(0, balance.totalPending - application.totalDays);
           balance.totalUsed += application.totalDays;
@@ -490,25 +529,33 @@ export class LeaveService {
     return mapId(application);
   }
 
-  static async getPendingApprovals(userId: string, _queryParams: Record<string, unknown>): Promise<any[]> {
-    const applications = await LeaveApplication.find({
-      status: 'pending',
+  static async getPendingApprovals(userId: string, queryParams: Record<string, unknown>): Promise<{ data: any[]; meta: PaginationMeta }> {
+    const filter = {
+      status: 'pending' as const,
       'approvers': {
-        $elemMatch: { approver: userId, status: 'pending' },
+        $elemMatch: { approver: userId, status: 'pending' as const },
       },
-    })
-      .populate('employee', 'fullName employeeCode department')
-      .populate('leaveType', 'name code color isPaid')
-      .sort({ createdAt: -1 })
-      .lean();
-
-    return applications.map((a: any) => ({
+    };
+    const { page, limit } = PaginationUtil.parseFromObject(queryParams);
+    const skip = PaginationUtil.getSkip(page, limit);
+    const [applications, total] = await Promise.all([
+      LeaveApplication.find(filter)
+        .populate('employee', 'fullName employeeCode department')
+        .populate('leaveType', 'name code color isPaid')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      LeaveApplication.countDocuments(filter),
+    ]);
+    const data = applications.map((a: any) => ({
       ...a,
       id: String(a._id),
       _id: undefined,
       employee: a.employee ? { id: String(a.employee._id), fullName: a.employee.fullName, employeeCode: a.employee.employeeCode, department: a.employee.department } : null,
       leaveType: a.leaveType ? { id: String(a.leaveType._id), name: a.leaveType.name, code: a.leaveType.code, color: a.leaveType.color, isPaid: a.leaveType.isPaid } : null,
     }));
+    return { data, meta: PaginationUtil.getMeta(page, limit, total) };
   }
 
   static async getBalances(employeeId: string, year?: number): Promise<any[]> {

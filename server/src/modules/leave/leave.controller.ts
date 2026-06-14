@@ -2,7 +2,6 @@ import { Request, Response } from 'express';
 import { LeaveService } from './leave.service.js';
 import { asyncHandler } from '../../core/errors/asyncHandler.js';
 import { ResponseHandler } from '../../core/response/ResponseHandler.js';
-import { PaginationMeta } from '../../core/utils/PaginationUtil.js';
 
 const listLeaveTypes = asyncHandler(async (_req: Request, res: Response) => {
   const result = await LeaveService.listLeaveTypes();
@@ -26,13 +25,13 @@ const deleteLeaveType = asyncHandler(async (req: Request, res: Response) => {
 
 const listApplications = asyncHandler(async (req: Request, res: Response) => {
   const result = await LeaveService.listApplications(req.query as Record<string, unknown>);
-  ResponseHandler.paginated(res, result.data, result.meta as PaginationMeta, 'Leave applications fetched successfully');
+  ResponseHandler.paginated(res, result.data, result.meta, 'Leave applications fetched successfully');
 });
 
 const getMyApplications = asyncHandler(async (req: Request, res: Response) => {
   const employeeId = req.user!.id;
   const result = await LeaveService.getEmployeeApplications(employeeId, req.query as Record<string, unknown>);
-  ResponseHandler.success(res, result, 'My leave applications fetched successfully');
+  ResponseHandler.paginated(res, result.data, result.meta, 'My leave applications fetched successfully');
 });
 
 const createApplication = asyncHandler(async (req: Request, res: Response) => {
@@ -52,7 +51,7 @@ const approveApplication = asyncHandler(async (req: Request, res: Response) => {
 
 const getPendingApprovals = asyncHandler(async (req: Request, res: Response) => {
   const result = await LeaveService.getPendingApprovals(req.user!.id, req.query as Record<string, unknown>);
-  ResponseHandler.success(res, result, 'Pending approvals fetched successfully');
+  ResponseHandler.paginated(res, result.data, result.meta, 'Pending approvals fetched successfully');
 });
 
 const getBalances = asyncHandler(async (req: Request, res: Response) => {

@@ -4,6 +4,7 @@ import { CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { leaveService, LeaveApplication } from '../services/leaveService';
+import { LeaveDetailDrawer } from '../components/LeaveDetailDrawer';
 import { PageHeader } from '../../../core/components/PageHeader';
 import { DataTable } from '../../../core/components/DataTable';
 import { QUERY_KEYS } from '../../../core/constants/queryKeys';
@@ -34,6 +35,9 @@ export function LeaveApprovalsPage() {
       setApproveModalOpen(false);
       setSelectedApp(null);
       setRemarks('');
+    },
+    onError: (err: any) => {
+      message.error(err?.response?.data?.message || 'Failed to process application');
     },
   });
 
@@ -126,15 +130,19 @@ export function LeaveApprovalsPage() {
       </Row>
 
       <Card title="Pending Approvals" style={{ marginBottom: 24 }}>
-        <DataTable
-          dataSource={pending?.data || []}
-          columns={pendingColumns}
-          rowKey="id"
-          loading={isLoading}
-          hidePagination
-          noCard
-          disableRowClick
-        />
+        {!isLoading && (!pending?.data || pending.data.length === 0) ? (
+          <div style={{ textAlign: 'center', padding: 40, color: 'var(--hrms-text-muted)' }}>No pending approvals</div>
+        ) : (
+          <DataTable
+            dataSource={pending?.data || []}
+            columns={pendingColumns}
+            rowKey="id"
+            loading={isLoading}
+            hidePagination
+            noCard
+            disableRowClick
+          />
+        )}
       </Card>
 
       <Card title="All Applications" style={{ marginBottom: 24 }}>
@@ -144,6 +152,8 @@ export function LeaveApprovalsPage() {
           rowKey="id"
           loading={isLoading}
           noCard
+          detailDrawerTitle="Leave Application Details"
+          customDetailRenderer={(record) => <LeaveDetailDrawer record={record as LeaveApplication} />}
         />
       </Card>
 

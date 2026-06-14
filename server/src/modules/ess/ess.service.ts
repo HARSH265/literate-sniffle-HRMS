@@ -26,7 +26,7 @@ export class EssService {
     const employeeId = (user as any).employeeId;
     if (!employeeId) return null;
 
-    const employee = await Employee.findById(employeeId).populate('department designation shift').lean() as Record<string, unknown> | null;
+    const employee = await Employee.findById(employeeId).populate('department designation shift department.head').lean() as Record<string, unknown> | null;
     return employee || null;
   }
 

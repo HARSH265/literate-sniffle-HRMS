@@ -163,6 +163,7 @@ for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     if (data.name) dept.name = data.name as string;
     if (data.code) dept.code = (data.code as string).toUpperCase();
     if (data.description !== undefined) dept.description = data.description as string;
+    if (data.head !== undefined) dept.head = data.head as any;
     if (data.isActive !== undefined) dept.isActive = data.isActive as boolean;
     dept.updatedBy = updatedById as any;
 

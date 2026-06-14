@@ -5,7 +5,7 @@ export interface EssProfile {
   employeeCode: string;
   fullName: string;
   fatherName: string;
-  department: { id: string; name: string } | null;
+  department: { id: string; name: string; head?: { id: string; fullName: string; employeeCode: string } | null } | null;
   designation: { id: string; name: string } | null;
   shift: { id: string; name: string } | null;
   joiningDate: string;

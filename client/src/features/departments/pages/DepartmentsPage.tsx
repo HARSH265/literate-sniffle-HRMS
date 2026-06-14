@@ -1,10 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Button, Modal, Form, Input, message, Popconfirm, Tooltip, Tag } from 'antd';
+import { Button, Modal, Form, Input, Select, message, Popconfirm, Tooltip, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, SettingOutlined } from '@ant-design/icons';
 import { PageHeader } from '../../../core/components/PageHeader';
 import { DataTable } from '../../../core/components/DataTable';
 import { departmentService, Department, CreateDepartment, UpdateDepartment } from '../services/departmentService';
+import { employeeService } from '../../employees/services/employeeService';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 
@@ -42,6 +43,12 @@ export function DepartmentsPage() {
       form.setFieldValue('code', nextCode);
     }
   }, [nextCode, form, editingId]);
+
+  const { data: employeesData } = useQuery({
+    queryKey: ['employees', 'select'],
+    queryFn: () => employeeService.list({ limit: 500, status: 'active' }),
+    staleTime: 5 * 60 * 1000,
+  });
 
   const { data, isLoading } = useQuery({
     queryKey: ['departments', page, limit, search],
@@ -82,9 +89,9 @@ export function DepartmentsPage() {
     onError: (err: any) => message.error(err?.response?.data?.message || 'Failed to delete department'),
   });
 
-  const handleEdit = (record: Department) => {
+  const handleEdit = (record: any) => {
     setEditingId(record.id);
-    form.setFieldsValue({ name: record.name, code: record.code, description: record.description, isActive: record.isActive });
+    form.setFieldsValue({ name: record.name, code: record.code, description: record.description, isActive: record.isActive, head: record.head });
     setIsModalOpen(true);
   };
 
@@ -114,6 +121,15 @@ export function DepartmentsPage() {
       ),
     },
     { title: 'Name', dataIndex: 'name', key: 'name', render: (name: string) => <span style={{ fontWeight: 500 }}>{name}</span> },
+    {
+      title: 'Head',
+      dataIndex: 'head',
+      key: 'head',
+      render: (headId: string) => {
+        const employee = employeesData?.data.find((e: any) => e.id === headId);
+        return employee ? `${employee.fullName} (${employee.employeeCode})` : '—';
+      },
+    },
     { title: 'Description', dataIndex: 'description', key: 'description', render: (d?: string) => <span style={{ color: d ? 'var(--hrms-text-secondary)' : 'var(--hrms-text-muted)' }}>{d || '—'}</span> },
     {
       title: 'Status',
@@ -143,7 +159,7 @@ export function DepartmentsPage() {
         </div>
       ),
     },
-  ], []);
+  ], [employeesData]);
 
   return (
     <div style={{ padding: '0 4px' }}>
@@ -230,6 +246,16 @@ export function DepartmentsPage() {
             </div>
             <Form.Item name="description" label="Description" style={{ marginBottom: 0 }}>
               <Input.TextArea placeholder="Brief description of the department..." rows={3} />
+            </Form.Item>
+            <Form.Item name="head" label="Department Head">
+              <Select
+                allowClear
+                showSearch
+                placeholder="Select department head"
+                optionFilterProp="label"
+                options={employeesData?.data?.map((e: any) => ({ label: `${e.fullName} (${e.employeeCode})`, value: e.id }))}
+                style={{ height: 40 }}
+              />
             </Form.Item>
           </Form>
         </div>

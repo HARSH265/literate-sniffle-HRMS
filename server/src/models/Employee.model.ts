@@ -48,6 +48,7 @@ export interface IEmployee extends Document {
   department: mongoose.Types.ObjectId;
   designation: mongoose.Types.ObjectId;
   shift: mongoose.Types.ObjectId;
+  reportingTo?: mongoose.Types.ObjectId;
   joiningDate: Date;
   salaryType: 'monthly' | 'daily';
   baseSalary: number;
@@ -150,6 +151,7 @@ const EmployeeSchema = new Schema<IEmployee>(
     department: { type: Schema.Types.ObjectId, ref: 'Department', required: true },
     designation: { type: Schema.Types.ObjectId, ref: 'Designation', required: true },
     shift: { type: Schema.Types.ObjectId, ref: 'Shift', required: true },
+    reportingTo: { type: Schema.Types.ObjectId, ref: 'Employee' },
     joiningDate: { type: Date, required: true },
     salaryType: {
       type: String,

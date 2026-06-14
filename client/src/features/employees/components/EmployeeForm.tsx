@@ -41,6 +41,11 @@ export function EmployeeForm({ mode, initialValues, onSubmit, isPending, onCance
     queryFn: () => import('../../shifts/services/shiftService').then(m => m.shiftService.list({ limit: 100 })),
   });
 
+  const { data: allEmployees } = useQuery({
+    queryKey: ['employees', 'all'],
+    queryFn: () => import('../services/employeeService').then(m => m.employeeService.list({ limit: 500, status: 'active' })),
+  });
+
   const { data: settings } = useQuery({
     queryKey: ['settings'],
     queryFn: () => import('../../settings/services/settingsService').then(m => m.settingsService.get()),
@@ -220,6 +225,20 @@ export function EmployeeForm({ mode, initialValues, onSubmit, isPending, onCance
                     options={shiftData?.data.map((s: any) => ({ label: s.name, value: s.id }))}
                     className={styles.inputHeight}
                     loading={shiftLoading}
+                  />
+                </Form.Item>
+              </Col>
+              <Col span={colSpan}>
+                <Form.Item name="reportingTo" label="Reports To">
+                  <Select
+                    allowClear
+                    showSearch
+                    placeholder="Select reporting manager"
+                    optionFilterProp="label"
+                    options={allEmployees?.data
+                      ?.filter((e: any) => e.id !== initialValues?.id)
+                      .map((e: any) => ({ label: `${e.fullName} (${e.employeeCode})`, value: e.id }))}
+                    className={styles.inputHeight}
                   />
                 </Form.Item>
               </Col>

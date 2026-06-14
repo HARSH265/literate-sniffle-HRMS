@@ -89,7 +89,7 @@ export const leaveService = {
     return data;
   },
 
-  async getMyApplications(params?: Record<string, unknown>): Promise<{ success: boolean; data: LeaveApplication[] }> {
+  async getMyApplications(params?: Record<string, unknown>): Promise<PaginatedResponse<LeaveApplication>> {
     const { data } = await apiClient.get(API_ENDPOINTS.leave.applications.my, { params });
     return data;
   },
@@ -120,7 +120,7 @@ export const leaveService = {
     return data;
   },
 
-  async getPendingApprovals(params?: Record<string, unknown>): Promise<{ success: boolean; data: LeaveApplication[] }> {
+  async getPendingApprovals(params?: Record<string, unknown>): Promise<PaginatedResponse<LeaveApplication>> {
     const { data } = await apiClient.get(API_ENDPOINTS.leave.approvals.pending, { params });
     return data;
   },

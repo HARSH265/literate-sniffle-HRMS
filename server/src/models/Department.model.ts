@@ -4,6 +4,7 @@ export interface IDepartment extends Document {
   name: string;
   code: string;
   description?: string;
+  head?: mongoose.Types.ObjectId;
   isActive: boolean;
   createdBy?: mongoose.Types.ObjectId;
   updatedBy?: mongoose.Types.ObjectId;
@@ -16,6 +17,7 @@ const DepartmentSchema = new Schema<IDepartment>(
     name: { type: String, required: true, unique: true, trim: true },
     code: { type: String, required: true, unique: true, uppercase: true },
     description: { type: String },
+    head: { type: Schema.Types.ObjectId, ref: 'Employee' },
     isActive: { type: Boolean, default: true },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User' },

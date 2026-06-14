@@ -16,7 +16,7 @@ export interface Employee {
   permanentAddress?: string;
   category: 'worker' | 'office-staff';
   employmentType: 'permanent' | 'contract' | 'temporary' | 'trainee';
-  department: { id: string; name: string } | null;
+  department: { id: string; name: string; head?: { id: string; fullName: string; employeeCode: string } | null } | null;
   designation: { id: string; name: string } | null;
   shift: { id: string; name: string } | null;
   joiningDate: string;
@@ -66,6 +66,7 @@ export interface CreateEmployee {
   department: string;
   designation: string;
   shift: string;
+  reportingTo?: string;
   joiningDate: string;
   salaryType: 'monthly' | 'daily';
   baseSalary: number;
