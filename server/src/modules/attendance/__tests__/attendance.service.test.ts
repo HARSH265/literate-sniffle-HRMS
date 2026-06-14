@@ -1,10 +1,11 @@
-import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest';
 import mongoose from 'mongoose';
 import AttendanceEntry from '../../../models/AttendanceEntry.model.js';
 import Employee from '../../../models/Employee.model.js';
 import Shift from '../../../models/Shift.model.js';
 import { AttendanceService } from '../attendance.service.js';
 import { AppError } from '../../../core/errors/AppError.js';
+import { AuditService } from '../../../core/audit/AuditService.js';
 import User from '../../../models/User.model.js';
 import CompanySettings from '../../../models/CompanySettings.model.js';
 
@@ -62,8 +63,13 @@ beforeAll(async () => {
   nightEmpId = nightEmp._id.toString();
 });
 
+beforeAll(async () => {
+  vi.spyOn(AuditService, 'log').mockResolvedValue(undefined as never);
+});
+
 beforeEach(async () => {
   await AttendanceEntry.deleteMany({});
+  vi.clearAllMocks();
 });
 
 describe('AttendanceService', () => {
@@ -77,6 +83,7 @@ describe('AttendanceService', () => {
       expect(result).toHaveProperty('id');
       expect(result.status).toBe('present');
       expect(result.inTime).toBe('09:00');
+      expect(AuditService.log).toHaveBeenCalledWith(expect.objectContaining({ action: 'create', module: 'attendance' }));
     });
 
     it('rejects future dates', async () => {
@@ -142,6 +149,7 @@ describe('AttendanceService', () => {
       ) as any;
 
       expect(result.status).toBe('absent');
+      expect(AuditService.log).toHaveBeenCalledWith(expect.objectContaining({ action: 'update', module: 'attendance' }));
     });
 
     it('rejects invalid outTime before inTime on update', async () => {
@@ -231,6 +239,7 @@ describe('AttendanceService', () => {
 
       expect(result).toHaveLength(1);
       expect((result[0] as any).status).toBe('created');
+      expect(AuditService.log).toHaveBeenCalledWith(expect.objectContaining({ action: 'create', module: 'attendance' }));
     });
 
     it('updates existing entries in bulk', async () => {
@@ -318,11 +327,62 @@ describe('AttendanceService', () => {
 
       const found = await AttendanceEntry.findById(entry._id);
       expect(found).toBeNull();
+      expect(AuditService.log).toHaveBeenCalledWith(expect.objectContaining({ action: 'delete', module: 'attendance' }));
     });
 
     it('throws on non-existent entry', async () => {
       await expect(
         AttendanceService.delete(new mongoose.Types.ObjectId().toString(), userId),
+      ).rejects.toThrow(AppError);
+    });
+  });
+
+  describe('monthlyView', () => {
+    it('returns monthly view for given month', async () => {
+      const month = yesterday.getMonth() + 1;
+      const year = yesterday.getFullYear();
+      const result = await AttendanceService.monthlyView({ month: String(month), year: String(year) });
+      expect(result).toHaveProperty('data');
+      expect(result).toHaveProperty('meta');
+      expect(result.meta).toHaveProperty('totalPages');
+    });
+
+    it('filters by department', async () => {
+      const result = await AttendanceService.monthlyView({
+        month: '3', year: '2025',
+        department: new mongoose.Types.ObjectId().toString(),
+      });
+      expect(result.data).toHaveLength(0);
+    });
+
+    it('respects pagination', async () => {
+      const month = yesterday.getMonth() + 1;
+      const year = yesterday.getFullYear();
+      const result = await AttendanceService.monthlyView({
+        month: String(month), year: String(year),
+        page: '1', limit: '5',
+      });
+      expect(result.meta.page).toBe(1);
+      expect(result.meta.limit).toBe(5);
+    });
+  });
+
+  describe('adminCheckout', () => {
+    it('checks out an active entry', async () => {
+      const entry = await AttendanceEntry.create({
+        employee: empId, date: new Date(), shift: shiftId, status: 'present',
+        inTime: '09:00', enteredBy: userId,
+      });
+
+      const result = await AttendanceService.adminCheckout(empId, userId, 'End of shift');
+      expect(result.outTime).toBeDefined();
+      expect(result.totalHours).toBeGreaterThan(0);
+      expect(AuditService.log).toHaveBeenCalledWith(expect.objectContaining({ action: 'attendance-checkout', module: 'attendance' }));
+    });
+
+    it('throws when no active check-in found', async () => {
+      await expect(
+        AttendanceService.adminCheckout(empId, userId, 'Test'),
       ).rejects.toThrow(AppError);
     });
   });

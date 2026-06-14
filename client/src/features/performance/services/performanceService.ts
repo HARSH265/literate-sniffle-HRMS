@@ -1,4 +1,5 @@
 import apiClient from '../../../core/api/apiClient';
+import { API_ENDPOINTS } from '../../../core/constants/api.endpoints';
 
 export interface PerformanceGoal {
   title: string;
@@ -87,12 +88,12 @@ interface ListParams {
 
 export const performanceService = {
   async listCycles(params?: ListParams): Promise<{ success: boolean; data: PerformanceCycle[]; meta: any }> {
-    const { data } = await apiClient.get('/performance/cycles', { params });
+    const { data } = await apiClient.get(API_ENDPOINTS.performance.cycles.list, { params });
     return data;
   },
 
   async getCycle(id: string): Promise<{ success: boolean; data: PerformanceCycle }> {
-    const { data } = await apiClient.get(`/performance/cycles/${id}`);
+    const { data } = await apiClient.get(API_ENDPOINTS.performance.cycles.get(id));
     return data;
   },
 
@@ -107,7 +108,7 @@ export const performanceService = {
     closureDate: string;
     participants?: string[];
   }): Promise<{ success: boolean; data: PerformanceCycle; message: string }> {
-    const { data } = await apiClient.post('/performance/cycles', payload);
+    const { data } = await apiClient.post(API_ENDPOINTS.performance.cycles.create, payload);
     return data;
   },
 
@@ -120,47 +121,47 @@ export const performanceService = {
     managerReviewDeadline: string;
     closureDate: string;
   }>): Promise<{ success: boolean; data: PerformanceCycle; message: string }> {
-    const { data } = await apiClient.patch(`/performance/cycles/${id}`, payload);
+    const { data } = await apiClient.patch(API_ENDPOINTS.performance.cycles.update(id), payload);
     return data;
   },
 
   async listReviews(params?: ListParams): Promise<{ success: boolean; data: PerformanceReview[]; meta: any }> {
-    const { data } = await apiClient.get('/performance/reviews', { params });
+    const { data } = await apiClient.get(API_ENDPOINTS.performance.reviews.list, { params });
     return data;
   },
 
   async getReview(id: string): Promise<{ success: boolean; data: PerformanceReview }> {
-    const { data } = await apiClient.get(`/performance/reviews/${id}`);
+    const { data } = await apiClient.get(API_ENDPOINTS.performance.reviews.get(id));
     return data;
   },
 
   async setGoals(reviewId: string, goals: PerformanceGoal[]): Promise<{ success: boolean; data: PerformanceReview; message: string }> {
-    const { data } = await apiClient.patch(`/performance/reviews/${reviewId}/goals`, { goals });
+    const { data } = await apiClient.patch(API_ENDPOINTS.performance.reviews.setGoals(reviewId), { goals });
     return data;
   },
 
   async submitReview(reviewId: string, payload: { rating: number; overallComment: string; strengths?: string; improvements?: string }): Promise<{ success: boolean; data: PerformanceReview; message: string }> {
-    const { data } = await apiClient.patch(`/performance/reviews/${reviewId}/self-review`, payload);
+    const { data } = await apiClient.patch(API_ENDPOINTS.performance.reviews.submitSelfReview(reviewId), payload);
     return data;
   },
 
   async managerReview(reviewId: string, payload: { rating: number; overallComment: string; strengths?: string; improvements?: string }): Promise<{ success: boolean; data: PerformanceReview; message: string }> {
-    const { data } = await apiClient.patch(`/performance/reviews/${reviewId}/manager-review`, payload);
+    const { data } = await apiClient.patch(API_ENDPOINTS.performance.reviews.managerReview(reviewId), payload);
     return data;
   },
 
   async appeal(reviewId: string, reason: string): Promise<{ success: boolean; data: PerformanceReview; message: string }> {
-    const { data } = await apiClient.post(`/performance/reviews/${reviewId}/appeal`, { reason });
+    const { data } = await apiClient.post(API_ENDPOINTS.performance.reviews.appeal(reviewId), { reason });
     return data;
   },
 
   async resolveAppeal(reviewId: string, resolution: string, finalRating?: number): Promise<{ success: boolean; data: PerformanceReview; message: string }> {
-    const { data } = await apiClient.post(`/performance/reviews/${reviewId}/resolve-appeal`, { resolution, finalRating });
+    const { data } = await apiClient.post(API_ENDPOINTS.performance.reviews.resolveAppeal(reviewId), { resolution, finalRating });
     return data;
   },
 
   async requestFeedback(reviewId: string, fromEmployeeId: string): Promise<{ success: boolean; data: any; message: string }> {
-    const { data } = await apiClient.post(`/performance/feedback/request/${reviewId}`, { fromEmployeeId });
+    const { data } = await apiClient.post(API_ENDPOINTS.performance.reviews.feedbackRequest(reviewId), { fromEmployeeId });
     return data;
   },
 };

@@ -17,5 +17,6 @@ router.use(authenticate);
 router.get('/', authorize('view-reports'), salarySlipsController.list);
 router.get('/:id/preview', authorize('view-reports'), salarySlipsController.preview);
 router.get('/:id/pdf', pdfLimiter, authorize('view-reports'), salarySlipsController.generatePdf);
+router.get('/:id/excel', pdfLimiter, authorize('view-reports'), salarySlipsController.generateExcel);
 
 export default router;

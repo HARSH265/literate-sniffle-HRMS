@@ -1,4 +1,5 @@
 import apiClient from '../../../core/api/apiClient';
+import { API_ENDPOINTS } from '../../../core/constants/api.endpoints';
 
 export interface Ticket {
   _id: string;
@@ -41,32 +42,32 @@ interface ListParams {
 
 export const helpdeskService = {
   async list(params?: ListParams): Promise<{ success: boolean; data: Ticket[]; meta: any }> {
-    const { data } = await apiClient.get('/helpdesk', { params });
+    const { data } = await apiClient.get(API_ENDPOINTS.helpdesk.list, { params });
     return data;
   },
 
   async getById(id: string): Promise<{ success: boolean; data: Ticket }> {
-    const { data } = await apiClient.get(`/helpdesk/${id}`);
+    const { data } = await apiClient.get(API_ENDPOINTS.helpdesk.get(id));
     return data;
   },
 
   async create(payload: { subject: string; description: string; category?: string; priority?: string; attachments?: { url: string; name: string; size: number }[] }): Promise<{ success: boolean; data: Ticket; message: string }> {
-    const { data } = await apiClient.post('/helpdesk', payload);
+    const { data } = await apiClient.post(API_ENDPOINTS.helpdesk.create, payload);
     return data;
   },
 
   async update(id: string, payload: Partial<{ subject: string; description: string; category: string; priority: string; status: string; assignedTo: string; attachments: { url: string; name: string; size: number }[] }>): Promise<{ success: boolean; data: Ticket; message: string }> {
-    const { data } = await apiClient.put(`/helpdesk/${id}`, payload);
+    const { data } = await apiClient.put(API_ENDPOINTS.helpdesk.update(id), payload);
     return data;
   },
 
   async addComment(id: string, payload: { message: string; attachments?: { url: string; name: string; size: number }[] }): Promise<{ success: boolean; data: Ticket; message: string }> {
-    const { data } = await apiClient.post(`/helpdesk/${id}/comments`, payload);
+    const { data } = await apiClient.post(API_ENDPOINTS.helpdesk.addComment(id), payload);
     return data;
   },
 
   async delete(id: string): Promise<{ success: boolean; message: string }> {
-    const { data } = await apiClient.delete(`/helpdesk/${id}`);
+    const { data } = await apiClient.delete(API_ENDPOINTS.helpdesk.delete(id));
     return data;
   },
 };

@@ -1,0 +1,264 @@
+.pageWrap {
+  padding: 0 4px;
+}
+
+/* Shared layout */
+.flexRow {
+  display: flex;
+  align-items: center;
+}
+
+.actionGroup {
+  display: flex;
+  gap: 8px;
+}
+
+/* EmployeesPage */
+.employeeRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.employeeName {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--hrms-text-primary);
+}
+
+.employeeCode {
+  font-size: 12px;
+  color: var(--hrms-text-muted);
+}
+
+.secondaryText {
+  color: var(--hrms-text-secondary);
+}
+
+.mutedText {
+  color: var(--hrms-text-muted);
+}
+
+.deptText {
+  color: var(--hrms-text-secondary);
+  font-size: 13px;
+}
+
+.salaryCell {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.salaryUnit {
+  font-weight: 400;
+  color: var(--hrms-text-muted);
+}
+
+.salaryMonthly {
+  color: var(--hrms-success);
+}
+
+.actionBtn {
+  color: var(--hrms-text-muted);
+  border-radius: 6px;
+}
+
+.actionBtnDanger {
+  color: #ef4444;
+  border-radius: 6px;
+}
+
+.avatarGradient {
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  flex-shrink: 0;
+}
+
+.errorMargin {
+  margin-bottom: 16px;
+}
+
+.countText {
+  font-size: 13px;
+  color: var(--hrms-text-muted);
+}
+
+.hiddenInput {
+  display: none;
+}
+
+/* EmployeeDetailPage */
+.loadingCenter {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 50vh;
+}
+
+.errorCenter {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 50vh;
+  gap: 16px;
+}
+
+.detailContent {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.profileHeader {
+  text-align: center;
+  padding: 20px 0;
+}
+
+.profileName {
+  font-size: 20px;
+  font-weight: 700;
+  margin-top: 16px;
+  color: var(--hrms-text-primary);
+}
+
+.profileSub {
+  font-size: 14px;
+  color: var(--hrms-text-muted);
+  margin-top: 4px;
+}
+
+.profileTagWrap {
+  margin-top: 16px;
+}
+
+.profileTag {
+  font-size: 12px;
+  padding: 4px 12px;
+}
+
+.profileDivider {
+  border-top: 1px solid var(--hrms-border-light);
+  padding-top: 20px;
+  margin-top: 20px;
+}
+
+.sectionLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--hrms-text-muted);
+  margin-bottom: 12px;
+}
+
+.statusTag {
+  margin: 0;
+}
+
+.statusText {
+  color: var(--hrms-text-muted);
+  font-size: 13px;
+}
+
+.salaryBold {
+  font-weight: 600;
+  color: var(--hrms-success);
+}
+
+.salaryDaily {
+  font-weight: 600;
+}
+
+.emptyDocs {
+  text-align: center;
+  color: var(--hrms-text-muted);
+  padding: 24px;
+}
+
+.docIcon {
+  font-size: 24px;
+  color: #4f46e5;
+}
+
+.docDeleteIcon {
+  color: #ff4d4f;
+}
+
+.modalField {
+  margin-bottom: 16px;
+}
+
+.modalLabel {
+  display: block;
+  margin-bottom: 8px;
+}
+
+/* EmployeeForm */
+.inputHeight {
+  height: 40px;
+}
+
+.dateWidth {
+  width: 100%;
+  height: 40px;
+}
+
+.codeRow {
+  display: flex;
+  gap: 4px;
+}
+
+.codeInput {
+  height: 40px;
+  flex: 1;
+}
+
+.codeBtn {
+  height: 40px;
+  width: 40px;
+}
+
+.autoTag {
+  margin-right: 0;
+  font-size: 11px;
+  line-height: 18px;
+}
+
+.disabledInput {
+  height: 40px;
+  background: #f5f5f5;
+}
+
+.overtimeRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.overtimeLabel {
+  font-size: 13px;
+  color: var(--hrms-text-secondary);
+}
+
+.formFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  position: sticky;
+  bottom: 0;
+  z-index: 100;
+  background: var(--hrms-bg);
+  padding: 16px 0;
+  border-top: 1px solid var(--hrms-border-light);
+}
+
+/* Filter widths */
+.filterStatus {
+  width: 120px;
+}
+
+.filterMedium {
+  width: 150px;
+}
+
+.filterSearch {
+  width: 280px;
+}

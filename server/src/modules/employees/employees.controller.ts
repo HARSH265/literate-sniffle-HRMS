@@ -1,18 +1,23 @@
 import { Request, Response } from 'express';
 import { EmployeesService } from './employees.service.js';
-import mongoose from 'mongoose';
 import { ResponseHandler } from '../../core/response/ResponseHandler.js';
 import { asyncHandler } from '../../core/errors/asyncHandler.js';
 import { AppError } from '../../core/errors/AppError.js';
 import { AuditService } from '../../core/audit/AuditService.js';
 import { PaginationMeta } from '../../core/utils/PaginationUtil.js';
 import { ExcelGeneratorService } from '../../core/excel/ExcelGeneratorService.js';
-import { FileUploadService } from '../../core/file/FileUploadService.js';
 import Employee from '../../models/Employee.model.js';
 import CompanySettings from '../../models/CompanySettings.model.js';
-import Department from '../../models/Department.model.js';
-import Designation from '../../models/Designation.model.js';
-import Shift from '../../models/Shift.model.js';
+
+/** Extract { id, name } from a populated Mongoose sub-document or return null */
+function refToIdName(val: unknown): { id: string; name: string } | null {
+  if (!val || typeof val !== 'object') return null;
+  const doc = val as Record<string, unknown>;
+  const id = doc._id ?? doc.id;
+  const name = doc.name ?? '';
+  if (!id) return null;
+  return { id: String(id), name: String(name) };
+}
 
 const list = asyncHandler(async (req: Request, res: Response) => {
   const userRole = req.user!.role;
@@ -39,152 +44,35 @@ const update = asyncHandler(async (req: Request, res: Response) => {
 });
 
 const uploadDocument = asyncHandler(async (req: Request, res: Response) => {
-  const { id } = req.params;
-  const { documentType } = req.body;
-  
   if (!req.file) {
-    ResponseHandler.error(res, 'No file uploaded', 400);
-    return;
+    throw new AppError('No file uploaded', 400);
   }
-
-  const employee = await Employee.findById(id);
-  if (!employee) {
-    ResponseHandler.error(res, 'Employee not found', 404);
-    return;
-  }
-
-  // Server‑side validation for employee document uploads
-    const settings = await CompanySettings.findOne().lean();
-    const docConfig = (settings as any)?.documentConfig || {
-      documentRepoEnabled: true,
-      maxFileSizeMb: 20,
-      allowedFileTypes: ['pdf', 'doc', 'docx', 'xlsx', 'jpg', 'png'],
-    };
-    const maxSizeBytes = docConfig.maxFileSizeMb * 1024 * 1024;
-    if (req.file.size > maxSizeBytes) {
-      throw new AppError(`File size exceeds maximum of ${docConfig.maxFileSizeMb}MB`, 400);
-    }
-    const ext = req.file.originalname.split('.').pop()?.toLowerCase();
-    if (!ext || !docConfig.allowedFileTypes.includes(ext)) {
-      throw new AppError(`File type not allowed. Allowed: ${docConfig.allowedFileTypes.join(', ')}`, 400);
-    }
-    const filePath = await FileUploadService.uploadFromBuffer(req.file.buffer, `employees/${id}/documents`);
-
-  const newDoc = {
-    type: documentType || 'other',
-    fileName: req.file.originalname,
-    filePath,
-    uploadedAt: new Date(),
-  };
-
-  if (!employee.documents) {
-    employee.documents = [];
-  }
-  employee.documents.push(newDoc as any);
-  await employee.save();
-
-  // Audit log for document upload
-  const uploadedDoc = employee.documents[employee.documents.length - 1];
-  await AuditService.log({
-    action: 'upload-document',
-    module: 'employees',
-    userId: req.user!.id,
-    targetId: employee._id.toString(),
-    targetName: uploadedDoc.type,
-    details: { documentId: uploadedDoc._id?.toString(), fileName: uploadedDoc.fileName },
-  });
-
-  ResponseHandler.success(res, employee.documents, 'Document uploaded successfully');
+  const result = await EmployeesService.uploadDocument(req.params.id, req.file, req.body.documentType, req.user!.id);
+  ResponseHandler.success(res, result, 'Document uploaded successfully');
 });
 
 const uploadPhoto = asyncHandler(async (req: Request, res: Response) => {
-  const { id } = req.params;
   if (!req.file) {
     throw new AppError('Please upload a photo file', 400);
   }
-
-  const employee = await Employee.findById(id);
-  if (!employee) {
-    ResponseHandler.error(res, 'Employee not found', 404);
-    return;
-  }
-
-  const filePath = await FileUploadService.uploadFromBuffer(req.file.buffer, `employees/${id}/photo`);
-
-  const result = await EmployeesService.updatePhoto(id, filePath, req.user!.id);
-  // Audit log for employee photo upload
-  await AuditService.log({
-    action: 'upload-photo',
-    module: 'employees',
-    userId: req.user!.id,
-    targetId: id,
-    targetName: 'employee-photo',
-    details: { filePath },
-  });
+  const { FileUploadService } = await import('../../core/file/FileUploadService.js');
+  const filePath = await FileUploadService.uploadFromBuffer(req.file.buffer, `employees/${req.params.id}/photo`);
+  const result = await EmployeesService.updatePhoto(req.params.id, filePath, req.user!.id, req.user!.role);
   ResponseHandler.success(res, result, 'Employee photo uploaded successfully');
 });
 
 const removeDocument = asyncHandler(async (req: Request, res: Response) => {
-  const { id, docId } = req.params;
-  
-  const employee = await Employee.findById(id);
-  if (!employee) {
-    ResponseHandler.error(res, 'Employee not found', 404);
-    return;
-  }
-
-  const doc = (employee.documents || []).find((d: any) => d._id?.toString() === docId);
-  if (doc?.filePath) {
-    try {
-      const publicId = FileUploadService.getPublicIdFromUrl(doc.filePath);
-      await FileUploadService.delete(publicId);
-    } catch {
-      // Log but don't fail if Cloudinary deletion fails
-    }
-  }
-
-  employee.documents = (employee.documents || []).filter((doc: any) => doc._id?.toString() !== docId);
-  await employee.save();
-
-  // Audit log for document deletion
-  await AuditService.log({
-    action: 'delete-document',
-    module: 'employees',
-    userId: req.user!.id,
-    targetId: employee._id.toString(),
-    targetName: 'employee-document',
-    details: { documentId: docId },
-  });
-
-  ResponseHandler.success(res, employee.documents, 'Document deleted successfully');
+  const result = await EmployeesService.removeDocument(req.params.id, req.params.docId, req.user!.id);
+  ResponseHandler.success(res, result, 'Document deleted successfully');
 });
 
 const downloadDocument = asyncHandler(async (req: Request, res: Response) => {
-  const { id, docId } = req.params;
-  const userRole = req.user!.role;
-  
-  const employee = await Employee.findById(id);
-  if (!employee) {
-    ResponseHandler.error(res, 'Employee not found', 404);
-    return;
-  }
-
-  if (employee.status === 'archived' && !['super-admin', 'hr-admin'].includes(userRole)) {
-    ResponseHandler.error(res, 'Access denied', 403);
-    return;
-  }
-
-  const doc = (employee.documents || []).find((d: any) => d._id?.toString() === docId);
-  if (!doc) {
-    ResponseHandler.error(res, 'Document not found', 404);
-    return;
-  }
-
-  res.redirect(doc.filePath);
+  const filePath = await EmployeesService.getDocumentUrl(req.params.id, req.params.docId, req.user!.role);
+  res.redirect(filePath);
 });
 
 const remove = asyncHandler(async (req: Request, res: Response) => {
-  await EmployeesService.delete(req.params.id, req.user!.id, req.user!.role);
+  await EmployeesService.archive(req.params.id, req.user!.id, req.user!.role);
   ResponseHandler.noContent(res);
 });
 
@@ -193,70 +81,118 @@ const restore = asyncHandler(async (req: Request, res: Response) => {
   ResponseHandler.success(res, result, 'Employee restored successfully');
 });
 
-const exportEmployees = asyncHandler(async (_req: Request, res: Response) => {
-  const employees = await Employee.find({ status: { $ne: 'archived' } })
+const exportEmployees = asyncHandler(async (req: Request, res: Response) => {
+  const filter: Record<string, unknown> = {};
+  if (req.query.status) {
+    filter.status = req.query.status;
+  } else {
+    filter.status = { $ne: 'archived' };
+  }
+
+  const columns = [
+    { header: 'Employee Code', key: 'EmployeeCode', width: 15 },
+    { header: 'Full Name', key: 'FullName', width: 20 },
+    { header: "Father's Name", key: 'FatherName', width: 20 },
+    { header: 'Category', key: 'Category', width: 15 },
+    { header: 'Employment Type', key: 'EmploymentType', width: 15 },
+    { header: 'Department', key: 'Department', width: 15 },
+    { header: 'Designation', key: 'Designation', width: 15 },
+    { header: 'Shift', key: 'Shift', width: 12 },
+    { header: 'Joining Date', key: 'JoiningDate', width: 12 },
+    { header: 'Salary Type', key: 'SalaryType', width: 12 },
+    { header: 'Base Salary', key: 'BaseSalary', width: 12 },
+    { header: 'Daily Wage', key: 'DailyWage', width: 12 },
+    { header: 'OT Eligible', key: 'OvertimeEligible', width: 12 },
+    { header: 'Status', key: 'Status', width: 10 },
+    { header: 'Contact', key: 'ContactNumber', width: 15 },
+    { header: 'Address', key: 'Address', width: 30 },
+  ];
+
+  const cursor = Employee.find(filter)
     .populate('department', 'name')
     .populate('designation', 'name')
     .populate('shift', 'name')
-    .lean();
+    .sort({ employeeCode: 1 })
+    .lean()
+    .cursor();
 
-  const data = employees.map((e: any) => ({
-    EmployeeCode: e.employeeCode,
-    FullName: e.fullName,
-    FatherName: e.fatherName,
-    Category: e.category,
-    EmploymentType: e.employmentType,
-    Department: e.department?.name || '',
-    Designation: e.designation?.name || '',
-    Shift: e.shift?.name || '',
-    JoiningDate: e.joiningDate ? new Date(e.joiningDate).toISOString().split('T')[0] : '',
-    SalaryType: e.salaryType,
-    BaseSalary: e.baseSalary,
-    DailyWage: e.dailyWage || '',
-    OvertimeEligible: e.overtimeEligible ? 'Yes' : 'No',
-    Status: e.status,
-    ContactNumber: e.contactNumber || '',
-    Address: e.address || '',
-  }));
+  let exportCount = 0;
 
-  await ExcelGeneratorService.generate(
+  async function* exportRows() {
+    for await (const emp of cursor) {
+      const { _id, ...rest } = emp as Record<string, unknown>;
+      const row = {
+        ...rest,
+        id: String(_id),
+        department: refToIdName((emp as Record<string, unknown>).department),
+        designation: refToIdName((emp as Record<string, unknown>).designation),
+        shift: refToIdName((emp as Record<string, unknown>).shift),
+      };
+      exportCount++;
+      const r = row as Record<string, unknown>;
+      yield {
+        EmployeeCode: String(r.employeeCode ?? ''),
+        FullName: String(r.fullName ?? ''),
+        FatherName: String(r.fatherName ?? ''),
+        Category: String(r.category ?? ''),
+        EmploymentType: String(r.employmentType ?? ''),
+        Department: (r.department as { name?: string })?.name ?? '',
+        Designation: (r.designation as { name?: string })?.name ?? '',
+        Shift: (r.shift as { name?: string })?.name ?? '',
+        JoiningDate: r.joiningDate ? new Date(r.joiningDate as string).toISOString().split('T')[0] : '',
+        SalaryType: String(r.salaryType ?? ''),
+        BaseSalary: r.baseSalary ?? '',
+        DailyWage: String(r.dailyWage ?? ''),
+        OvertimeEligible: r.overtimeEligible ? 'Yes' : 'No',
+        Status: String(r.status ?? ''),
+        ContactNumber: String(r.contactNumber ?? ''),
+        Address: String(r.address ?? ''),
+      };
+    }
+  }
+
+  await ExcelGeneratorService.generateStreaming(
     res,
     `employees_${new Date().toISOString().split('T')[0]}.xlsx`,
     'Employees',
-    [
-      { header: 'Employee Code', key: 'EmployeeCode', width: 15 },
-      { header: 'Full Name', key: 'FullName', width: 20 },
-      { header: "Father's Name", key: 'FatherName', width: 20 },
-      { header: 'Category', key: 'Category', width: 15 },
-      { header: 'Employment Type', key: 'EmploymentType', width: 15 },
-      { header: 'Department', key: 'Department', width: 15 },
-      { header: 'Designation', key: 'Designation', width: 15 },
-      { header: 'Shift', key: 'Shift', width: 12 },
-      { header: 'Joining Date', key: 'JoiningDate', width: 12 },
-      { header: 'Salary Type', key: 'SalaryType', width: 12 },
-      { header: 'Base Salary', key: 'BaseSalary', width: 12 },
-      { header: 'Daily Wage', key: 'DailyWage', width: 12 },
-      { header: 'OT Eligible', key: 'OvertimeEligible', width: 12 },
-      { header: 'Status', key: 'Status', width: 10 },
-      { header: 'Contact', key: 'ContactNumber', width: 15 },
-      { header: 'Address', key: 'Address', width: 30 },
-    ],
-    data,
+    columns,
+    exportRows(),
   );
+
+  await AuditService.log({
+    action: 'export',
+    module: 'employees',
+    userId: req.user!.id,
+    targetId: 'employees-export',
+    targetName: `Exported ${exportCount} employees`,
+  });
 });
 
-const downloadTemplate = asyncHandler(async (_req: Request, res: Response) => {
+const downloadTemplate = asyncHandler(async (req: Request, res: Response) => {
+  // Audit log for template download
+  await AuditService.log({
+    action: 'export',
+    module: 'employees',
+    userId: req.user!.id,
+    targetId: 'employee-template',
+    targetName: 'Employee import template downloaded',
+  });
+
+  // Read sample defaults from CompanySettings
+  const settings = await CompanySettings.findOne().lean();
+  const defaults = (settings as Record<string, unknown>)?.employeeDefaults as Record<string, unknown> | undefined;
+
   const data = [{
     EmployeeCode: 'EMP001',
     FullName: 'John Doe',
     FatherName: 'Mark Doe',
-    Category: 'worker',
-    EmploymentType: 'permanent',
+    Category: String(defaults?.defaultCategory || 'worker'),
+    EmploymentType: String(defaults?.defaultEmploymentType || 'permanent'),
     DepartmentName: 'Production',
     DesignationName: 'Operator',
     ShiftName: 'General',
     JoiningDate: '2024-01-01',
-    SalaryType: 'monthly',
+    SalaryType: String(defaults?.defaultSalaryType || 'monthly'),
     BaseSalary: '25000',
     DailyWage: '',
     OvertimeEligible: 'Yes',
@@ -298,8 +234,6 @@ const importEmployees = asyncHandler(async (req: Request, res: Response) => {
 
   const ExcelJS = (await import('exceljs')).default;
   const workbook = new ExcelJS.Workbook();
-  
-  // Use buffer for memory storage
   await workbook.xlsx.load(req.file.buffer as any);
 
   const worksheet = workbook.getWorksheet(1);
@@ -312,120 +246,13 @@ const importEmployees = asyncHandler(async (req: Request, res: Response) => {
     throw new AppError('No data found in the file', 400);
   }
 
-  // Begin atomic import with transaction
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
-  const results = { success: 0, failed: 0, errors: [] as string[] };
-
-  // Batch: collect all unique names first, then do single queries
-  const allDeptNames = new Set<string>();
-  const allDesigNames = new Set<string>();
-  const allShiftNames = new Set<string>();
-  const allEmpCodes = new Set<string>();
-  const rowData: any[] = [];
-
-  for (const row of rows) {
-    const values = row.values as any[];
-    const data = Array.from(values).slice(1);
-    const departmentName = data[5] ? String(data[5]).trim() : '';
-    const designationName = data[6] ? String(data[6]).trim() : '';
-    const shiftName = data[7] ? String(data[7]).trim() : '';
-    const employeeCode = data[0] ? String(data[0]).trim() : '';
-    if (departmentName) allDeptNames.add(departmentName);
-    if (designationName) allDesigNames.add(designationName);
-    if (shiftName) allShiftNames.add(shiftName);
-    if (employeeCode) allEmpCodes.add(employeeCode.toUpperCase());
-    rowData.push({ row, data });
-  }
-
-  const [departments, designations, shifts, existingEmployees] = await Promise.all([
-    allDeptNames.size > 0 ? Department.find({ name: { $in: Array.from(allDeptNames).map(n => new RegExp(`^${n}$`, 'i')) } }) : [],
-    allDesigNames.size > 0 ? Designation.find({ name: { $in: Array.from(allDesigNames).map(n => new RegExp(`^${n}$`, 'i')) } }) : [],
-    allShiftNames.size > 0 ? Shift.find({ name: { $in: Array.from(allShiftNames).map(n => new RegExp(`^${n}$`, 'i')) } }) : [],
-    allEmpCodes.size > 0 ? Employee.find({ employeeCode: { $in: Array.from(allEmpCodes) } }).select('employeeCode') : [],
-  ]);
-
-  const deptMap = new Map(departments.map((d: any) => [d.name.toLowerCase(), d]));
-  const desigMap = new Map(designations.map((d: any) => [d.name.toLowerCase(), d]));
-  const shiftMap = new Map(shifts.map((s: any) => [s.name.toLowerCase(), s]));
-  const empCodeSet = new Set(existingEmployees.map((e: any) => e.employeeCode.toUpperCase()));
-
-  try {
-    for (const { row, data } of rowData) {
-      const employeeCode = data[0] ? String(data[0]).trim() : '';
-      const fullName = data[1] ? String(data[1]).trim() : '';
-      const fatherName = data[2] ? String(data[2]).trim() : '';
-      
-      const rawCategory = data[3] ? String(data[3]).trim().toLowerCase() : '';
-      const category = rawCategory.includes('manufacturing') || rawCategory.includes('worker') ? 'worker' : 
-                       rawCategory.includes('office') ? 'office-staff' : 'worker';
-      
-      const employmentType = data[4] ? String(data[4]).trim().toLowerCase() : '';
-      const departmentName = data[5] ? String(data[5]).trim() : '';
-      const designationName = data[6] ? String(data[6]).trim() : '';
-      const shiftName = data[7] ? String(data[7]).trim() : '';
-      const joiningDate = data[8] ? String(data[8]).trim() : '';
-      
-      const rawSalaryType = data[9] ? String(data[9]).trim().toLowerCase() : '';
-      const salaryType = rawSalaryType.includes('daily') ? 'daily' : 'monthly';
-      
-      const baseSalary = parseFloat(data[10] ? String(data[10]).trim() : '0');
-      const dailyWage = parseFloat(data[11] ? String(data[11]).trim() : '0');
-      const overtimeEligible = data[12] ? String(data[12]).trim().toLowerCase() === 'yes' : false;
-      const status = data[13] ? String(data[13]).trim().toLowerCase() : 'active';
-      const contactNumber = data[14] ? String(data[14]).trim() : '';
-      const address = data[15] ? String(data[15]).trim() : '';
-
-      if (!employeeCode || !fullName || !fatherName) {
-        throw new AppError(`Row ${row.number}: Missing required fields`, 400);
-      }
-
-      const department = departmentName ? deptMap.get(departmentName.toLowerCase()) : null;
-      const designation = designationName ? desigMap.get(designationName.toLowerCase()) : null;
-      const shift = shiftName ? shiftMap.get(shiftName.toLowerCase()) : null;
-
-      if (empCodeSet.has(employeeCode.toUpperCase())) {
-        throw new AppError(`Row ${row.number}: Employee code ${employeeCode} already exists`, 400);
-      }
-
-      await Employee.create({
-        employeeCode: employeeCode.toUpperCase(),
-        fullName,
-        fatherName,
-        category,
-        employmentType,
-        department: department?._id,
-        designation: designation?._id,
-        shift: shift?._id,
-        joiningDate: joiningDate ? new Date(joiningDate) : new Date(),
-        salaryType,
-        baseSalary,
-        dailyWage,
-        overtimeEligible,
-        status,
-        contactNumber,
-        address,
-        createdBy: req.user!.id as any,
-      }, { session });
-
-      results.success++;
-    }
-    await session.commitTransaction();
-    session.endSession();
-    ResponseHandler.success(res, {
-      message: `Import completed: ${results.success} successful, 0 failed`,
-      success: results.success,
-      failed: 0,
-      errors: [],
-    });
-  } catch (err: any) {
-    await session.abortTransaction();
-    session.endSession();
-    // If any error during import, respond with failure details
-    const errorMessage = err instanceof AppError ? err.message : err.message || 'Import failed';
-    throw new AppError(errorMessage, err.status || 500);
-  }
+  const results = await EmployeesService.importEmployees(rows, req.user!.id);
+  ResponseHandler.success(res, {
+    message: `Import completed: ${results.success} successful, ${results.failed} failed`,
+    success: results.success,
+    failed: results.failed,
+    errors: results.errors,
+  });
 });
 
 const generateNextCode = asyncHandler(async (_req: Request, res: Response) => {

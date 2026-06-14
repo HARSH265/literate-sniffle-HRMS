@@ -25,7 +25,7 @@ export const EMPLOYEE_STATUS_COLORS: Record<string, string> = {
   active: 'green',
   inactive: 'default',
   terminated: 'red',
-  probation: 'blue',
+  archived: 'default',
 };
 
 export const ATTENDANCE_STATUS_COLORS: Record<string, string> = {

@@ -194,12 +194,14 @@ describe('LeaveService', () => {
 
   describe('getPendingApprovals', () => {
     it('returns pending approvals for user', async () => {
-      const result = await LeaveService.createApplication(
+      await LeaveService.createApplication(
         { employee: empId, leaveType: leaveTypeId, startDate: '2025-07-01', endDate: '2025-07-03', reason: 'Need approval' },
         userId,
       );
 
-      expect(result.status).toBe('pending');
+      const result = await LeaveService.getPendingApprovals(userId, {});
+      expect(result.data.length).toBeGreaterThanOrEqual(1);
+      expect(result.data[0]).toHaveProperty('id');
     });
   });
 
@@ -229,6 +231,155 @@ describe('LeaveService', () => {
       await expect(
         LeaveService.approveApplication({ applicationId: app.id, status: 'approved' }, userId),
       ).rejects.toThrow(AppError);
+    });
+  });
+
+  describe('cancelApplication', () => {
+    it('cancels a pending application', async () => {
+      const app = await LeaveService.createApplication(
+        { employee: empId, leaveType: leaveTypeId, startDate: '2025-10-01', endDate: '2025-10-03', reason: 'To cancel' },
+        userId,
+      );
+
+      const result = await LeaveService.cancelApplication(app.id, userId);
+      expect(result.status).toBe('cancelled');
+    });
+
+    it('throws on non-existent id', async () => {
+      await expect(
+        LeaveService.cancelApplication(new mongoose.Types.ObjectId().toString(), userId),
+      ).rejects.toThrow(AppError);
+    });
+
+    it('restores pending balance on cancellation', async () => {
+      const lt = await LeaveType.create({
+        name: 'Cancel Test', code: 'CT', maxDaysPerApplication: 5, maxDaysPerYear: 10,
+        requiresApproval: true, autoApproveThreshold: 1, approvalLevels: 1, isPaid: true,
+      });
+
+      await LeaveBalance.create({
+        employee: empId, leaveType: lt._id, year: 2025,
+        totalEntitled: 10, balance: 7, totalUsed: 0, totalPending: 3,
+      });
+
+      const app = await LeaveService.createApplication(
+        { employee: empId, leaveType: lt._id.toString(), startDate: '2025-11-01', endDate: '2025-11-03', reason: 'Cancel me' },
+        userId,
+      );
+
+      const beforeBalance = await LeaveBalance.findOne({ employee: empId, leaveType: lt._id, year: 2025 });
+      const pendingBefore = beforeBalance?.totalPending || 0;
+
+      await LeaveService.cancelApplication(app.id, userId);
+
+      const afterBalance = await LeaveBalance.findOne({ employee: empId, leaveType: lt._id, year: 2025 });
+      expect(afterBalance?.totalPending).toBe(pendingBefore - 3);
+    });
+  });
+
+  describe('listApplications', () => {
+    it('returns paginated applications', async () => {
+      await LeaveService.createApplication(
+        { employee: empId, leaveType: leaveTypeId, startDate: '2025-12-01', endDate: '2025-12-03', reason: 'List test' },
+        userId,
+      );
+
+      const result = await LeaveService.listApplications({ page: 1, limit: 10 });
+      expect(result.data.length).toBeGreaterThanOrEqual(1);
+      expect(result.meta).toHaveProperty('page');
+      expect(result.meta).toHaveProperty('totalPages');
+    });
+
+    it('filters by status', async () => {
+      const result = await LeaveService.listApplications({ status: 'approved', page: 1, limit: 10 });
+      result.data.forEach((a: any) => {
+        expect(a.status).toBe('approved');
+      });
+    });
+  });
+
+  describe('getEmployeeApplications', () => {
+    it('returns applications for a specific employee', async () => {
+      await LeaveService.createApplication(
+        { employee: empId, leaveType: leaveTypeId, startDate: '2025-06-15', endDate: '2025-06-17', reason: 'Employee apps' },
+        userId,
+      );
+
+      const result = await LeaveService.getEmployeeApplications(empId, { page: 1, limit: 10 });
+      expect(result.data.length).toBeGreaterThanOrEqual(1);
+      result.data.forEach((a: any) => {
+        expect(a.employee || a.leaveType).toBeDefined();
+      });
+    });
+
+    it('filters by year', async () => {
+      const result = await LeaveService.getEmployeeApplications(empId, { year: '2025', page: 1, limit: 10 });
+      expect(result.data).toBeDefined();
+    });
+
+    it('returns empty array for employee with no applications', async () => {
+      const result = await LeaveService.getEmployeeApplications(
+        new mongoose.Types.ObjectId().toString(),
+        { page: 1, limit: 10 },
+      );
+      expect(result.data).toEqual([]);
+    });
+  });
+
+  describe('bulkAccrue', () => {
+    it('accrues leave balances for all employees', async () => {
+      const result = await LeaveService.bulkAccrue(
+        { leaveTypeId, year: 2025 },
+        userId,
+      );
+      expect(result.totalProcessed).toBeGreaterThanOrEqual(1);
+      expect(result.results[0]).toHaveProperty('status');
+    });
+
+    it('throws for non-existent leave type', async () => {
+      await expect(
+        LeaveService.bulkAccrue(
+          { leaveTypeId: new mongoose.Types.ObjectId().toString(), year: 2025 },
+          userId,
+        ),
+      ).rejects.toThrow(AppError);
+    });
+  });
+
+  describe('getCalendar', () => {
+    it('returns leave calendar for a month', async () => {
+      const lt = await LeaveType.create({
+        name: 'Calendar Leave', code: 'CL', maxDaysPerApplication: 5, maxDaysPerYear: 10,
+        requiresApproval: false, isPaid: true, allowNegativeBalance: true,
+      });
+      await LeaveService.createApplication(
+        { employee: empId, leaveType: lt._id.toString(), startDate: '2025-04-10', endDate: '2025-04-12', reason: 'Calendar test' },
+        userId,
+      );
+
+      const result = await LeaveService.getCalendar({ month: 4, year: 2025 });
+      expect(result.length).toBeGreaterThanOrEqual(1);
+      expect(result[0]).toHaveProperty('days');
+    });
+  });
+
+  describe('getLeaveSummary', () => {
+    it('returns leave summary for a month', async () => {
+      await LeaveService.createApplication(
+        { employee: empId, leaveType: leaveTypeId, startDate: '2025-04-05', endDate: '2025-04-07', reason: 'Summary test' },
+        userId,
+      );
+
+      const result = await LeaveService.getLeaveSummary({ month: 4, year: 2025 });
+      expect(result).toHaveProperty('totalDays');
+      expect(result).toHaveProperty('totalApplications');
+      expect(result).toHaveProperty('byStatus');
+    });
+
+    it('returns zeros when no applications exist', async () => {
+      const result = await LeaveService.getLeaveSummary({ month: 6, year: 2025 });
+      expect(result.totalDays).toBe(0);
+      expect(result.totalApplications).toBe(0);
     });
   });
 });

@@ -4,6 +4,7 @@ import { PlusOutlined, SendOutlined } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { leaveService, LeaveApplication } from '../services/leaveService';
+import { LeaveDetailDrawer } from '../components/LeaveDetailDrawer';
 import { employeeService } from '../../employees/services/employeeService';
 import { PageHeader } from '../../../core/components/PageHeader';
 import { DataTable } from '../../../core/components/DataTable';
@@ -42,6 +43,9 @@ export function LeaveApplicationsPage() {
       setCancelModalOpen(false);
       setSelectedApp(null);
     },
+    onError: (err: any) => {
+      message.error(err?.response?.data?.message || 'Failed to cancel application');
+    },
   });
 
   const createMutation = useMutation({
@@ -51,6 +55,9 @@ export function LeaveApplicationsPage() {
       setApplyModalOpen(false);
       applyForm.resetFields();
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.leaveApplications });
+    },
+    onError: (err: any) => {
+      message.error(err?.response?.data?.message || 'Failed to submit application');
     },
   });
 
@@ -117,6 +124,8 @@ export function LeaveApplicationsPage() {
         page={page}
         pageSize={limit}
         onPaginationChange={(p, size) => { setPage(p); setLimit(size ?? 10); }}
+        detailDrawerTitle="Leave Application Details"
+        customDetailRenderer={(record) => <LeaveDetailDrawer record={record as LeaveApplication} />}
         filterContent={
           <Select
             placeholder="Filter by status"

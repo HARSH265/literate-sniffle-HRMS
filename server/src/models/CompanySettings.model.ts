@@ -38,6 +38,7 @@ export interface ICompanySettings extends Document {
     payPeriod?: 'calendar' | '26th-25th' | 'custom';
     salaryCreditDate?: number;
     currency?: string;
+    appName?: string;
     multiLocation?: boolean;
     multiState?: boolean;
   };
@@ -353,6 +354,7 @@ const CompanySettingsSchema = new Schema<ICompanySettings>(
       payPeriod: { type: String, enum: ['calendar', '26th-25th', 'custom'] },
       salaryCreditDate: { type: Number, min: 1, max: 31 },
       currency: { type: String, default: 'INR' },
+      appName: { type: String, default: 'Orian' },
       multiLocation: { type: Boolean, default: false },
       multiState: { type: Boolean, default: false },
     },

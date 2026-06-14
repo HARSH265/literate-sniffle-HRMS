@@ -42,22 +42,13 @@ const remove = asyncHandler(async (req: Request, res: Response) => {
 });
 
 const bulkUpdateEntries = asyncHandler(async (req: Request, res: Response) => {
-  const { entries } = req.body;
-  if (!entries || !Array.isArray(entries)) {
-    ResponseHandler.error(res, 'Entries array is required', 400);
-    return;
-  }
-  const result = await AttendanceService.bulkUpdateEntries(entries, req.user!.id);
+  const result = await AttendanceService.bulkUpdateEntries(req.body.entries, req.user!.id);
   ResponseHandler.success(res, result, 'Bulk update completed');
 });
 
 const adminCheckout = asyncHandler(async (req: Request, res: Response) => {
   const { employeeId } = req.params;
   const { reason } = req.body;
-  if (!reason) {
-    ResponseHandler.error(res, 'Reason is required for admin checkout', 400);
-    return;
-  }
   const result = await AttendanceService.adminCheckout(employeeId, req.user!.id, reason);
   ResponseHandler.success(res, result, 'Admin checkout completed');
 });

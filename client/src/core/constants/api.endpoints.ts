@@ -4,6 +4,9 @@ export const API_ENDPOINTS = {
     logout: '/auth/logout',
     me: '/auth/me',
     changePassword: '/auth/change-password',
+    forgotPassword: '/auth/forgot-password',
+    resetPassword: '/auth/reset-password',
+    logoutAllDevices: '/auth/logout-all-devices',
   },
 
   users: {
@@ -12,6 +15,12 @@ export const API_ENDPOINTS = {
     get: (id: string) => `/users/${id}`,
     update: (id: string) => `/users/${id}`,
     delete: (id: string) => `/users/${id}`,
+    activate: (id: string) => `/users/${id}/activate`,
+    deactivate: (id: string) => `/users/${id}/deactivate`,
+    activity: (id: string) => `/users/${id}/activity`,
+    stats: (id: string) => `/users/${id}/stats`,
+    export: '/users/export',
+    import: '/users/import',
   },
 
   departments: {
@@ -75,9 +84,16 @@ export const API_ENDPOINTS = {
 
   attendance: {
     list: '/attendance',
+    create: '/attendance',
     bulk: '/attendance/bulk',
     monthly: (employeeId: string) => `/attendance/monthly/${employeeId}`,
+    monthlyView: '/attendance/monthly-view',
     summary: '/attendance/summary',
+    bulkUpdate: '/attendance/bulk-update',
+    update: (id: string) => `/attendance/${id}`,
+    delete: (id: string) => `/attendance/${id}`,
+    adminCheckout: (employeeId: string) => `/attendance/admin-checkout/${employeeId}`,
+    getByEmployee: (employeeId: string) => `/attendance/employee/${employeeId}`,
   },
 
   overtimeRules: {
@@ -115,8 +131,9 @@ export const API_ENDPOINTS = {
       get: (id: string) => `/payroll/items/${id}`,
       update: (id: string) => `/payroll/items/${id}`,
       batch: (runId: string) => `/payroll/run/${runId}/items/batch`,
+      updateInRun: (runId: string, itemId: string) => `/payroll/run/${runId}/items/${itemId}`,
     },
-    employee: (employeeId: string) => `/payroll/runs/employee/${employeeId}`
+    employee: (employeeId: string) => `/payroll/runs/employee/${employeeId}`,
   },
 
   salarySlips: {
@@ -135,6 +152,8 @@ export const API_ENDPOINTS = {
   settings: {
     get: '/settings',
     update: '/settings',
+    testEmail: '/settings/test-email',
+    uploadLogo: '/settings/upload-logo',
   },
 
   leave: {
@@ -173,6 +192,11 @@ export const API_ENDPOINTS = {
   auditLogs: {
     list: '/audit-logs',
     modules: '/audit-logs/modules',
+    actions: '/audit-logs/actions',
+    export: '/audit-logs/export',
+    stats: '/audit-logs/stats',
+    retention: '/audit-logs/retention',
+    cleanup: '/audit-logs/cleanup',
   },
 
   training: {
@@ -191,6 +215,7 @@ export const API_ENDPOINTS = {
       complete: (id: string) => `/training/enrollments/${id}/complete`,
       drop: (id: string) => `/training/enrollments/${id}/drop`,
       attendance: (id: string) => `/training/enrollments/${id}/attendance`,
+      list: '/training/enrollments',
     },
     skills: {
       list: '/training/skills',
@@ -216,10 +241,12 @@ export const API_ENDPOINTS = {
       get: (id: string) => `/performance/reviews/${id}`,
       setGoals: (id: string) => `/performance/reviews/${id}/goals`,
       submit: (id: string) => `/performance/reviews/${id}/submit`,
+      submitSelfReview: (id: string) => `/performance/reviews/${id}/self-review`,
       managerReview: (id: string) => `/performance/reviews/${id}/manager-review`,
       appeal: (id: string) => `/performance/reviews/${id}/appeal`,
       resolveAppeal: (id: string) => `/performance/reviews/${id}/resolve-appeal`,
       feedback: (id: string) => `/performance/reviews/${id}/feedback`,
+      feedbackRequest: (id: string) => `/performance/reviews/${id}/feedback-request`,
     },
   },
 
@@ -234,7 +261,7 @@ export const API_ENDPOINTS = {
     role: (role: string) => `/permissions/roles/${role}`,
     resetRole: (role: string) => `/permissions/roles/${role}/reset`,
   },
-  // Component Master endpoints
+
   componentMaster: {
     list: '/component-master',
     create: '/component-master',
@@ -242,12 +269,124 @@ export const API_ENDPOINTS = {
     update: (id: string) => `/component-master/${id}`,
     delete: (id: string) => `/component-master/${id}`,
   },
-  // Salary Structure endpoints
+
   salaryStructures: {
     list: '/salary-structures',
     create: '/salary-structures',
     get: (id: string) => `/salary-structures/${id}`,
     update: (id: string) => `/salary-structures/${id}`,
     delete: (id: string) => `/salary-structures/${id}`,
+  },
+
+  announcements: {
+    list: '/announcements',
+    create: '/announcements',
+    get: (id: string) => `/announcements/${id}`,
+    update: (id: string) => `/announcements/${id}`,
+    delete: (id: string) => `/announcements/${id}`,
+    markRead: (id: string) => `/announcements/${id}/read`,
+    unreadCount: '/announcements/unread-count',
+  },
+
+  helpdesk: {
+    list: '/helpdesk',
+    create: '/helpdesk',
+    get: (id: string) => `/helpdesk/${id}`,
+    update: (id: string) => `/helpdesk/${id}`,
+    delete: (id: string) => `/helpdesk/${id}`,
+    stats: '/helpdesk/stats',
+    checkSla: '/helpdesk/check-sla',
+    addComment: (id: string) => `/helpdesk/${id}/comment`,
+  },
+
+  loans: {
+    list: '/loans',
+    create: '/loans',
+    get: (id: string) => `/loans/${id}`,
+    update: (id: string) => `/loans/${id}`,
+    delete: (id: string) => `/loans/${id}`,
+    types: {
+      list: '/loans/types',
+      get: (id: string) => `/loans/types/${id}`,
+      create: '/loans/types',
+      update: (id: string) => `/loans/types/${id}`,
+      delete: (id: string) => `/loans/types/${id}`,
+    },
+    apply: '/loans/apply',
+    approve: (id: string) => `/loans/${id}/approve`,
+    reject: (id: string) => `/loans/${id}/reject`,
+    disburse: (id: string) => `/loans/${id}/disburse`,
+    cancel: (id: string) => `/loans/${id}/cancel`,
+    repay: (id: string) => `/loans/${id}/repay`,
+    employeeSummary: (employeeId: string) => `/loans/employee/${employeeId}/summary`,
+  },
+
+  assets: {
+    list: '/assets',
+    create: '/assets',
+    get: (id: string) => `/assets/${id}`,
+    update: (id: string) => `/assets/${id}`,
+    delete: (id: string) => `/assets/${id}`,
+    allocate: (id: string) => `/assets/${id}/allocate`,
+    returnAsset: (id: string) => `/assets/${id}/return`,
+    maintenance: (id: string) => `/assets/${id}/maintenance`,
+    retire: (id: string) => `/assets/${id}/retire`,
+    employeeAssets: (employeeId: string) => `/assets/employee/${employeeId}`,
+    stats: '/assets/stats',
+    history: (id: string) => `/assets/${id}/history`,
+    categories: '/assets/categories',
+  },
+
+  statutory: {
+    config: '/statutory/config',
+    defaults: '/statutory/defaults',
+    calculate: '/statutory/calculate',
+    summary: (month: string) => `/statutory/summary/${month}`,
+    compliance: {
+      check: '/statutory/compliance/check',
+      report: (id: string) => `/statutory/compliance/report/${id}`,
+    },
+    challans: {
+      generate: (month: string) => `/statutory/challans/generate/${month}`,
+      list: '/statutory/challans',
+      get: (id: string) => `/statutory/challans/${id}`,
+      update: (id: string) => `/statutory/challans/${id}`,
+    },
+    reports: {
+      generate: '/statutory/reports/generate',
+      list: '/statutory/reports',
+      get: (id: string) => `/statutory/reports/${id}`,
+      update: (id: string) => `/statutory/reports/${id}`,
+    },
+  },
+
+  compliance: {
+    summary: '/compliance/summary',
+    runCheck: (runId: string) => `/compliance/runs/${runId}/check`,
+    runSummary: (runId: string) => `/compliance/runs/${runId}/summary`,
+    gapReport: (runId: string) => `/compliance/runs/${runId}/gap-report`,
+    auditLog: '/compliance/audit-log',
+  },
+
+  salaryStructureTemplates: {
+    list: '/salary-structure-templates',
+    create: '/salary-structure-templates',
+    get: (id: string) => `/salary-structure-templates/${id}`,
+    update: (id: string) => `/salary-structure-templates/${id}`,
+    delete: (id: string) => `/salary-structure-templates/${id}`,
+  },
+
+  payrollReports: {
+    payslipPdf: (itemId: string) => `/payroll-reports/payslip/${itemId}/pdf`,
+    bankFile: (runId: string) => `/payroll-reports/bank-file/${runId}`,
+    salaryRegister: (runId: string) => `/payroll-reports/salary-register/${runId}`,
+    salaryRegisterCsv: (runId: string) => `/payroll-reports/salary-register/${runId}/csv`,
+    runPdf: (runId: string) => `/payroll-reports/run/${runId}/pdf`,
+    headcountCost: '/payroll-reports/headcount-cost',
+    momVariance: '/payroll-reports/mom-variance',
+    ytdCost: '/payroll-reports/ytd-cost',
+    otLop: (runId: string) => `/payroll-reports/ot-lop/${runId}`,
+    loanOutstanding: '/payroll-reports/loan-outstanding',
+    budgetVsActual: (runId: string) => `/payroll-reports/budget-vs-actual/${runId}`,
   },
 } as const;

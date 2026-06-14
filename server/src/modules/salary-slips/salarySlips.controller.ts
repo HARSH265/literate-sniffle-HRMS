@@ -25,4 +25,15 @@ const generatePdf = asyncHandler(async (req: Request, res: Response) => {
   await PDFGeneratorService.generateFromData(data, res, filename);
 });
 
-export const salarySlipsController = { list, preview, generatePdf };
+const generateExcel = asyncHandler(async (req: Request, res: Response) => {
+  const buffer = await SalarySlipsService.generateExcel(req.params.id);
+  const run = await (await import('../../models/PayrollRun.model.js')).default.findById(req.params.id).lean();
+  const month = run?.month?.replace(/[^a-zA-Z0-9]/g, '_') || 'all';
+  const filename = `SalarySlips-${month}.xlsx`;
+  
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  res.send(buffer);
+});
+
+export const salarySlipsController = { list, preview, generatePdf, generateExcel };

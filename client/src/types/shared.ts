@@ -43,3 +43,21 @@ export function isNamedLabel(value: unknown): value is { name: string } | { labe
   if (typeof value !== 'object' || value === null) return false;
   return 'name' in value || 'label' in value;
 }
+
+export interface ApiErrorResponse {
+  success: false;
+  message: string;
+  errors?: Record<string, string[]> | string[];
+  statusCode: number;
+}
+
+export function isApiError(err: unknown): err is { response: { data: ApiErrorResponse } } {
+  return (
+    typeof err === 'object' &&
+    err !== null &&
+    'response' in err &&
+    typeof (err as any).response === 'object' &&
+    (err as any).response !== null &&
+    'data' in (err as any).response
+  );
+}

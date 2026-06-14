@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Form, Input, Button, Row, Col, Avatar, Upload, Popconfirm, message } from 'antd';
 import { UserOutlined, SaveOutlined, PlusOutlined } from '@ant-design/icons';
 import apiClient from '../../../core/api/apiClient';
+import { API_ENDPOINTS } from '../../../core/constants/api.endpoints';
 import { useAuthStore } from '../../../core/stores/authStore';
 
 export function ProfileSection({ form }: { form: any }) {
@@ -13,7 +14,7 @@ export function ProfileSection({ form }: { form: any }) {
   const handleLogoutAll = async () => {
     setLogoutLoading(true);
     try {
-      await apiClient.post('/auth/logout-all-devices');
+      await apiClient.post(API_ENDPOINTS.auth.logoutAllDevices);
       logout();
       message.success('Logged out from all devices');
       navigate('/');

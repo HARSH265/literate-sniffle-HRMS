@@ -29,12 +29,8 @@ export const QUERY_KEYS = {
 
   leaveTypes: ['leave', 'types'] as const,
   leaveApplications: ['leave', 'applications'] as const,
-  leaveApplicationsMy: ['leave', 'applications', 'my'] as const,
   leaveApprovalsPending: ['leave', 'approvals', 'pending'] as const,
   leaveBalances: (employeeId: string) => ['leave', 'balances', employeeId] as const,
-  leaveBalancesMy: ['leave', 'balances', 'my'] as const,
-  leaveCalendar: ['leave', 'calendar'] as const,
-  leaveSummary: ['leave', 'summary'] as const,
 
   reports: ['reports'] as const,
 

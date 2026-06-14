@@ -8,6 +8,7 @@ import {
 import { useAuthStore } from '../../../core/stores/authStore';
 import { ROLES } from '../../../core/constants/permissions';
 import apiClient from '../../../core/api/apiClient';
+import { API_ENDPOINTS } from '../../../core/constants/api.endpoints';
 import { AxiosError } from 'axios';
 
 export function LoginPage() {
@@ -18,13 +19,13 @@ export function LoginPage() {
   const handleLogin = async (values: { email: string; password: string }) => {
     setLoading(true);
     try {
-      const res = await apiClient.post('/auth/login', values);
+      const res = await apiClient.post(API_ENDPOINTS.auth.login, values);
       const { user, token } = res.data.data;
       login(user, token);
 
       // Fetch effective permissions for the user's role
       try {
-        const permRes = await apiClient.get(`/permissions/roles/${user.role}`);
+        const permRes = await apiClient.get(API_ENDPOINTS.permissions.role(user.role));
         const roleData = permRes.data.data;
         if (roleData?.permissions) {
           const { setPermissions } = useAuthStore.getState();

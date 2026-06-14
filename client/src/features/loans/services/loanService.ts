@@ -1,4 +1,5 @@
 import apiClient from '../../../core/api/apiClient';
+import { API_ENDPOINTS } from '../../../core/constants/api.endpoints';
 
 export interface LoanType {
   id: string;
@@ -55,62 +56,62 @@ export interface LoanRepayment {
 
 export const loanService = {
   async getLoanTypes(): Promise<{ success: boolean; data: { loanTypes: LoanType[]; total: number } }> {
-    const { data } = await apiClient.get('/loans/loan-types');
+    const { data } = await apiClient.get(API_ENDPOINTS.loans.types.list);
     return data;
   },
 
   async getLoanType(id: string): Promise<{ success: boolean; data: LoanType }> {
-    const { data } = await apiClient.get(`/loans/loan-types/${id}`);
+    const { data } = await apiClient.get(API_ENDPOINTS.loans.types.get(id));
     return data;
   },
 
   async createLoanType(payload: Partial<LoanType>): Promise<{ success: boolean; data: LoanType }> {
-    const { data } = await apiClient.post('/loans/loan-types', payload);
+    const { data } = await apiClient.post(API_ENDPOINTS.loans.types.create, payload);
     return data;
   },
 
   async updateLoanType(id: string, payload: Partial<LoanType>): Promise<{ success: boolean; data: LoanType }> {
-    const { data } = await apiClient.patch(`/loans/loan-types/${id}`, payload);
+    const { data } = await apiClient.patch(API_ENDPOINTS.loans.types.update(id), payload);
     return data;
   },
 
   async deleteLoanType(id: string): Promise<{ success: boolean }> {
-    const { data } = await apiClient.delete(`/loans/loan-types/${id}`);
+    const { data } = await apiClient.delete(API_ENDPOINTS.loans.types.delete(id));
     return data;
   },
 
   async applyLoan(payload: { employee: string; loanType: string; amount: number; tenure: number; purpose?: string }): Promise<{ success: boolean; data: any }> {
-    const { data } = await apiClient.post('/loans/apply', payload);
+    const { data } = await apiClient.post(API_ENDPOINTS.loans.apply, payload);
     return data;
   },
 
   async listLoans(params?: Record<string, any>): Promise<{ success: boolean; data: { loans: Loan[]; total: number; pagination: any } }> {
-    const { data } = await apiClient.get('/loans', { params });
+    const { data } = await apiClient.get(API_ENDPOINTS.loans.list, { params });
     return data;
   },
 
   async getLoan(id: string): Promise<{ success: boolean; data: Loan }> {
-    const { data } = await apiClient.get(`/loans/${id}`);
+    const { data } = await apiClient.get(API_ENDPOINTS.loans.get(id));
     return data;
   },
 
   async approveLoan(id: string, payload: { approve: boolean; remarks?: string; level?: number }): Promise<{ success: boolean; data: Loan }> {
-    const { data } = await apiClient.patch(`/loans/${id}/approve`, payload);
+    const { data } = await apiClient.patch(API_ENDPOINTS.loans.approve(id), payload);
     return data;
   },
 
   async disburseLoan(id: string, remarks?: string): Promise<{ success: boolean; data: Loan }> {
-    const { data } = await apiClient.patch(`/loans/${id}/disburse`, { remarks });
+    const { data } = await apiClient.patch(API_ENDPOINTS.loans.disburse(id), { remarks });
     return data;
   },
 
   async cancelLoan(id: string): Promise<{ success: boolean; data: Loan }> {
-    const { data } = await apiClient.patch(`/loans/${id}/cancel`);
+    const { data } = await apiClient.patch(API_ENDPOINTS.loans.cancel(id));
     return data;
   },
 
   async getEmployeeLoanSummary(employeeId: string): Promise<{ success: boolean; data: any }> {
-    const { data } = await apiClient.get(`/loans/employee/${employeeId}/summary`);
+    const { data } = await apiClient.get(API_ENDPOINTS.loans.employeeSummary(employeeId));
     return data;
   },
 };

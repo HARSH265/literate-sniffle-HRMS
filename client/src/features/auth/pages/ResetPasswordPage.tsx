@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Form, Input, Button, message, Result } from 'antd';
 import { LockOutlined } from '@ant-design/icons';
 import apiClient from '../../../core/api/apiClient';
+import { API_ENDPOINTS } from '../../../core/constants/api.endpoints';
 import { AxiosError } from 'axios';
 
 export function ResetPasswordPage() {
@@ -23,7 +24,7 @@ export function ResetPasswordPage() {
   const handleSubmit = async (values: { newPassword: string }) => {
     setLoading(true);
     try {
-      await apiClient.post('/auth/reset-password', { token, newPassword: values.newPassword });
+      await apiClient.post(API_ENDPOINTS.auth.resetPassword, { token, newPassword: values.newPassword });
       setSuccess(true);
     } catch (err) {
       const error = err as AxiosError<{ message?: string }>;

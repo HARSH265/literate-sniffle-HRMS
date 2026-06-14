@@ -1,4 +1,5 @@
 import apiClient from '../../../core/api/apiClient';
+import { API_ENDPOINTS } from '../../../core/constants/api.endpoints';
 import { PaginatedResponse } from '@/types/shared';
 
 interface AuditLogQuery {
@@ -48,17 +49,17 @@ export const auditService = {
     if (query.startDate) params.append('startDate', query.startDate);
     if (query.endDate) params.append('endDate', query.endDate);
 
-    const response = await apiClient.get<PaginatedResponse<AuditLog[]>>(`/audit-logs?${params.toString()}`);
+    const response = await apiClient.get<PaginatedResponse<AuditLog[]>>(`${API_ENDPOINTS.auditLogs.list}?${params.toString()}`);
     return response.data;
   },
 
   getModules: async (): Promise<OptionItem[]> => {
-    const response = await apiClient.get<{ success: boolean; data: OptionItem[] }>('/audit-logs/modules');
+    const response = await apiClient.get<{ success: boolean; data: OptionItem[] }>(API_ENDPOINTS.auditLogs.modules);
     return response.data.data;
   },
 
   getActions: async (): Promise<OptionItem[]> => {
-    const response = await apiClient.get<{ success: boolean; data: OptionItem[] }>('/audit-logs/actions');
+    const response = await apiClient.get<{ success: boolean; data: OptionItem[] }>(API_ENDPOINTS.auditLogs.actions);
     return response.data.data;
   },
 
@@ -69,22 +70,22 @@ export const auditService = {
     if (query.startDate) params.append('startDate', query.startDate);
     if (query.endDate) params.append('endDate', query.endDate);
 
-    const response = await apiClient.get(`/audit-logs/export?${params.toString()}`);
+    const response = await apiClient.get(`${API_ENDPOINTS.auditLogs.export}?${params.toString()}`);
     return response.data;
   },
 
   getStats: async (): Promise<{ success: boolean; data: any }> => {
-    const response = await apiClient.get('/audit-logs/stats');
+    const response = await apiClient.get(API_ENDPOINTS.auditLogs.stats);
     return response.data;
   },
 
   getRetentionInfo: async (): Promise<{ success: boolean; data: any }> => {
-    const response = await apiClient.get('/audit-logs/retention');
+    const response = await apiClient.get(API_ENDPOINTS.auditLogs.retention);
     return response.data;
   },
 
   cleanupLogs: async (days: number): Promise<{ success: boolean; data: { deletedCount: number } }> => {
-    const response = await apiClient.post('/audit-logs/cleanup', { days });
+    const response = await apiClient.post(API_ENDPOINTS.auditLogs.cleanup, { days });
     return response.data;
   },
 };

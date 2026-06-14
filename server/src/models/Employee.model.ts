@@ -36,11 +36,19 @@ export interface IEmployee extends Document {
   employeeCode: string;
   fullName: string;
   fatherName: string;
+  dateOfBirth?: Date;
+  gender?: 'male' | 'female' | 'other';
+  bloodGroup?: string;
+  maritalStatus?: 'single' | 'married' | 'divorced' | 'widowed';
+  email?: string;
+  emergencyContact?: string;
+  permanentAddress?: string;
   category: 'worker' | 'office-staff';
   employmentType: 'permanent' | 'contract' | 'temporary' | 'trainee';
   department: mongoose.Types.ObjectId;
   designation: mongoose.Types.ObjectId;
   shift: mongoose.Types.ObjectId;
+  reportingTo?: mongoose.Types.ObjectId;
   joiningDate: Date;
   salaryType: 'monthly' | 'daily';
   baseSalary: number;
@@ -55,6 +63,7 @@ export interface IEmployee extends Document {
   paymentMode?: 'bank-transfer' | 'cheque' | 'cash';
   photo?: string;
   documents?: Array<{
+    _id?: mongoose.Types.ObjectId;
     type: 'aadhar' | 'pan' | 'voter' | 'driver_license' | 'passport' | 'other';
     fileName: string;
     filePath: string;
@@ -122,6 +131,13 @@ const EmployeeSchema = new Schema<IEmployee>(
     employeeCode: { type: String, required: true, unique: true, uppercase: true },
     fullName: { type: String, required: true, trim: true },
     fatherName: { type: String, required: true, trim: true },
+    dateOfBirth: { type: Date },
+    gender: { type: String, enum: ['male', 'female', 'other'] },
+    bloodGroup: { type: String },
+    maritalStatus: { type: String, enum: ['single', 'married', 'divorced', 'widowed'] },
+    email: { type: String },
+    emergencyContact: { type: String },
+    permanentAddress: { type: String },
     category: {
       type: String,
       required: true,
@@ -135,6 +151,7 @@ const EmployeeSchema = new Schema<IEmployee>(
     department: { type: Schema.Types.ObjectId, ref: 'Department', required: true },
     designation: { type: Schema.Types.ObjectId, ref: 'Designation', required: true },
     shift: { type: Schema.Types.ObjectId, ref: 'Shift', required: true },
+    reportingTo: { type: Schema.Types.ObjectId, ref: 'Employee' },
     joiningDate: { type: Date, required: true },
     salaryType: {
       type: String,

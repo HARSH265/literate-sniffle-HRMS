@@ -3,6 +3,7 @@ import { API_ENDPOINTS } from '../../../core/constants/api.endpoints';
 import { PaginatedResponse } from '@/types/shared';
 
 export interface Department {
+  head?: any;
   id: string;
   name: string;
   code: string;
@@ -13,12 +14,14 @@ export interface Department {
 }
 
 export interface CreateDepartment {
+  head?: string;
   name: string;
   code?: string;
   description?: string;
 }
 
 export interface UpdateDepartment {
+  head?: string;
   name?: string;
   code?: string;
   description?: string;

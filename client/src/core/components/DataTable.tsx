@@ -36,8 +36,29 @@ function TableSkeleton({ columns, rows = 5 }: { columns: number; rows?: number }
 function formatValue(value: unknown): React.ReactNode {
   if (value === null || value === undefined) return <span style={{ color: '#999' }}>—</span>;
   if (typeof value === 'boolean') return <Tag color={value ? 'green' : 'default'}>{value ? 'Yes' : 'No'}</Tag>;
+  if (typeof value === 'string' && value.includes('<tr')) {
+    // HTML content (salary slip HTML) — render as HTML
+    return <div dangerouslySetInnerHTML={{ __html: value }} style={{ fontSize: 12 }} />;
+  }
   if (typeof value === 'object') {
-    if (Array.isArray(value)) return value.join(', ') || <span style={{ color: '#999' }}>—</span>;
+    if (Array.isArray(value)) {
+      if (value.length === 0) return <span style={{ color: '#999' }}>—</span>;
+      // Array of objects (allowances/deductions) — show name + calculatedValue
+      if (typeof value[0] === 'object' && value[0] !== null && 'name' in value[0]) {
+        return (
+          <div style={{ fontSize: 12 }}>
+            {value.map((item: any, i: number) => (
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0' }}>
+                <span>{item.name}</span>
+                <span style={{ fontWeight: 600 }}>₹{(item.calculatedValue ?? item.value ?? 0).toLocaleString()}</span>
+              </div>
+            ))}
+          </div>
+        );
+      }
+      // Array of primitives
+      return value.map(String).join(', ');
+    }
     const obj = value as Record<string, unknown>;
     if ('name' in obj && typeof obj.name === 'string') return obj.name;
     if ('label' in obj && typeof obj.label === 'string') return obj.label;
@@ -52,6 +73,7 @@ const SKIP_KEYS = new Set([
   'lastLogin', 'lastActivity', 'lastActivityAt',
   'twoFactorSecret', 'totpSecret', 'otpSecret', 'otp',
   'resetPasswordToken', 'emailVerificationToken', 'apiKey',
+  'allowancesHtml', 'deductionsHtml',
 ]);
 
 function formatLabel(key: string): string {
@@ -90,6 +112,15 @@ interface DataTableProps<T extends object> {
   toolbarRight?: React.ReactNode;
 
   noCard?: boolean;
+
+  /** Custom detail renderer for the row-click drawer. If provided, replaces the default key-value drawer. */
+  customDetailRenderer?: (record: T, onClose: () => void) => React.ReactNode;
+
+  /** Custom drawer title. Defaults to "Record Details". */
+  detailDrawerTitle?: string;
+
+  /** Custom drawer width. Defaults to 720. */
+  detailDrawerWidth?: number;
 }
 
 export function DataTable<T extends object>({
@@ -112,6 +143,9 @@ export function DataTable<T extends object>({
   toolbarLeft,
   toolbarRight,
   noCard = false,
+  customDetailRenderer,
+  detailDrawerTitle = 'Record Details',
+  detailDrawerWidth = 720,
 }: DataTableProps<T>) {
   const [showFilters, setShowFilters] = useState(false);
   const [detailRecord, setDetailRecord] = useState<T | null>(null);
@@ -223,13 +257,15 @@ export function DataTable<T extends object>({
       </div>
 
       <Drawer
-        title={detailRecord ? `Record Details` : ''}
+        title={detailRecord ? detailDrawerTitle : ''}
         open={detailOpen}
         onClose={() => setDetailOpen(false)}
-        width={720}
+        width={detailDrawerWidth}
         styles={{ body: { padding: 0 } }}
       >
-        {detailRecord && (
+        {detailRecord && customDetailRenderer
+          ? customDetailRenderer(detailRecord, () => setDetailOpen(false))
+          : detailRecord && (
           <div style={{ padding: 24 }}>
             <Descriptions
               column={{ xs: 1, sm: 2 }}

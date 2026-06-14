@@ -1,5 +1,6 @@
 import axios, { AxiosInstance, AxiosError, AxiosRequestConfig } from 'axios';
 import { useAuthStore } from '../stores/authStore';
+import { API_ENDPOINTS } from '../constants/api.endpoints';
 
 let isRefreshing = false;
 let failedQueue: Array<{ resolve: (value: unknown) => void; reject: (reason?: unknown) => void }> = [];
@@ -21,7 +22,7 @@ const apiClient: AxiosInstance = axios.create({
   withCredentials: true,
 });
 
-const isAuthRequest = (url?: string) => url?.includes('/auth/login') || url?.includes('/auth/refresh');
+const isAuthRequest = (url?: string) => url === API_ENDPOINTS.auth.login || url?.includes('/auth/refresh');
 
 apiClient.interceptors.request.use(
   (config) => {

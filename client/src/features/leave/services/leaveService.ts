@@ -1,4 +1,5 @@
 import apiClient from '../../../core/api/apiClient';
+import { API_ENDPOINTS } from '../../../core/constants/api.endpoints';
 import { PaginatedResponse } from '@/types/shared';
 
 export interface LeaveType {
@@ -65,31 +66,31 @@ export interface LeaveBalance {
 
 export const leaveService = {
   async listLeaveTypes(): Promise<{ success: boolean; data: LeaveType[] }> {
-    const { data } = await apiClient.get('/leave/types');
+    const { data } = await apiClient.get(API_ENDPOINTS.leave.types.list);
     return data;
   },
 
   async createLeaveType(payload: Partial<LeaveType>): Promise<{ success: boolean; data: LeaveType }> {
-    const { data } = await apiClient.post('/leave/types', payload);
+    const { data } = await apiClient.post(API_ENDPOINTS.leave.types.create, payload);
     return data;
   },
 
   async updateLeaveType(id: string, payload: Partial<LeaveType>): Promise<{ success: boolean; data: LeaveType }> {
-    const { data } = await apiClient.patch(`/leave/types/${id}`, payload);
+    const { data } = await apiClient.patch(API_ENDPOINTS.leave.types.update(id), payload);
     return data;
   },
 
   async deleteLeaveType(id: string): Promise<void> {
-    await apiClient.delete(`/leave/types/${id}`);
+    await apiClient.delete(API_ENDPOINTS.leave.types.delete(id));
   },
 
   async listApplications(params?: Record<string, unknown>): Promise<PaginatedResponse<LeaveApplication>> {
-    const { data } = await apiClient.get<PaginatedResponse<LeaveApplication>>('/leave/applications', { params });
+    const { data } = await apiClient.get<PaginatedResponse<LeaveApplication>>(API_ENDPOINTS.leave.applications.list, { params });
     return data;
   },
 
-  async getMyApplications(params?: Record<string, unknown>): Promise<{ success: boolean; data: LeaveApplication[] }> {
-    const { data } = await apiClient.get('/leave/applications/my', { params });
+  async getMyApplications(params?: Record<string, unknown>): Promise<PaginatedResponse<LeaveApplication>> {
+    const { data } = await apiClient.get(API_ENDPOINTS.leave.applications.my, { params });
     return data;
   },
 
@@ -101,12 +102,12 @@ export const leaveService = {
     reason: string;
     documentUrl?: string;
   }): Promise<{ success: boolean; data: LeaveApplication }> {
-    const { data } = await apiClient.post('/leave/applications', payload);
+    const { data } = await apiClient.post(API_ENDPOINTS.leave.applications.create, payload);
     return data;
   },
 
   async cancelApplication(id: string): Promise<{ success: boolean; data: LeaveApplication }> {
-    const { data } = await apiClient.patch(`/leave/applications/${id}/cancel`);
+    const { data } = await apiClient.patch(API_ENDPOINTS.leave.applications.cancel(id));
     return data;
   },
 
@@ -115,22 +116,22 @@ export const leaveService = {
     status: 'approved' | 'rejected';
     remarks?: string;
   }): Promise<{ success: boolean; data: LeaveApplication }> {
-    const { data } = await apiClient.post('/leave/applications/approve', payload);
+    const { data } = await apiClient.post(API_ENDPOINTS.leave.applications.approve, payload);
     return data;
   },
 
-  async getPendingApprovals(params?: Record<string, unknown>): Promise<{ success: boolean; data: LeaveApplication[] }> {
-    const { data } = await apiClient.get('/leave/approvals/pending', { params });
+  async getPendingApprovals(params?: Record<string, unknown>): Promise<PaginatedResponse<LeaveApplication>> {
+    const { data } = await apiClient.get(API_ENDPOINTS.leave.approvals.pending, { params });
     return data;
   },
 
   async getBalances(employeeId: string, year?: number): Promise<{ success: boolean; data: LeaveBalance[] }> {
-    const { data } = await apiClient.get(`/leave/balances/${employeeId}`, { params: { year } });
+    const { data } = await apiClient.get(API_ENDPOINTS.leave.balances.get(employeeId), { params: { year } });
     return data;
   },
 
   async getMyBalances(year?: number): Promise<{ success: boolean; data: LeaveBalance[] }> {
-    const { data } = await apiClient.get('/leave/balances/my', { params: { year } });
+    const { data } = await apiClient.get(API_ENDPOINTS.leave.balances.my, { params: { year } });
     return data;
   },
 
@@ -139,17 +140,17 @@ export const leaveService = {
     year: number;
     employeeIds?: string[];
   }): Promise<{ success: boolean; data: any }> {
-    const { data } = await apiClient.post('/leave/accrue', payload);
+    const { data } = await apiClient.post(API_ENDPOINTS.leave.accrue, payload);
     return data;
   },
 
   async getCalendar(params?: Record<string, unknown>): Promise<{ success: boolean; data: any[] }> {
-    const { data } = await apiClient.get('/leave/calendar', { params });
+    const { data } = await apiClient.get(API_ENDPOINTS.leave.calendar, { params });
     return data;
   },
 
   async getSummary(params?: Record<string, unknown>): Promise<{ success: boolean; data: any }> {
-    const { data } = await apiClient.get('/leave/summary', { params });
+    const { data } = await apiClient.get(API_ENDPOINTS.leave.summary, { params });
     return data;
   },
 };

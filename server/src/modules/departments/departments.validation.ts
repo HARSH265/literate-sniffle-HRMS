@@ -1,4 +1,7 @@
 import { z } from 'zod';
+import mongoose from 'mongoose';
+
+const objectIdOrEmpty = z.string().refine((val) => !val || mongoose.Types.ObjectId.isValid(val), { message: 'Invalid ID' }).optional();
 
 export const createDepartmentSchema = z.object({
   name: z
@@ -12,6 +15,7 @@ export const createDepartmentSchema = z.object({
     .regex(/^[A-Z0-9_-]+$/, 'Code must contain only uppercase letters, numbers, underscore, or hyphen')
     .optional(),
   description: z.string().max(500, 'Description must be at most 500 characters').optional(),
+  head: objectIdOrEmpty,
 });
 
 export const updateDepartmentSchema = z.object({
@@ -27,6 +31,7 @@ export const updateDepartmentSchema = z.object({
     .regex(/^[A-Z0-9_-]+$/, 'Code must contain only uppercase letters, numbers, underscore, or hyphen')
     .optional(),
   description: z.string().max(500, 'Description must be at most 500 characters').optional(),
+  head: objectIdOrEmpty,
   isActive: z.boolean().optional(),
 });
 
