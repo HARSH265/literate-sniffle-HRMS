@@ -1,6 +1,12 @@
 import apiClient from '../../../core/api/apiClient';
 import { API_ENDPOINTS } from '../../../core/constants/api.endpoints';
 
+const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
+
+function validateRunId(runId: string): void {
+  if (!OBJECT_ID_REGEX.test(runId)) throw new Error('Invalid run ID format');
+}
+
 export const payrollReportsService = {
   async downloadPayslip(itemId: string): Promise<Blob> {
     const { data } = await apiClient.get(API_ENDPOINTS.payrollReports.payslipPdf(itemId), { responseType: 'blob' });
@@ -8,12 +14,20 @@ export const payrollReportsService = {
   },
 
   async downloadBankFile(runId: string): Promise<Blob> {
+    validateRunId(runId);
     const { data } = await apiClient.get(API_ENDPOINTS.payrollReports.bankFile(runId), { responseType: 'blob' });
     return data;
   },
 
   async downloadSalaryRegister(runId: string): Promise<Blob> {
+    validateRunId(runId);
     const { data } = await apiClient.get(API_ENDPOINTS.payrollReports.salaryRegister(runId), { responseType: 'blob' });
+    return data;
+  },
+
+  async downloadSalaryRegisterCsv(runId: string): Promise<Blob> {
+    validateRunId(runId);
+    const { data } = await apiClient.get(API_ENDPOINTS.payrollReports.salaryRegisterCsv(runId), { responseType: 'blob' });
     return data;
   },
 
@@ -33,6 +47,7 @@ export const payrollReportsService = {
   },
 
   async getOtLop(runId: string): Promise<{ success: boolean; data: any }> {
+    validateRunId(runId);
     const { data } = await apiClient.get(API_ENDPOINTS.payrollReports.otLop(runId));
     return data;
   },
@@ -43,6 +58,7 @@ export const payrollReportsService = {
   },
 
   async getBudgetVsActual(runId: string): Promise<{ success: boolean; data: any }> {
+    validateRunId(runId);
     const { data } = await apiClient.get(API_ENDPOINTS.payrollReports.budgetVsActual(runId));
     return data;
   },

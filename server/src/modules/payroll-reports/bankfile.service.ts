@@ -33,20 +33,21 @@ export async function generateBankFile(
     .lean();
 
   const rows: BankFileRow[] = [];
+  let skipped = 0;
 
   for (const item of items) {
     const emp = item.employee as any;
     const primaryAcct = emp?.bankDetails?.accountNumber || '';
     const primaryIfsc = emp?.bankDetails?.ifscCode || '';
     const primaryBank = emp?.bankDetails?.bankName || '';
-const netAmount = item.netPay || 0;
-  const splitPercent = item.bankSplitPercent ?? emp?.bankSplitPercent ?? 0;
+    const netAmount = item.netPay || 0;
+    const splitPercent = item.bankSplitPercent ?? emp?.bankSplitPercent ?? 0;
 
-    if (!primaryAcct) continue;
+    if (!primaryAcct) { skipped++; continue; }
 
     if (splitPercent > 0 && splitPercent < 100) {
-const primaryAmount = item.primaryBankAmount ?? Math.round(netAmount * (splitPercent / 100) * 100) / 100;
-       const secondaryAmount = item.secondaryBankAmount ?? Math.round((netAmount - primaryAmount) * 100) / 100;
+      const primaryAmount = item.primaryBankAmount ?? Math.round(netAmount * (splitPercent / 100) * 100) / 100;
+      const secondaryAmount = item.secondaryBankAmount ?? Math.round((netAmount - primaryAmount) * 100) / 100;
       const secondaryAcct = emp?.secondaryBank?.accountNumber || '';
       const secondaryIfsc = emp?.secondaryBank?.ifscCode || '';
 
@@ -107,7 +108,7 @@ const primaryAmount = item.primaryBankAmount ?? Math.round(netAmount * (splitPer
       module: 'payroll',
       userId,
       targetId: runId,
-      details: { type: `bank-file-${format}`, month: run.month, employees: rows.length },
+      details: { type: `bank-file-${format}`, month: run.month, employees: rows.length, skipped },
     });
   }
 }

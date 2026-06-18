@@ -54,43 +54,9 @@ export async function generateSalaryRegister(
   });
   const deductionCodes = componentCodes.filter(c => !earningCodes.includes(c));
 
-  const workbook = new ExcelJS.Workbook();
-  const sheet = workbook.addWorksheet('Salary Register', {
-    pageSetup: { paperSize: 9, orientation: 'landscape', fitToPage: true },
-  });
-
-  // Header row
-  const headerRow = [
-    'Sr.No',
-    'Employee Code',
-    'Employee Name',
-    'Department',
-    'Designation',
-    'Total Days',
-    'Working Days',
-    ...earningCodes,
-    'Gross Total',
-    ...deductionCodes,
-    'Total Deductions',
-    'Net Pay',
-  ];
-
-  const headerStyle: Partial<ExcelJS.Style> = {
-    font: { bold: true, color: { argb: 'FFFFFFFF' }, size: 9 },
-    fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2563EB' } },
-    border: {
-      top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' },
-    },
-    alignment: { horizontal: 'center', vertical: 'middle', wrapText: true },
-  };
-
-  const header = sheet.addRow(headerRow);
-  header.eachCell((cell) => { cell.style = headerStyle; });
-
-  // Data rows
+  // Build data rows
   let srNo = 0;
-  let totals: Record<string, number> = {};
-  const numberFormat = '#,##0.00';
+  const dataRows: any[][] = [];
 
   for (const item of items) {
     srNo++;
@@ -117,7 +83,7 @@ export async function generateSalaryRegister(
     const deductionComponents = deductionCodes.reduce((s, code) => s + (deductionsMap[code] || 0), 0);
     const deductionTotal = item.totalDeductions || deductionComponents;
 
-    const rowData = [
+    dataRows.push([
       srNo,
       emp?.employeeCode || '',
       emp?.fullName || '',
@@ -130,75 +96,104 @@ export async function generateSalaryRegister(
       ...deductionCodes.map(code => deductionsMap[code] || 0),
       deductionTotal,
       item.netPay || 0,
-    ];
-
-    const dataRow = sheet.addRow(rowData);
-
-    // Apply number format to currency columns
-    for (let col = 8; col <= rowData.length; col++) {
-      const cell = dataRow.getCell(col);
-      if (typeof cell.value === 'number') {
-        cell.numFmt = numberFormat;
-      }
-    }
-
-    // Track totals
-    if (!totals.totalEmployees) {
-      earningCodes.forEach(code => { totals[`earn_${code}`] = 0; });
-      deductionCodes.forEach(code => { totals[`ded_${code}`] = 0; });
-      totals.grossTotal = 0;
-      totals.deductionTotal = 0;
-      totals.netPayTotal = 0;
-    }
-    totals.totalEmployees = (totals.totalEmployees || 0) + 1;
-    earningCodes.forEach(code => { totals[`earn_${code}`] = (totals[`earn_${code}`] || 0) + (earningsMap[code] || 0); });
-    deductionCodes.forEach(code => { totals[`ded_${code}`] = (totals[`ded_${code}`] || 0) + (deductionsMap[code] || 0); });
-    totals.grossTotal = (totals.grossTotal || 0) + grossTotal;
-    totals.deductionTotal = (totals.deductionTotal || 0) + deductionTotal;
-    totals.netPayTotal = (totals.netPayTotal || 0) + (item.netPay || 0);
+    ]);
   }
 
-  // Summary row
-  const summaryStyle: Partial<ExcelJS.Style> = {
-    font: { bold: true, size: 9 },
-    fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3F4F6' } },
-    border: {
-      top: { style: 'double' }, bottom: { style: 'double' }, left: { style: 'thin' }, right: { style: 'thin' },
-    },
-  };
+  if (_format === 'csv') {
+    const headerRow = [
+      'Sr.No', 'Employee Code', 'Employee Name', 'Department', 'Designation',
+      'Total Days', 'Working Days', ...earningCodes, 'Gross Total',
+      ...deductionCodes, 'Total Deductions', 'Net Pay',
+    ];
+    const csvLines: string[] = [headerRow.join(',')];
+    for (const row of dataRows) {
+      csvLines.push(row.map(v => `"${v}"`).join(','));
+    }
+    const content = csvLines.join('\r\n');
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename=salary_register_${run.month}.csv`);
+    res.send(content);
+  } else {
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('Salary Register', {
+      pageSetup: { paperSize: 9, orientation: 'landscape', fitToPage: true },
+    });
 
-  const summaryRow = sheet.addRow([
-    '',
-    '',
-    `Total (${srNo} employees)`,
-    '', '', '', '',
-    ...earningCodes.map(code => totals[`earn_${code}`] || 0),
-    totals.grossTotal || 0,
-    ...deductionCodes.map(code => totals[`ded_${code}`] || 0),
-    totals.deductionTotal || 0,
-    totals.netPayTotal || 0,
-  ]);
-  summaryRow.eachCell((cell, col) => {
-    cell.style = summaryStyle as any;
-    if (col >= 8) cell.numFmt = numberFormat;
-  });
+    const headerRow = [
+      'Sr.No', 'Employee Code', 'Employee Name', 'Department', 'Designation',
+      'Total Days', 'Working Days', ...earningCodes, 'Gross Total',
+      ...deductionCodes, 'Total Deductions', 'Net Pay',
+    ];
 
-  // Column widths
-  const colWidths = [6, 14, 22, 14, 14, 10, 12];
-  earningCodes.forEach(() => colWidths.push(12));
-  colWidths.push(12);
-  deductionCodes.forEach(() => colWidths.push(12));
-  colWidths.push(14, 12);
+    const headerStyle: Partial<ExcelJS.Style> = {
+      font: { bold: true, color: { argb: 'FFFFFFFF' }, size: 9 },
+      fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2563EB' } },
+      border: {
+        top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' },
+      },
+      alignment: { horizontal: 'center', vertical: 'middle', wrapText: true },
+    };
 
-  sheet.columns.forEach((col, i) => { if (colWidths[i]) col.width = colWidths[i]; });
+    const header = sheet.addRow(headerRow);
+    header.eachCell((cell) => { cell.style = headerStyle; });
 
-  // Freeze panes
-  sheet.views = [{ state: 'frozen', ySplit: 1 }];
+    const numberFormat = '#,##0.00';
+    let totals: Record<string, number> = {};
 
-  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-  res.setHeader('Content-Disposition', `attachment; filename=salary_register_${run.month}.xlsx`);
-  await workbook.xlsx.write(res);
-  res.end();
+    for (let i = 0; i < dataRows.length; i++) {
+      const row = dataRows[i];
+      const dataRow = sheet.addRow(row);
+      for (let col = 8; col <= row.length; col++) {
+        const cell = dataRow.getCell(col);
+        if (typeof cell.value === 'number') cell.numFmt = numberFormat;
+      }
+      if (!totals.totalEmployees) {
+        earningCodes.forEach(code => { totals[`earn_${code}`] = 0; });
+        deductionCodes.forEach(code => { totals[`ded_${code}`] = 0; });
+        totals.grossTotal = 0; totals.deductionTotal = 0; totals.netPayTotal = 0;
+      }
+      totals.totalEmployees = (totals.totalEmployees || 0) + 1;
+      earningCodes.forEach(code => { totals[`earn_${code}`] = (totals[`earn_${code}`] || 0) + (row[7 + earningCodes.indexOf(code)] as number || 0); });
+      deductionCodes.forEach(code => { totals[`ded_${code}`] = (totals[`ded_${code}`] || 0) + (row[7 + earningCodes.length + 1 + deductionCodes.indexOf(code)] as number || 0); });
+      totals.grossTotal = (totals.grossTotal || 0) + (row[7 + earningCodes.length] as number || 0);
+      totals.deductionTotal = (totals.deductionTotal || 0) + (row[7 + earningCodes.length + 1 + deductionCodes.length] as number || 0);
+      totals.netPayTotal = (totals.netPayTotal || 0) + (row[row.length - 1] as number || 0);
+    }
+
+    const summaryStyle: Partial<ExcelJS.Style> = {
+      font: { bold: true, size: 9 },
+      fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3F4F6' } },
+      border: {
+        top: { style: 'double' }, bottom: { style: 'double' }, left: { style: 'thin' }, right: { style: 'thin' },
+      },
+    };
+
+    const summaryRow = sheet.addRow([
+      '', '', `Total (${srNo} employees)`, '', '', '', '',
+      ...earningCodes.map(code => totals[`earn_${code}`] || 0),
+      totals.grossTotal || 0,
+      ...deductionCodes.map(code => totals[`ded_${code}`] || 0),
+      totals.deductionTotal || 0,
+      totals.netPayTotal || 0,
+    ]);
+    summaryRow.eachCell((cell, col) => {
+      cell.style = summaryStyle as any;
+      if (col >= 8) cell.numFmt = numberFormat;
+    });
+
+    const colWidths = [6, 14, 22, 14, 14, 10, 12];
+    earningCodes.forEach(() => colWidths.push(12));
+    colWidths.push(12);
+    deductionCodes.forEach(() => colWidths.push(12));
+    colWidths.push(14, 12);
+    sheet.columns.forEach((col, i) => { if (colWidths[i]) col.width = colWidths[i]; });
+    sheet.views = [{ state: 'frozen', ySplit: 1 }];
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename=salary_register_${run.month}.xlsx`);
+    await workbook.xlsx.write(res);
+    res.end();
+  }
 
   if (userId) {
     await AuditService.log({
@@ -206,7 +201,7 @@ export async function generateSalaryRegister(
       module: 'payroll',
       userId,
       targetId: runId,
-      details: { type: 'salary-register', month: run.month, employees: srNo },
+      details: { type: `salary-register-${_format}`, month: run.month, employees: srNo },
     });
   }
 }

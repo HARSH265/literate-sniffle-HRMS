@@ -22,6 +22,7 @@ export async function generatePayslipPdf(
   const emp = item.employee as any;
   const settings = await CompanySettings.findOne().lean();
   const companyInfo = (settings as any)?.companyInfo || {};
+  const currencySymbol = (settings as any)?.currency === 'INR' ? '₹' : (settings as any)?.currency || '₹';
   const run = await PayrollRun.findById(item.payrollRun).lean();
 
   const doc = new PDFDocument({
@@ -36,6 +37,18 @@ export async function generatePayslipPdf(
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Content-Disposition', `attachment; filename=payslip_${emp?.employeeCode || 'unknown'}_${item.month}.pdf`);
   doc.pipe(res);
+  if (typeof doc.on === 'function') {
+    doc.on('error', (err) => {
+      console.error('PDF stream error:', err);
+      if (!res.headersSent) res.status(500).end();
+    });
+  }
+  if (typeof res.on === 'function') {
+    res.on('error', (err) => {
+      console.error('Response stream error:', err);
+      if (typeof doc.destroy === 'function') doc.destroy();
+    });
+  }
 
   const pageWidth = doc.page.width - 80;
   const leftMargin = 40;
@@ -164,7 +177,7 @@ export async function generatePayslipPdf(
   doc.fill('#ffffff').fontSize(14).font('Helvetica-Bold');
   const netPay = item.netPay || 0;
   doc.text('NET PAY', leftMargin + 10, y + 6);
-  doc.text(`₹ ${netPay.toFixed(2)}`, leftMargin + pageWidth - 80, y + 6, { width: 70, align: 'right' });
+  doc.text(`${currencySymbol} ${netPay.toFixed(2)}`, leftMargin + pageWidth - 80, y + 6, { width: 70, align: 'right' });
   y += 40;
 
   // Amount in words
