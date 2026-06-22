@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Button, Card, Row, Col, Tag, Typography, Statistic, Spin } from 'antd';
 import { ArrowLeftOutlined, ClockCircleOutlined, HistoryOutlined } from '@ant-design/icons';
 import { PageHeader } from '../../../core/components/PageHeader';
+import { PageContainer } from '../../../core/components/PageContainer';
 import { DataTable } from '../../../core/components/DataTable';
 import { userService } from '../services/userService';
 import { useQuery } from '@tanstack/react-query';
@@ -162,7 +163,8 @@ export function UserActivityPage() {
   ];
 
   return (
-    <div style={{ padding: '0 4px' }}>
+    <PageContainer>
+    <div>
       <PageHeader
         title={`Activity: ${user.name}`}
         subtitle={user.email}
@@ -255,5 +257,6 @@ export function UserActivityPage() {
         }
       />
     </div>
+    </PageContainer>
   );
 }

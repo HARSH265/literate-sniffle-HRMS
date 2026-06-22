@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Form, Select, InputNumber, Input, Button, Row, Col, message, Descriptions } from 'antd';
 import { ArrowLeftOutlined, SaveOutlined, UserOutlined, CreditCardOutlined, CalculatorOutlined } from '@ant-design/icons';
 import { PageHeader } from '../../../core/components/PageHeader';
+import { PageContainer } from '../../../core/components/PageContainer';
 import { FormSection } from '../../../core/components/FormSection';
 import { loanService, LoanType } from '../services/loanService';
 import { employeeService } from '../../employees/services/employeeService';
@@ -67,7 +68,7 @@ export function LoanApplyPage() {
   const activeTypes = loanTypes?.data?.loanTypes?.filter((t: any) => t.isActive) || [];
 
   return (
-    <div style={{ padding: '0 4px' }}>
+    <PageContainer>
       <PageHeader
         title="Apply for Loan"
         subtitle="Submit a new loan application"
@@ -197,6 +198,6 @@ export function LoanApplyPage() {
           </div>
         </Form>
       </div>
-    </div>
+    </PageContainer>
   );
 }

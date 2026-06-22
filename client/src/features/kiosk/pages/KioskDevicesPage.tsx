@@ -3,6 +3,7 @@ import { Button, Input, InputNumber, message, Modal, Form, Tooltip, Switch, Tag,
 import type { ColumnsType } from 'antd/es/table';
 import { PlusOutlined, SearchOutlined, QrcodeOutlined, NotificationOutlined, CopyOutlined, LinkOutlined, DeleteOutlined } from '@ant-design/icons';
 import { PageHeader } from '../../../core/components/PageHeader';
+import { PageContainer } from '../../../core/components/PageContainer';
 import { DataTable } from '../../../core/components/DataTable';
 import { kioskService, KioskDevice, CreateKioskDevice, UpdateKioskDevice } from '../services/kioskService';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -277,7 +278,8 @@ export function KioskDevicesPage() {
   ];
 
   return (
-    <div style={{ padding: '0 4px' }}>
+    <PageContainer>
+    <div>
       <PageHeader
         title="Kiosk Devices"
         subtitle="Manage attendance kiosk devices"
@@ -439,5 +441,6 @@ export function KioskDevicesPage() {
         )}
       </Modal>
     </div>
+    </PageContainer>
   );
 }

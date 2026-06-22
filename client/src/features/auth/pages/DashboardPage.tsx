@@ -21,6 +21,7 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { PageHeader } from '../../../core/components/PageHeader';
+import { PageContainer } from '../../../core/components/PageContainer';
 import { AnnouncementWidget } from '../../announcements/components/AnnouncementWidget';
 import apiClient from '../../../core/api/apiClient';
 
@@ -269,7 +270,7 @@ export function DashboardPage() {
   };
 
   return (
-    <div style={{ padding: '0 4px' }}>
+    <PageContainer>
       <PageHeader
         title={`${getGreeting()}!`}
         subtitle="Here's what's happening across your organization today."
@@ -560,7 +561,7 @@ export function DashboardPage() {
           </SectionCard>
         </Col>
       </Row>
-    </div>
+    </PageContainer>
   );
 }
 

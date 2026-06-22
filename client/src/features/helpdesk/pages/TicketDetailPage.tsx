@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, Descriptions, Tag, Button, Typography, Spin, Input, Empty, Divider, Tooltip } from 'antd';
+import { PageContainer } from '../../../core/components/PageContainer';
 import { ArrowLeftOutlined, EditOutlined, SendOutlined, WarningOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import { useTicket, useAddComment } from '../hooks/useHelpdesk';
 import dayjs from 'dayjs';
@@ -52,7 +53,7 @@ export function TicketDetailPage() {
   }
 
   return (
-    <div style={{ maxWidth: 800, margin: '0 auto', padding: '0 4px' }}>
+    <PageContainer>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
         <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => navigate('/helpdesk')} />
         <Text strong style={{ fontSize: 18 }}>{ticket.ticketId}</Text>
@@ -135,6 +136,6 @@ export function TicketDetailPage() {
           />
         </div>
       </Card>
-    </div>
+    </PageContainer>
   );
 }

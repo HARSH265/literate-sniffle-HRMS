@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Card, Tabs, Select, Button, Space, Statistic, Row, Col, message, Spin, Empty, Tag } from 'antd';
 import { DownloadOutlined, BankOutlined, FileExcelOutlined, TeamOutlined, BarChartOutlined, DollarOutlined, WarningOutlined, ToolOutlined, FundOutlined } from '@ant-design/icons';
 import { PageHeader } from '../../../core/components/PageHeader';
+import { PageContainer } from '../../../core/components/PageContainer';
 import { DataTable } from '../../../core/components/DataTable';
 import { ErrorBoundary } from '../../../core/components/ErrorBoundary';
 import { payrollReportsService } from '../services/payrollReportsService';
@@ -432,26 +433,31 @@ function PayrollReportsPageInner() {
 
   if (runsLoading) {
     return (
-      <div style={{ padding: '0 4px' }}>
+      <PageContainer>
+      <div>
         <PageHeader title="Payroll Reports" />
         <Card><div style={{ textAlign: 'center', padding: '60px 0' }}><Spin size="large" /></div></Card>
       </div>
+      </PageContainer>
     );
   }
 
   if (!hasRuns) {
     return (
-      <div style={{ padding: '0 4px' }}>
+      <PageContainer>
+      <div>
         <PageHeader title="Payroll Reports" />
         <Card>
           <Empty description="No finalized payroll runs found. Finalize a payroll run to generate reports." />
         </Card>
       </div>
+      </PageContainer>
     );
   }
 
   return (
-    <div style={{ padding: '0 4px' }}>
+    <PageContainer>
+    <div>
       <PageHeader
         title="Payroll Reports"
         actions={
@@ -477,6 +483,7 @@ function PayrollReportsPageInner() {
         <Tabs defaultActiveKey="bank-file" items={tabItems} />
       </Card>
     </div>
+    </PageContainer>
   );
 }
 

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Button, Select, message, Tag } from 'antd';
 import { CheckOutlined } from '@ant-design/icons';
 import { PageHeader } from '../../../core/components/PageHeader';
+import { PageContainer } from '../../../core/components/PageContainer';
 import { DataTable } from '../../../core/components/DataTable';
 import { notificationService, Notification } from '../services/notificationService';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -129,7 +130,8 @@ export function NotificationsPage() {
   ];
 
   return (
-    <div style={{ padding: '0 4px' }}>
+    <PageContainer>
+    <div>
       <PageHeader
         title="Notifications"
         subtitle="View all your notifications"
@@ -189,5 +191,6 @@ export function NotificationsPage() {
         }
       />
     </div>
+    </PageContainer>
   );
 }

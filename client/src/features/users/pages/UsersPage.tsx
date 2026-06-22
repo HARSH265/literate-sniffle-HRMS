@@ -4,6 +4,7 @@ import { Button, Input, message, Modal, Form, Select, Tooltip, Popconfirm, Uploa
 import type { ColumnsType } from 'antd/es/table';
 import { PlusOutlined, EditOutlined, SearchOutlined, DownloadOutlined, UploadOutlined, LockOutlined, CheckCircleOutlined, EyeOutlined } from '@ant-design/icons';
 import { PageHeader } from '../../../core/components/PageHeader';
+import { PageContainer } from '../../../core/components/PageContainer';
 import { DataTable } from '../../../core/components/DataTable';
 import { userService, User, CreateUser } from '../services/userService';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -213,7 +214,8 @@ export function UsersPage() {
   ], []);
 
   return (
-    <div style={{ padding: '0 4px' }}>
+    <PageContainer>
+    <div>
       <PageHeader
         title="Users"
         subtitle="Manage system users and their access roles"
@@ -285,5 +287,6 @@ export function UsersPage() {
         </div>
       </Modal>
     </div>
+    </PageContainer>
   );
 }

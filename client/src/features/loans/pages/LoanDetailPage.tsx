@@ -2,6 +2,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Card, Descriptions, Tag, Button, Space, message, Modal, Input, Row, Col, Statistic, Popconfirm } from 'antd';
 import { ArrowLeftOutlined, CheckCircleOutlined, CloseCircleOutlined, DollarOutlined, StopOutlined } from '@ant-design/icons';
 import { PageHeader } from '../../../core/components/PageHeader';
+import { PageContainer } from '../../../core/components/PageContainer';
 import { DataTable } from '../../../core/components/DataTable';
 import { loanService } from '../services/loanService';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -70,7 +71,7 @@ export function LoanDetailPage() {
   ];
 
   return (
-    <div>
+    <PageContainer>
       <PageHeader title="Loan Details" subtitle={`Application #${loan.id?.slice(-6).toUpperCase()}`}
         actions={<Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/loans')}>Back to Loans</Button>} />
 
@@ -131,6 +132,6 @@ export function LoanDetailPage() {
       <Modal title="Disburse Loan" open={disburseModalOpen} onCancel={() => setDisburseModalOpen(false)} onOk={() => disburseMutation.mutate()} okText="Disburse">
         <Input.TextArea rows={2} placeholder="Remarks (optional)" value={remarks} onChange={(e) => setRemarks(e.target.value)} />
       </Modal>
-    </div>
+    </PageContainer>
   );
 }

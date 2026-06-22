@@ -4,6 +4,7 @@ import { Button, message, Popconfirm, Avatar, Tooltip, Select, Input, Upload, Al
 import type { ColumnsType } from 'antd/es/table';
 import { PlusOutlined, EditOutlined, EyeOutlined, SearchOutlined, UserOutlined, DownloadOutlined, UploadOutlined, ReloadOutlined, InboxOutlined } from '@ant-design/icons';
 import { PageHeader } from '../../../core/components/PageHeader';
+import { PageContainer } from '../../../core/components/PageContainer';
 import { DataTable } from '../../../core/components/DataTable';
 import { employeeService, Employee } from '../services/employeeService';
 import { departmentService } from '../../departments/services/departmentService';
@@ -203,6 +204,7 @@ export function EmployeesPage() {
   ], [navigate, handleDelete]);
 
   return (
+    <PageContainer>
     <div className={styles.pageWrap}>
       <PageHeader
         title="Employees"
@@ -301,5 +303,6 @@ export function EmployeesPage() {
         }
       />
     </div>
+    </PageContainer>
   );
 }

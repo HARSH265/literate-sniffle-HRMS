@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Form, Input, Select, Button, message, Card, Row, Col, Spin } from 'antd';
 import { ArrowLeftOutlined, SaveOutlined } from '@ant-design/icons';
 import { PageHeader } from '../../../core/components/PageHeader';
+import { PageContainer } from '../../../core/components/PageContainer';
 import { userService, CreateUser } from '../services/userService';
 import { useQuery, useMutation } from '@tanstack/react-query';
 
@@ -62,7 +63,8 @@ export function UserEditPage() {
   const user = userData.data;
 
   return (
-    <div style={{ padding: '0 4px' }}>
+    <PageContainer>
+    <div>
       <PageHeader 
         title="Edit User" 
         breadcrumbs={[
@@ -121,5 +123,6 @@ export function UserEditPage() {
         </Card>
       </div>
     </div>
+    </PageContainer>
   );
 }

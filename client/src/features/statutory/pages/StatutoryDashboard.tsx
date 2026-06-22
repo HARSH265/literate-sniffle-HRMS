@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { PageHeader } from '../../../core/components/PageHeader';
+import { PageContainer } from '../../../core/components/PageContainer';
 import { DataTable } from '../../../core/components/DataTable';
 import { Row, Col, Card, Statistic, Tag, Button, message, Select, Modal, Form, Descriptions } from 'antd';
 import { BankOutlined, DollarOutlined, SafetyCertificateOutlined, FileTextOutlined, PlusOutlined, EyeOutlined } from '@ant-design/icons';
@@ -91,7 +92,7 @@ export function StatutoryDashboard() {
   ];
 
   return (
-    <div>
+    <PageContainer>
       <PageHeader title="Statutory Compliance" subtitle="PF, ESI & Professional Tax management" />
 
       <Row gutter={16} style={{ marginBottom: 16 }}>
@@ -233,6 +234,6 @@ export function StatutoryDashboard() {
           </pre>
         )}
       </Modal>
-    </div>
+    </PageContainer>
   );
 }

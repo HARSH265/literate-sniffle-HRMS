@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Tag, Button, Select, Input, Typography, Tooltip, Modal, Form, Popconfirm } from 'antd';
 import { PlusOutlined, EyeOutlined, DeleteOutlined, WarningOutlined } from '@ant-design/icons';
 import { PageHeader } from '../../../core/components/PageHeader';
+import { PageContainer } from '../../../core/components/PageContainer';
 import { DataTable } from '../../../core/components/DataTable';
 import { useTickets, useDeleteTicket, useCreateTicket } from '../hooks/useHelpdesk';
 import dayjs from 'dayjs';
@@ -175,7 +176,7 @@ export function HelpdeskPage() {
   ], []);
 
   return (
-    <div style={{ padding: '0 4px' }}>
+    <PageContainer>
       <PageHeader
         title="Help Desk"
         subtitle="Manage support tickets"
@@ -291,6 +292,6 @@ export function HelpdeskPage() {
           </Form>
         </div>
       </Modal>
-    </div>
+    </PageContainer>
   );
 }

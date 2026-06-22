@@ -2,6 +2,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Card, Form, Input, Select, Button, Space, DatePicker, Spin } from 'antd';
 import { ArrowLeftOutlined } from '@ant-design/icons';
 import { PageHeader } from '../../../core/components/PageHeader';
+import { PageContainer } from '../../../core/components/PageContainer';
 import { useCreateAnnouncement, useUpdateAnnouncement, useAnnouncement } from '../hooks/useAnnouncements';
 import dayjs from 'dayjs';
 
@@ -43,7 +44,7 @@ export function AnnouncementFormPage() {
   };
 
   return (
-    <div>
+    <PageContainer>
       <PageHeader
         title={isEdit ? 'Edit Announcement' : 'New Announcement'}
         subtitle={isEdit ? 'Update the announcement details' : 'Create a company-wide announcement'}
@@ -119,6 +120,6 @@ export function AnnouncementFormPage() {
           </Form.Item>
         </Form>
       </Card>
-    </div>
+    </PageContainer>
   );
 }

@@ -2,6 +2,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Card, Spin, Descriptions, Tag, Typography, Button, Space, Divider } from 'antd';
 import { ArrowLeftOutlined, BellOutlined } from '@ant-design/icons';
 import { PageHeader } from '../../../core/components/PageHeader';
+import { PageContainer } from '../../../core/components/PageContainer';
 import { useAnnouncement } from '../hooks/useAnnouncements';
 import dayjs from 'dayjs';
 
@@ -34,7 +35,7 @@ export function AnnouncementDetailPage() {
   }
 
   return (
-    <div>
+    <PageContainer>
       <PageHeader
         title="Announcement Details"
         subtitle={announcement.title}
@@ -81,6 +82,6 @@ export function AnnouncementDetailPage() {
           </Descriptions.Item>
         </Descriptions>
       </Card>
-    </div>
+    </PageContainer>
   );
 }

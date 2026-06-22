@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Select, DatePicker, Space, Tag, Typography, Card, Row, Col, Button, Modal, message, Statistic, Tooltip, Input } from 'antd';
 import { DownloadOutlined, DeleteOutlined, ReloadOutlined, InfoCircleOutlined, SearchOutlined } from '@ant-design/icons';
 import { PageHeader } from '../../../core/components/PageHeader';
+import { PageContainer } from '../../../core/components/PageContainer';
 import { DataTable } from '../../../core/components/DataTable';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { auditService } from '../services/auditService';
@@ -199,7 +200,8 @@ export function AuditLogsPage() {
   };
 
   return (
-    <div style={{ padding: '0 4px' }}>
+    <PageContainer>
+    <div>
       <PageHeader
         title="Audit Logs"
         subtitle="Track all system activities and changes"
@@ -341,5 +343,6 @@ export function AuditLogsPage() {
         </div>
       </Modal>
     </div>
+    </PageContainer>
   );
 }

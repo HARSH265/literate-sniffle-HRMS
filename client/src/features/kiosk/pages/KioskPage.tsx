@@ -3,6 +3,7 @@ import QRCode from 'qrcode-generator';
 import { connectKiosk, disconnectKiosk } from '../../../core/socket/socketClient';
 import apiClient from '../../../core/api/apiClient';
 import { message } from 'antd';
+import { PageContainer } from '../../../core/components/PageContainer';
 
 const POLL_INTERVAL = 30_000;
 
@@ -110,6 +111,7 @@ export function KioskPage() {
   }, []);
 
   return (
+    <PageContainer>
     <div style={{
       width: '100vw', height: '100vh',
       background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
@@ -182,5 +184,6 @@ export function KioskPage() {
         </span>
       </div>
     </div>
+    </PageContainer>
   );
 }

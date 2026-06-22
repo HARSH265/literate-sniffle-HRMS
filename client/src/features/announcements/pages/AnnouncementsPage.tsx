@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Tag, Button, Space, Select, Input, Tooltip, Modal, Form } from 'antd';
 import { PlusOutlined, EyeOutlined, DeleteOutlined, BellOutlined } from '@ant-design/icons';
 import { PageHeader } from '../../../core/components/PageHeader';
+import { PageContainer } from '../../../core/components/PageContainer';
 import { DataTable } from '../../../core/components/DataTable';
 import { useAnnouncements, useDeleteAnnouncement, useCreateAnnouncement } from '../hooks/useAnnouncements';
 import dayjs from 'dayjs';
@@ -105,7 +106,8 @@ export function AnnouncementsPage() {
   ];
 
   return (
-    <div>
+    <PageContainer>
+      <div>
       <PageHeader
         title="Announcements"
         subtitle="Manage company-wide announcements and broadcasts"
@@ -212,5 +214,6 @@ export function AnnouncementsPage() {
         </div>
       </Modal>
     </div>
+    </PageContainer>
   );
 }

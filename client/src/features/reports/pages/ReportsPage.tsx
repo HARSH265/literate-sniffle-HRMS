@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { Tabs } from 'antd';
 import { DownloadOutlined, BarChartOutlined, PieChartOutlined, FilterOutlined } from '@ant-design/icons';
 import { PageHeader } from '../../../core/components/PageHeader';
+import { PageContainer } from '../../../core/components/PageContainer';
 import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { ExportTab, SummaryTab, CustomReportTab, ChartsTab, DrillDownModal } from '../components';
@@ -56,6 +57,7 @@ export function ReportsPage() {
   }, []);
 
   return (
+    <PageContainer>
     <div>
       <PageHeader title="Reports" subtitle="Export data, view interactive charts, and build custom reports" />
       <Tabs activeKey={activeTab} onChange={setActiveTab} items={[
@@ -106,5 +108,6 @@ export function ReportsPage() {
         loading={drillDownLoading}
       />
     </div>
+    </PageContainer>
   );
 }

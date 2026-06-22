@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Button, Modal, Form, Input, InputNumber, Select, Switch, Space, message, Tag, Popconfirm, Row, Col } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { PageHeader } from '../../../core/components/PageHeader';
+import { PageContainer } from '../../../core/components/PageContainer';
 import { DataTable } from '../../../core/components/DataTable';
 import { loanService, LoanType } from '../services/loanService';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -71,7 +72,7 @@ export function LoanTypesPage() {
   ];
 
   return (
-    <div>
+    <PageContainer>
       <PageHeader title="Loan Types" subtitle="Configure loan types and their rules" />
       <DataTable
         dataSource={data?.data?.loanTypes || []}
@@ -156,6 +157,6 @@ export function LoanTypesPage() {
           </Row>
         </Form>
       </Modal>
-    </div>
+    </PageContainer>
   );
 }

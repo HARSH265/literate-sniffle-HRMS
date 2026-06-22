@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Button, Modal, Form, Input, Switch, Tag, message, Spin } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { PageHeader } from '../../../core/components/PageHeader';
+import { PageContainer } from '../../../core/components/PageContainer';
 import { DataTable } from '../../../core/components/DataTable';
 import { salaryStructureTemplateService, SalaryStructureTemplate } from '../services/salaryStructureTemplateService';
 
@@ -72,7 +73,7 @@ export function SalaryStructureTemplatesPage() {
   ];
 
   return (
-    <>
+    <PageContainer>
       <PageHeader title="Salary Structure Templates" actions={<Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditing(null); form.resetFields(); setModalOpen(true); }}>New Template</Button>} />
       <DataTable columns={columns} dataSource={data} rowKey="id" />
       <Modal title={editing ? 'Edit Template' : 'New Template'} open={modalOpen} onOk={form.submit} onCancel={() => { setModalOpen(false); setEditing(null); }}>
@@ -82,6 +83,6 @@ export function SalaryStructureTemplatesPage() {
           <Form.Item name="isActive" label="Active" valuePropName="checked"><Switch /></Form.Item>
         </Form>
       </Modal>
-    </>
+    </PageContainer>
   );
 }

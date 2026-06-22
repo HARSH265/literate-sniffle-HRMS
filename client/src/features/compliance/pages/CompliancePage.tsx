@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card, Row, Col, Statistic, Tag, Spin, message } from 'antd';
 import { CheckCircleOutlined, WarningOutlined, CloseCircleOutlined } from '@ant-design/icons';
 import { PageHeader } from '../../../core/components/PageHeader';
+import { PageContainer } from '../../../core/components/PageContainer';
 import { DataTable } from '../../../core/components/DataTable';
 import { complianceService, ComplianceReport } from '../services/complianceService';
 
@@ -38,7 +39,7 @@ export function CompliancePage() {
   ];
 
   return (
-    <>
+    <PageContainer>
       <PageHeader title="Compliance" />
       <Row gutter={16} style={{ marginBottom: 24 }}>
         <Col span={8}><Card><Statistic title="Passed" value={0} prefix={<CheckCircleOutlined />} valueStyle={{ color: '#3f8600' }} /></Card></Col>
@@ -46,6 +47,6 @@ export function CompliancePage() {
         <Col span={8}><Card><Statistic title="Failures" value={0} prefix={<CloseCircleOutlined />} valueStyle={{ color: '#cf1322' }} /></Card></Col>
       </Row>
       <DataTable columns={columns} dataSource={reports} rowKey="runId" />
-    </>
+    </PageContainer>
   );
 }

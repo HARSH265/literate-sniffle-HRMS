@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Form, Input, Select, Button, message, Card, Row, Col } from 'antd';
 import { ArrowLeftOutlined, SaveOutlined } from '@ant-design/icons';
 import { PageHeader } from '../../../core/components/PageHeader';
+import { PageContainer } from '../../../core/components/PageContainer';
 import { userService, CreateUser } from '../services/userService';
 import { useMutation } from '@tanstack/react-query';
 
@@ -37,7 +38,8 @@ export function UserNewPage() {
   };
 
   return (
-    <div style={{ padding: '0 4px' }}>
+    <PageContainer>
+    <div>
       <PageHeader 
         title="Add User" 
         breadcrumbs={[{ label: 'Users', path: '/users' }, { label: 'New' }]}
@@ -88,5 +90,6 @@ export function UserNewPage() {
         </Card>
       </div>
     </div>
+    </PageContainer>
   );
 }

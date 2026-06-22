@@ -18,6 +18,7 @@ import { overtimeRuleService } from '../../overtime-rules/services/overtimeRuleS
 import { weeklyOffRuleService } from '../../weekly-off-rules/services/weeklyOffRuleService';
 import { holidayService } from '../../holidays/services/holidayService';
 import { PageHeader } from '../../../core/components/PageHeader';
+import { PageContainer } from '../../../core/components/PageContainer';
 import {
   ProfileSection, CompanySection, AuthSection, EmailSection, PayrollSection,
   AttendanceSection, AllowancesSection, OvertimeSection, WeeklyOffSection,
@@ -209,6 +210,7 @@ case 'statutory':
   };
 
   return (
+    <PageContainer>
     <div>
       <PageHeader title="Settings" subtitle="Manage your profile and system configurations" />
 
@@ -287,5 +289,6 @@ case 'statutory':
         holidayCreateMutation={holidayCreateMutation}
       />
     </div>
+    </PageContainer>
   );
 }

@@ -3,6 +3,7 @@ import { Button, Modal, Form, Select, DatePicker, InputNumber, message, Popconfi
 import type { ColumnsType } from 'antd/es/table';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined } from '@ant-design/icons';
 import { PageHeader } from '../../../core/components/PageHeader';
+import { PageContainer } from '../../../core/components/PageContainer';
 import { DataTable } from '../../../core/components/DataTable';
 import { overtimeEntryService, OvertimeEntry, CreateOvertimeEntry } from '../services/overtimeEntryService';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -180,6 +181,7 @@ export function OvertimePage() {
   })) || [];
 
   return (
+    <PageContainer>
     <div>
       <PageHeader
         title="Overtime Entries"
@@ -289,5 +291,6 @@ export function OvertimePage() {
         </Form>
       </Modal>
     </div>
+    </PageContainer>
   );
 }

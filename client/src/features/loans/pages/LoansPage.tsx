@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { Card, Tag, Select, Space, Button, message, Row, Col, Statistic, Popconfirm } from 'antd';
 import { EyeOutlined, PlusOutlined, DollarOutlined } from '@ant-design/icons';
 import { PageHeader } from '../../../core/components/PageHeader';
+import { PageContainer } from '../../../core/components/PageContainer';
 import { DataTable } from '../../../core/components/DataTable';
 import { loanService, Loan } from '../services/loanService';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -58,7 +59,7 @@ export function LoansPage() {
   ], []);
 
   return (
-    <div>
+    <PageContainer>
       <PageHeader title="Loans" subtitle="View and manage loan applications" />
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={6}><Card><Statistic title="Total" value={stats.total} prefix={<DollarOutlined />} /></Card></Col>
@@ -78,6 +79,6 @@ export function LoansPage() {
         }
       />
 
-    </div>
+    </PageContainer>
   );
 }

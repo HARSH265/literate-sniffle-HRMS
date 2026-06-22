@@ -1,5 +1,6 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { Card, Form, Input, Select, Button, Typography } from 'antd';
+import { PageContainer } from '../../../core/components/PageContainer';
 import { ArrowLeftOutlined } from '@ant-design/icons';
 import { useCreateTicket, useTicket, useUpdateTicket } from '../hooks/useHelpdesk';
 
@@ -42,7 +43,7 @@ export function TicketFormPage() {
   }
 
   return (
-    <div style={{ maxWidth: 700, margin: '0 auto', padding: '0 4px' }}>
+    <PageContainer>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
         <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => navigate('/helpdesk')} />
         <Text strong style={{ fontSize: 18 }}>{isEdit ? 'Edit Ticket' : 'New Ticket'}</Text>
@@ -111,6 +112,6 @@ export function TicketFormPage() {
           </div>
         </Form>
       </Card>
-    </div>
+    </PageContainer>
   );
 }
