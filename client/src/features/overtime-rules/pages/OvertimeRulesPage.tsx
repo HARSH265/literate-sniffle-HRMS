@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Button, Modal, Form, Input, Select, InputNumber, message, Popconfirm, Tag, Tooltip, Row, Col, Statistic, Card } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { PlusOutlined, EditOutlined, DeleteOutlined, InfoCircleOutlined } from '@ant-design/icons';
+import { PageContainer } from '../../../core/components/PageContainer';
 import { PageHeader } from '../../../core/components/PageHeader';
 import { DataTable } from '../../../core/components/DataTable';
 import { overtimeRuleService, OvertimeRule, CreateOvertimeRule } from '../services/overtimeRuleService';
@@ -147,7 +148,7 @@ export function OvertimeRulesPage() {
   ];
 
   return (
-    <div style={{ padding: '0 4px' }}>
+    <PageContainer>
       <PageHeader
         title="Overtime Rules"
         subtitle="Configure overtime policies and limits"
@@ -190,7 +191,6 @@ export function OvertimeRulesPage() {
         page={page}
         pageSize={limit}
         onPaginationChange={(p, size) => { setPage(p); setLimit(size ?? 10); }}
-        pageSizeOptions={['10', '20', '50']}
         toolbarRight={
           <span style={{ fontSize: 13, color: 'var(--hrms-text-muted)' }}>
             {data?.meta?.total ?? 0} rules
@@ -239,6 +239,6 @@ export function OvertimeRulesPage() {
           </Row>
         </Form>
       </Modal>
-    </div>
+    </PageContainer>
   );
 }

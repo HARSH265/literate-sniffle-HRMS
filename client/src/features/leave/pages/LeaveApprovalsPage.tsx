@@ -5,6 +5,7 @@ import dayjs from 'dayjs';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { leaveService, LeaveApplication } from '../services/leaveService';
 import { LeaveDetailDrawer } from '../components/LeaveDetailDrawer';
+import { PageContainer } from '../../../core/components/PageContainer';
 import { PageHeader } from '../../../core/components/PageHeader';
 import { DataTable } from '../../../core/components/DataTable';
 import { QUERY_KEYS } from '../../../core/constants/queryKeys';
@@ -111,18 +112,18 @@ export function LeaveApprovalsPage() {
   };
 
   return (
-    <div>
+    <PageContainer>
       <PageHeader title="Leave Approvals" subtitle="Review and manage leave applications" />
 
       <Row gutter={16} style={{ marginBottom: 24 }}>
         <Col span={6}>
-          <Card size="small"><Statistic title="Pending" value={stats.pending} valueStyle={{ color: '#faad14' }} /></Card>
+          <Card size="small"><Statistic title="Pending" value={stats.pending} valueStyle={{ color: 'var(--hrms-warning)' }} /></Card>
         </Col>
         <Col span={6}>
-          <Card size="small"><Statistic title="Approved" value={stats.approved} valueStyle={{ color: '#52c41a' }} /></Card>
+          <Card size="small"><Statistic title="Approved" value={stats.approved} valueStyle={{ color: 'var(--hrms-success)' }} /></Card>
         </Col>
         <Col span={6}>
-          <Card size="small"><Statistic title="Rejected" value={stats.rejected} valueStyle={{ color: '#ff4d4f' }} /></Card>
+          <Card size="small"><Statistic title="Rejected" value={stats.rejected} valueStyle={{ color: 'var(--hrms-danger)' }} /></Card>
         </Col>
         <Col span={6}>
           <Card size="small"><Statistic title="Total" value={(allApps?.data?.length || 0)} /></Card>
@@ -182,6 +183,6 @@ export function LeaveApprovalsPage() {
           onChange={(e) => setRemarks(e.target.value)}
         />
       </Modal>
-    </div>
+    </PageContainer>
   );
 }

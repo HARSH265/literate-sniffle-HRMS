@@ -6,6 +6,7 @@ import dayjs from 'dayjs';
 import { leaveService, LeaveApplication } from '../services/leaveService';
 import { LeaveDetailDrawer } from '../components/LeaveDetailDrawer';
 import { employeeService } from '../../employees/services/employeeService';
+import { PageContainer } from '../../../core/components/PageContainer';
 import { PageHeader } from '../../../core/components/PageHeader';
 import { DataTable } from '../../../core/components/DataTable';
 import { QUERY_KEYS } from '../../../core/constants/queryKeys';
@@ -108,7 +109,7 @@ export function LeaveApplicationsPage() {
   ];
 
   return (
-    <div>
+    <PageContainer>
       <PageHeader
         title="Leave Applications"
         subtitle="View all leave applications"
@@ -191,6 +192,6 @@ export function LeaveApplicationsPage() {
           <p>Are you sure you want to cancel the {selectedApp.leaveType?.name} application for {selectedApp.totalDays} day(s)?</p>
         )}
       </Modal>
-    </div>
+    </PageContainer>
   );
 }

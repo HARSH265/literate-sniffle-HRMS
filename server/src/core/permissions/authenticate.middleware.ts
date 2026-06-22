@@ -4,6 +4,7 @@ import { env } from '../../config/env.js';
 import { AppError } from '../errors/AppError.js';
 import { TokenBlacklist } from '../auth/TokenBlacklist.js';
 import { logger } from '../logger/logger.js';
+import { AUTH_CONSTANTS } from '../../modules/auth/auth.constants.js';
 
 export interface AuthUser {
   id: string;
@@ -27,8 +28,8 @@ export async function authenticate(
   try {
     let token: string | undefined;
 
-    if (req.cookies?.jwt) {
-      token = req.cookies.jwt;
+    if (req.cookies?.[AUTH_CONSTANTS.cookieNames.jwt]) {
+      token = req.cookies[AUTH_CONSTANTS.cookieNames.jwt];
     } else if (req.headers.authorization?.startsWith('Bearer ')) {
       token = req.headers.authorization.split(' ')[1];
     }

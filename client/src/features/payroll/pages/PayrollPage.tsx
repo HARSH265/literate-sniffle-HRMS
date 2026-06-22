@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { PageContainer } from '../../../core/components/PageContainer';
 import { PageHeader } from '../../../core/components/PageHeader';
 import { DataTable } from '../../../core/components/DataTable';
 import { Button, Modal, Form, DatePicker, message, Tag, Popconfirm, Space, Input, Tooltip } from 'antd';
@@ -175,7 +176,7 @@ export function PayrollPage() {
   ];
 
   return (
-    <div style={{ padding: '0 4px' }}>
+    <PageContainer>
       <PageHeader
         title="Payroll"
         subtitle="Process and manage monthly payroll"
@@ -257,6 +258,6 @@ export function PayrollPage() {
           </Form.Item>
         </Form>
       </Modal>
-    </div>
+    </PageContainer>
   );
 }

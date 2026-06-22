@@ -1,16 +1,18 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { PageContainer } from '../../../core/components/PageContainer';
 import { PageHeader } from '../../../core/components/PageHeader';
 import { DataTable } from '../../../core/components/DataTable';
 import { Button, Modal, Form, Input, message, Tag, Card, Row, Col, Statistic, Space, Timeline, Tabs, InputNumber, Tooltip } from 'antd';
-import { CheckCircleOutlined, EditOutlined, UndoOutlined, ArrowLeftOutlined, SendOutlined, StopOutlined, HistoryOutlined, ExperimentOutlined, SaveOutlined, CloseOutlined } from '@ant-design/icons';
-import { payrollService, PayrollItem, PayrollRevision } from '../services/payrollService';
+import { CheckCircleOutlined, EditOutlined, UndoOutlined, ArrowLeftOutlined, SendOutlined, StopOutlined, HistoryOutlined, ExperimentOutlined, SaveOutlined, CloseOutlined, DownloadOutlined, WarningOutlined, InfoCircleOutlined } from '@ant-design/icons';
+import { payrollService, PayrollItem, PayrollRevision, ApprovalHistoryEntry } from '../services/payrollService';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../../core/stores/authStore';
 import { PAYROLL_STATUS_COLORS } from '../../../core/constants/statusColors';
 import { getCurrencySymbol, CURRENCY_MAX_AMOUNT, CURRENCY_PRECISION, formatCurrency } from '../../../core/constants/currency';
 import dayjs from 'dayjs';
 import apiClient from '../../../core/api/apiClient';
+import * as XLSX from 'xlsx';
 
 const STATUS_COLORS: Record<string, string> = PAYROLL_STATUS_COLORS;
 
@@ -27,9 +29,20 @@ export function PayrollDetailsPage() {
   const [batchChanges, setBatchChanges] = useState<Record<string, Record<string, number>>>({});
   const [itemsPage, setItemsPage] = useState(1);
   const [itemsPageSize, setItemsPageSize] = useState(10);
+  const [employeeSearch, setEmployeeSearch] = useState('');
   const [editForm] = Form.useForm();
   const batchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [unfinalizeForm] = Form.useForm();
+  const [isBatchConfirmOpen, setIsBatchConfirmOpen] = useState(false);
+
+  const getStatutoryDeduction = (item: PayrollItem, name: string): number => {
+    const found = item.deductions?.find((d) => d.name.toLowerCase().includes(name.toLowerCase()));
+    return found?.calculatedValue || 0;
+  };
+
+  const totalBatchChanges = useMemo(() => {
+    return Object.values(batchChanges).reduce((sum, changes) => sum + Object.keys(changes).length, 0);
+  }, [batchChanges]);
 
   useEffect(() => {
     return () => {
@@ -113,7 +126,7 @@ export function PayrollDetailsPage() {
       if (!runId) throw new Error('Run ID is missing');
       return payrollService.batchUpdateItems(runId, items);
     },
-    onSuccess: (res) => { message.success(`${res.data.totalEmployees} items updated`); setBatchEditMode(false); setBatchChanges({}); queryClient.invalidateQueries({ queryKey: ['payroll-run-details', id] }); },
+    onSuccess: (res) => { message.success(`${res.data.updated} items updated`); setBatchEditMode(false); setBatchChanges({}); queryClient.invalidateQueries({ queryKey: ['payroll-run-details', id] }); },
     onError: (err: Error) => message.error((err as any)?.response?.data?.message || 'Failed to batch update'),
   });
 
@@ -191,22 +204,99 @@ export function PayrollDetailsPage() {
     } catch { message.error('Failed to download salary slip'); }
   };
 
+  const handleExportItems = () => {
+    const items = filteredItems;
+    if (!items.length) { message.warning('No items to export'); return; }
+    const data = items.map((item) => ({
+      'Employee Name': item.employee.name,
+      'Employee Code': item.employee.code,
+      'Total Days': item.totalDays,
+      'Present Days': item.presentDays,
+      'Absent Days': item.absentDays,
+      'Half Days': item.halfDays,
+      'Paid Leave': item.paidLeaveDays,
+      'Unpaid Leave': item.unpaidLeaveDays,
+      'Weekly Offs': item.weeklyOffs,
+      'Holidays': item.holidays,
+      'Effective Working Days': item.effectiveWorkingDays,
+      'OT Hours': item.overtimeHours,
+      'Basic Earnings': item.basicEarnings,
+      'Allowances': item.allowancesTotal,
+      'OT Pay': item.overtimeAmount,
+      'Gross Earnings': item.grossEarnings,
+      'PF': getStatutoryDeduction(item, 'pf'),
+      'ESI': getStatutoryDeduction(item, 'esi'),
+      'PT': getStatutoryDeduction(item, 'pt'),
+      'Total Deductions': item.totalDeductions,
+      'Arrears': item.arrears?.reduce((sum, a) => sum + a.effectiveArrearAmount, 0) || 0,
+      'Net Pay': item.netPay,
+    }));
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Payroll Items');
+    XLSX.writeFile(wb, `payroll_items_${run?.month || 'export'}.xlsx`);
+    message.success('Exported to Excel');
+  };
+
   const run = runData?.data;
   const canEdit = run?.status === 'draft';
+  const filteredItems = useMemo(() => {
+    const items = run?.items || [];
+    if (!employeeSearch.trim()) return items;
+    const q = employeeSearch.toLowerCase();
+    return items.filter((item) =>
+      item.employee.name.toLowerCase().includes(q) || item.employee.code.toLowerCase().includes(q),
+    );
+  }, [run?.items, employeeSearch]);
 
   const detailColumns = useMemo(() => [
-    { title: 'Employee', key: 'employee', width: 180, render: (_: unknown, r: PayrollItem) => <div><div style={{ fontWeight: 500 }}>{r.employee.name}</div><div style={{ fontSize: 11, color: '#888' }}>{r.employee.code}</div></div> },
+    {
+      title: 'Employee', key: 'employee', width: 200,
+      render: (_: unknown, r: PayrollItem) => {
+        const hasComplianceIssues = r.complianceFlags?.some((f) => f.status === 'fail');
+        const complianceWarnings = r.complianceFlags?.filter((f) => f.status === 'warning') || [];
+        return (
+          <div>
+            <div style={{ fontWeight: 500 }}>{r.employee.name}</div>
+            <div style={{ fontSize: 11, color: '#888' }}>{r.employee.code}</div>
+            {r.proRataDetails?.isJoiner && <div style={{ fontSize: 11, color: '#1890ff' }}>Joined {dayjs(r.proRataDetails.joinDate).format('DD-MMM')} • {r.proRataDetails.daysWorked}d paid</div>}
+            {r.proRataDetails?.isLeaver && <div style={{ fontSize: 11, color: '#faad14' }}>Left {dayjs(r.proRataDetails.leaveDate).format('DD-MMM')} • {r.proRataDetails.daysWorked}d paid</div>}
+            {hasComplianceIssues && <Tooltip title={r.complianceFlags?.filter((f) => f.status === 'fail').map((f) => `${f.check}: ${f.notes || 'gap ' + f.gap}`).join('\n')}><Tag color="error" style={{ fontSize: 10, marginTop: 2 }}><WarningOutlined /> Compliance</Tag></Tooltip>}
+            {complianceWarnings.length > 0 && <Tooltip title={complianceWarnings.map((f) => `${f.check}: ${f.notes || 'gap ' + f.gap}`).join('\n')}><Tag color="warning" style={{ fontSize: 10, marginTop: 2 }}><InfoCircleOutlined /> Warning</Tag></Tooltip>}
+          </div>
+        );
+      },
+    },
     { title: 'Present', dataIndex: 'presentDays', key: 'presentDays', width: 68, render: (v: number, r: PayrollItem) => batchEditMode && canEdit ? <InputNumber size="small" style={{ width: 60 }} value={batchChanges[r.id]?.presentDays ?? v} onChange={(val) => handleBatchChange(r.id, 'presentDays', val ?? v)} /> : v },
     { title: 'Absent', dataIndex: 'absentDays', key: 'absentDays', width: 60, render: (v: number, r: PayrollItem) => batchEditMode && canEdit ? <InputNumber size="small" style={{ width: 60 }} value={batchChanges[r.id]?.absentDays ?? v} onChange={(val) => handleBatchChange(r.id, 'absentDays', val ?? v)} /> : v },
     { title: 'Half', dataIndex: 'halfDays', key: 'halfDays', width: 50, render: (v: number, r: PayrollItem) => batchEditMode && canEdit ? <InputNumber size="small" style={{ width: 60 }} value={batchChanges[r.id]?.halfDays ?? v} onChange={(val) => handleBatchChange(r.id, 'halfDays', val ?? v)} /> : v },
     { title: 'Paid Lv', dataIndex: 'paidLeaveDays', key: 'paidLeaveDays', width: 60, render: (v: number) => <Tag color="green">{v}</Tag> },
     { title: 'Unpd Lv', dataIndex: 'unpaidLeaveDays', key: 'unpaidLeaveDays', width: 60, render: (v: number) => <Tag color="red">{v}</Tag> },
+    { title: 'PF', key: 'pf', width: 70, render: (_: unknown, r: PayrollItem) => { const v = getStatutoryDeduction(r, 'pf'); return v > 0 ? formatCurrency(v) : '-'; } },
+    { title: 'ESI', key: 'esi', width: 70, render: (_: unknown, r: PayrollItem) => { const v = getStatutoryDeduction(r, 'esi'); return v > 0 ? formatCurrency(v) : '-'; } },
+    { title: 'PT', key: 'pt', width: 60, render: (_: unknown, r: PayrollItem) => { const v = getStatutoryDeduction(r, 'pt'); return v > 0 ? formatCurrency(v) : '-'; } },
     { title: 'OT Hrs', dataIndex: 'overtimeHours', key: 'overtimeHours', width: 60 },
     { title: 'Basic', dataIndex: 'basicEarnings', key: 'basicEarnings', width: 100, render: (v: number, r: PayrollItem) => batchEditMode && canEdit ? <InputNumber size="small" style={{ width: 90 }} prefix={getCurrencySymbol()} value={batchChanges[r.id]?.basicEarnings ?? v} onChange={(val) => handleBatchChange(r.id, 'basicEarnings', val ?? v)} /> : formatCurrency(v) },
     { title: 'Allow', dataIndex: 'allowancesTotal', key: 'allowancesTotal', width: 80, render: (v: number) => formatCurrency(v) },
     { title: 'OT Pay', dataIndex: 'overtimeAmount', key: 'overtimeAmount', width: 80, render: (v: number, r: PayrollItem) => batchEditMode && canEdit ? <InputNumber size="small" style={{ width: 80 }} prefix={getCurrencySymbol()} value={batchChanges[r.id]?.overtimeAmount ?? v} onChange={(val) => handleBatchChange(r.id, 'overtimeAmount', val ?? v)} /> : formatCurrency(v) },
     { title: 'Dedn', dataIndex: 'totalDeductions', key: 'totalDeductions', width: 80, render: (v: number, r: PayrollItem) => batchEditMode && canEdit ? <InputNumber size="small" style={{ width: 80 }} prefix={getCurrencySymbol()} value={batchChanges[r.id]?.totalDeductions ?? v} onChange={(val) => handleBatchChange(r.id, 'totalDeductions', val ?? v)} /> : formatCurrency(v) },
     { title: 'Net Pay', dataIndex: 'netPay', key: 'netPay', width: 110, render: (v: number, r: PayrollItem) => batchEditMode && canEdit ? <InputNumber size="small" style={{ width: 100, fontWeight: 600 }} prefix={getCurrencySymbol()} value={batchChanges[r.id]?.netPay ?? v} onChange={(val) => handleBatchChange(r.id, 'netPay', val ?? v)} /> : <span style={{ fontWeight: 600, color: 'var(--hrms-success)' }}>{formatCurrency(v)}</span> },
+    {
+      title: 'Arrears', key: 'arrears', width: 100,
+      render: (_: unknown, r: PayrollItem) => {
+        if (!r.arrears || r.arrears.length === 0) return <span style={{ color: '#bbb' }}>—</span>;
+        const totalArrear = r.arrears.reduce((sum, a) => sum + a.effectiveArrearAmount, 0);
+        if (totalArrear === 0) return <span style={{ color: '#bbb' }}>—</span>;
+        const tooltipContent = r.arrears.map((a) => `${a.component.name}: ${a.isPositive ? '+' : ''}${formatCurrency(a.effectiveArrearAmount)} (${a.applicableArrearDays}d)`).join('\n');
+        return (
+          <Tooltip title={<pre style={{ margin: 0, fontSize: 12 }}>{tooltipContent}</pre>}>
+            <span style={{ color: totalArrear > 0 ? 'var(--hrms-success)' : 'var(--hrms-danger)', cursor: 'pointer' }}>
+              {totalArrear > 0 ? '+' : ''}{formatCurrency(totalArrear)}
+            </span>
+          </Tooltip>
+        );
+      },
+    },
     {
       title: 'Actions', key: 'actions', width: 120,
       render: (_: unknown, r: PayrollItem) => (
@@ -220,18 +310,18 @@ export function PayrollDetailsPage() {
 
   if (!run && !isLoading) {
     return (
-      <div style={{ padding: '0 4px' }}>
+      <PageContainer>
         <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/payroll')}>Back to Payroll</Button>
         <Card style={{ marginTop: 20, textAlign: 'center', padding: '40px 0' }}>
           <div style={{ fontSize: 16, color: 'rgba(0,0,0,0.45)', marginBottom: 8 }}>Payroll run not found</div>
           <div style={{ fontSize: 13, color: 'rgba(0,0,0,0.25)' }}>The payroll run may have been deleted or you don't have access.</div>
         </Card>
-      </div>
+      </PageContainer>
     );
   }
 
   return (
-    <div style={{ padding: '0 4px' }}>
+    <PageContainer>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/payroll')}>Back to Payroll</Button>
         <Space>
@@ -239,21 +329,29 @@ export function PayrollDetailsPage() {
             <>
               <Button type="primary" icon={<SendOutlined />} onClick={() => submitMutation.mutate()} loading={submitMutation.isPending}>Submit</Button>
               <Button icon={<ExperimentOutlined />} onClick={() => setBatchEditMode(!batchEditMode)}>{batchEditMode ? 'Exit Batch' : 'Batch Edit'}</Button>
+              <Button icon={<DownloadOutlined />} onClick={handleExportItems}>Export</Button>
             </>
           )}
           {canProcessPayroll && run?.status === 'submitted' && (
             <>
               <Button type="primary" icon={<CheckCircleOutlined />} onClick={() => approveMutation.mutate()} loading={approveMutation.isPending}>Approve</Button>
               <Button danger icon={<StopOutlined />} onClick={() => rejectMutation.mutate()} loading={rejectMutation.isPending}>Reject</Button>
+              <Button icon={<DownloadOutlined />} onClick={handleExportItems}>Export</Button>
             </>
           )}
           {canProcessPayroll && run?.status === 'approved' && (
-            <Button type="primary" icon={<CheckCircleOutlined />} onClick={() => finalizeMutation.mutate(undefined)} loading={finalizeMutation.isPending}>Finalize</Button>
+            <>
+              <Button type="primary" icon={<CheckCircleOutlined />} onClick={() => finalizeMutation.mutate(undefined)} loading={finalizeMutation.isPending}>Finalize</Button>
+              <Button icon={<DownloadOutlined />} onClick={handleExportItems}>Export</Button>
+            </>
           )}
           {canProcessPayroll && run?.status === 'finalized' && (
-            <Tooltip title={run?.unfinalizeLocked ? `Unfinalize window of ${run.unfinalizeWindowDays} days has expired (finalized on ${dayjs(run.finalizedAt).format('DD-MMM-YYYY')})` : 'Revert payroll to draft for edits'}>
-              <Button icon={<UndoOutlined />} disabled={run?.unfinalizeLocked} onClick={() => setIsUnfinalizeModalOpen(true)} loading={unfinalizeMutation.isPending}>Unfinalize</Button>
-            </Tooltip>
+            <>
+              <Tooltip title={run?.unfinalizeLocked ? `Unfinalize window of ${run.unfinalizeWindowDays} days has expired (finalized on ${dayjs(run.finalizedAt).format('DD-MMM-YYYY')})` : 'Revert payroll to draft for edits'}>
+                <Button icon={<UndoOutlined />} disabled={run?.unfinalizeLocked} onClick={() => setIsUnfinalizeModalOpen(true)} loading={unfinalizeMutation.isPending}>Unfinalize</Button>
+              </Tooltip>
+              <Button icon={<DownloadOutlined />} onClick={handleExportItems}>Export</Button>
+            </>
           )}
         </Space>
       </div>
@@ -262,7 +360,8 @@ export function PayrollDetailsPage() {
         <Card size="small" style={{ marginBottom: 16, background: '#fffbe6', borderColor: '#ffe58f' }}>
           <Space>
             <span style={{ fontWeight: 500 }}>Batch Edit Mode — Click into any editable cell to change values</span>
-            <Button type="primary" size="small" icon={<SaveOutlined />} onClick={handleBatchSave} loading={batchMutation.isPending}>Save All Changes</Button>
+            {totalBatchChanges > 0 && <Tag color="blue">{totalBatchChanges} change{totalBatchChanges !== 1 ? 's' : ''} pending</Tag>}
+            <Button type="primary" size="small" icon={<SaveOutlined />} onClick={() => setIsBatchConfirmOpen(true)} loading={batchMutation.isPending} disabled={totalBatchChanges === 0}>Save All Changes</Button>
             <Button size="small" icon={<CloseOutlined />} onClick={() => { setBatchEditMode(false); setBatchChanges({}); }}>Cancel</Button>
           </Space>
         </Card>
@@ -282,19 +381,28 @@ export function PayrollDetailsPage() {
             key: 'items',
             label: 'Payroll Items',
             children: (
-              <DataTable
-                columns={detailColumns}
-                dataSource={run?.items || []}
-                rowKey="id"
-                loading={isLoading}
-                page={itemsPage}
-                pageSize={itemsPageSize}
-                total={run?.items?.length || 0}
-                onPaginationChange={(page, pageSize) => { setItemsPage(page); setItemsPageSize(pageSize); }}
-                pageSizeOptions={['10', '25', '50', '100']}
-                noCard
-                scroll={{ x: 1400 }}
-              />
+              <>
+                <Input.Search
+                  placeholder="Search by employee name or code"
+                  allowClear
+                  value={employeeSearch}
+                  onChange={(e) => { setEmployeeSearch(e.target.value); setItemsPage(1); }}
+                  style={{ marginBottom: 12, maxWidth: 300 }}
+                />
+                <DataTable
+                  columns={detailColumns}
+                  dataSource={filteredItems}
+                  rowKey="id"
+                  loading={isLoading}
+                  page={itemsPage}
+                  pageSize={itemsPageSize}
+                  total={filteredItems.length}
+                  onPaginationChange={(page, pageSize) => { setItemsPage(page); setItemsPageSize(pageSize); }}
+                  pageSizeOptions={['10', '25', '50', '100']}
+                  noCard
+                  scroll={{ x: 1400 }}
+                />
+              </>
             ),
           },
           {
@@ -305,6 +413,127 @@ export function PayrollDetailsPage() {
                 children: <div><strong>{rev.userName}</strong> — {rev.action} <span style={{ color: '#888', fontSize: 12 }}>{dayjs(rev.timestamp).format('DD-MMM-YYYY HH:mm')}</span></div>,
               }))} />
             ) : <div style={{ padding: 24, textAlign: 'center', color: '#888' }}>No revisions yet</div>,
+          },
+          {
+            key: 'approval',
+            label: <span><CheckCircleOutlined /> Approval History</span>,
+            children: run?.approvalHistory && run.approvalHistory.length > 0 ? (
+              <Timeline items={run.approvalHistory.map((entry: ApprovalHistoryEntry) => ({
+                color: entry.action === 'approved' ? 'green' : entry.action === 'rejected' ? 'red' : entry.action === 'finalized' ? 'blue' : 'gray',
+                children: (
+                  <div>
+                    <strong>{entry.userName}</strong> <Tag color={entry.action === 'approved' ? 'green' : entry.action === 'rejected' ? 'red' : entry.action === 'finalized' ? 'blue' : 'default'}>{entry.action}</Tag>
+                    <span style={{ color: '#888', fontSize: 12 }}>as {entry.role}</span>
+                    <div style={{ fontSize: 12, color: '#888' }}>{dayjs(entry.timestamp).format('DD-MMM-YYYY HH:mm')}{entry.ipAddress ? ` • IP: ${entry.ipAddress}` : ''}</div>
+                    {entry.comments && <div style={{ marginTop: 4, padding: '4px 8px', background: '#f5f5f5', borderRadius: 4, fontSize: 13 }}>{entry.comments}</div>}
+                  </div>
+                ),
+              }))} />
+            ) : <div style={{ padding: 24, textAlign: 'center', color: '#888' }}>No approval history yet</div>,
+          },
+          {
+            key: 'tax',
+            label: 'Tax Breakdown',
+            children: (() => {
+              const itemsWithTax = (run?.items || []).filter((item: PayrollItem) => item.taxComputation);
+              if (itemsWithTax.length === 0) return <div style={{ padding: 24, textAlign: 'center', color: '#888' }}>No tax data available</div>;
+              return (
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                    <thead>
+                      <tr style={{ borderBottom: '2px solid #f0f0f0', textAlign: 'left' }}>
+                        <th style={{ padding: '8px 12px' }}>Employee</th>
+                        <th style={{ padding: '8px 12px' }}>Regime</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'right' }}>Annual Gross</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'right' }}>Exemptions</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'right' }}>Taxable Income</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'right' }}>Tax</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'right' }}>Surcharge</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'right' }}>Cess</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'right' }}>Rebate 87A</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'right' }}>Monthly TDS</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {itemsWithTax.map((item: PayrollItem) => {
+                        const t = item.taxComputation!;
+                        return (
+                          <tr key={item.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
+                            <td style={{ padding: '8px 12px' }}>{item.employee.name}<br/><span style={{ fontSize: 11, color: '#888' }}>{item.employee.code}</span></td>
+                            <td style={{ padding: '8px 12px' }}><Tag>{t.taxRegime}</Tag></td>
+                            <td style={{ padding: '8px 12px', textAlign: 'right' }}>{formatCurrency(t.projectedAnnualGross)}</td>
+                            <td style={{ padding: '8px 12px', textAlign: 'right' }}>{formatCurrency(t.projectedAnnualDeductions)}</td>
+                            <td style={{ padding: '8px 12px', textAlign: 'right' }}>{formatCurrency(t.projectedTaxableIncome)}</td>
+                            <td style={{ padding: '8px 12px', textAlign: 'right' }}>{formatCurrency(t.annualTaxAmount)}</td>
+                            <td style={{ padding: '8px 12px', textAlign: 'right' }}>{formatCurrency(t.surcharge)}</td>
+                            <td style={{ padding: '8px 12px', textAlign: 'right' }}>{formatCurrency(t.educationCess)}</td>
+                            <td style={{ padding: '8px 12px', textAlign: 'right' }}>{t.rebate87a > 0 ? formatCurrency(t.rebate87a) : '-'}</td>
+                            <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 600 }}>{formatCurrency(t.monthlyTds)}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })(),
+          },
+          {
+            key: 'mom',
+            label: 'Month-over-Month',
+            children: (() => {
+              const itemsWithComparison = (run?.items || []).filter((item: PayrollItem) => item.previousMonthComparison);
+              if (itemsWithComparison.length === 0) return <div style={{ padding: 24, textAlign: 'center', color: '#888' }}>No previous month data available for comparison</div>;
+              const prevMonthLabel = itemsWithComparison[0]?.previousMonthComparison?.previousMonth || '';
+              const totalCurrentNet = itemsWithComparison.reduce((s: number, i: PayrollItem) => s + i.netPay, 0);
+              const totalPrevNet = itemsWithComparison.reduce((s: number, i: PayrollItem) => s + (i.previousMonthComparison?.previousNetPay || 0), 0);
+              const totalVariance = totalCurrentNet - totalPrevNet;
+              const totalVariancePct = totalPrevNet !== 0 ? Math.round((totalVariance / totalPrevNet) * 100 * 100) / 100 : 0;
+              return (
+                <>
+                  <Row gutter={16} style={{ marginBottom: 16 }}>
+                    <Col span={8}><Card size="small"><Statistic title={`Net Pay (${dayjs(run?.month + '-01').format('MMM YYYY')})`} value={totalCurrentNet} prefix={getCurrencySymbol()} /></Card></Col>
+                    <Col span={8}><Card size="small"><Statistic title={`Net Pay (${prevMonthLabel})`} value={totalPrevNet} prefix={getCurrencySymbol()} /></Card></Col>
+                    <Col span={8}><Card size="small"><Statistic title="Variance" value={totalVariance} prefix={getCurrencySymbol()} suffix={totalVariancePct !== 0 ? `${totalVariancePct > 0 ? '+' : ''}${totalVariancePct}%` : ''} valueStyle={{ color: totalVariance > 0 ? 'var(--hrms-success)' : totalVariance < 0 ? 'var(--hrms-danger)' : undefined }} /></Card></Col>
+                  </Row>
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                      <thead>
+                        <tr style={{ borderBottom: '2px solid #f0f0f0', textAlign: 'left' }}>
+                          <th style={{ padding: '8px 12px' }}>Employee</th>
+                          <th style={{ padding: '8px 12px', textAlign: 'right' }}>Current Gross</th>
+                          <th style={{ padding: '8px 12px', textAlign: 'right' }}>Prev Gross</th>
+                          <th style={{ padding: '8px 12px', textAlign: 'right' }}>Gross Δ</th>
+                          <th style={{ padding: '8px 12px', textAlign: 'right' }}>Current Net</th>
+                          <th style={{ padding: '8px 12px', textAlign: 'right' }}>Prev Net</th>
+                          <th style={{ padding: '8px 12px', textAlign: 'right' }}>Net Δ</th>
+                          <th style={{ padding: '8px 12px', textAlign: 'right' }}>Net Δ%</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {itemsWithComparison.map((item: PayrollItem) => {
+                          const c = item.previousMonthComparison!;
+                          const grossDelta = c.grossPayVariance;
+                          const netDelta = c.netPayVariance;
+                          return (
+                            <tr key={item.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
+                              <td style={{ padding: '8px 12px' }}>{item.employee.name}<br/><span style={{ fontSize: 11, color: '#888' }}>{item.employee.code}</span></td>
+                              <td style={{ padding: '8px 12px', textAlign: 'right' }}>{formatCurrency(item.grossEarnings)}</td>
+                              <td style={{ padding: '8px 12px', textAlign: 'right' }}>{formatCurrency(c.previousGrossPay)}</td>
+                              <td style={{ padding: '8px 12px', textAlign: 'right', color: grossDelta > 0 ? 'var(--hrms-success)' : grossDelta < 0 ? 'var(--hrms-danger)' : undefined }}>{grossDelta !== 0 ? `${grossDelta > 0 ? '+' : ''}${formatCurrency(grossDelta)}` : '—'}</td>
+                              <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 600 }}>{formatCurrency(item.netPay)}</td>
+                              <td style={{ padding: '8px 12px', textAlign: 'right' }}>{formatCurrency(c.previousNetPay)}</td>
+                              <td style={{ padding: '8px 12px', textAlign: 'right', color: netDelta > 0 ? 'var(--hrms-success)' : netDelta < 0 ? 'var(--hrms-danger)' : undefined, fontWeight: 600 }}>{netDelta !== 0 ? `${netDelta > 0 ? '+' : ''}${formatCurrency(netDelta)}` : '—'}</td>
+                              <td style={{ padding: '8px 12px', textAlign: 'right', color: c.variancePercent > 0 ? 'var(--hrms-success)' : c.variancePercent < 0 ? 'var(--hrms-danger)' : undefined }}>{c.variancePercent !== 0 ? `${c.variancePercent > 0 ? '+' : ''}${c.variancePercent}%` : '—'}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              );
+            })(),
           },
         ]} />
       </Card>
@@ -339,6 +568,18 @@ export function PayrollDetailsPage() {
           </Form.Item>
         </Form>
       </Modal>
-    </div>
+
+      <Modal
+        title="Confirm Batch Update"
+        open={isBatchConfirmOpen}
+        onOk={() => { setIsBatchConfirmOpen(false); handleBatchSave(); }}
+        onCancel={() => setIsBatchConfirmOpen(false)}
+        confirmLoading={batchMutation.isPending}
+        okText={`Save ${totalBatchChanges} Change${totalBatchChanges !== 1 ? 's' : ''}`}
+      >
+        <p>You are about to update <strong>{totalBatchChanges}</strong> field{totalBatchChanges !== 1 ? 's' : ''} across <strong>{Object.keys(batchChanges).filter((k) => Object.keys(batchChanges[k]).length > 0).length}</strong> employee(s).</p>
+        <p style={{ color: '#888', fontSize: 13 }}>This action will recalculate gross earnings and net pay for affected items.</p>
+      </Modal>
+    </PageContainer>
   );
 }

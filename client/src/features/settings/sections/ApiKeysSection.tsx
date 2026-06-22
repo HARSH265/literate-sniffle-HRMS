@@ -220,7 +220,7 @@ export function ApiKeysSection() {
         loading={isLoading}
         pagination={{
           current: page,
-          pageSize: 20,
+          pageSize: 10,
           total: data?.meta?.total || 0,
           onChange: (p) => setPage(p),
           showSizeChanger: false,

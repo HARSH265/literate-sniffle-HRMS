@@ -4,6 +4,7 @@ export interface TaxInput {
   ytdTdsDeducted: number;
   monthsRemaining: number;
   regime: 'old' | 'new';
+  employeeAge?: number;
   declaration: {
     section80C: number;
     section80CCD1B: number;
@@ -62,11 +63,19 @@ function computeTaxBySlabs(income: number, slabs: { max: number; rate: number }[
   return tax;
 }
 
-function computeSurcharge(income: number, tax: number): number {
-  if (income > 50000000) return tax * 0.25;
-  if (income > 20000000) return tax * 0.15;
-  if (income > 10000000) return tax * 0.10;
-  if (income > 5000000) return tax * 0.10;
+function computeSurcharge(income: number, tax: number, regime: 'old' | 'new'): number {
+  if (regime === 'old') {
+    // Old regime: 37% surcharge for >₹5Cr
+    if (income > 50000000) return tax * 0.37;
+    if (income > 20000000) return tax * 0.25;
+    if (income > 10000000) return tax * 0.15;
+    if (income > 5000000) return tax * 0.10;
+  } else {
+    // New regime: max 25% surcharge
+    if (income > 20000000) return tax * 0.25;
+    if (income > 10000000) return tax * 0.15;
+    if (income > 5000000) return tax * 0.10;
+  }
   return 0;
 }
 
@@ -79,7 +88,8 @@ export function computeTax(input: TaxInput): TaxResult {
   if (input.regime === 'old') {
     const sec80c = Math.min(input.declaration.section80C, 150000);
     const sec80ccd1b = Math.min(input.declaration.section80CCD1B, 50000);
-    const sec80d = Math.min(input.declaration.section80D, 25000);
+    const sec80dCap = (input.employeeAge && input.employeeAge >= 60) ? 50000 : 25000;
+    const sec80d = Math.min(input.declaration.section80D, sec80dCap);
     const sec80e = input.declaration.section80E;
     const sec24b = Math.min(input.declaration.section24b, 200000);
 
@@ -101,7 +111,7 @@ export function computeTax(input: TaxInput): TaxResult {
   let annualTaxAmount = computeTaxBySlabs(projectedTaxableIncome, slabs);
   annualTaxAmount = Math.round(annualTaxAmount);
 
-  const surcharge = Math.round(computeSurcharge(projectedTaxableIncome, annualTaxAmount));
+  const surcharge = Math.round(computeSurcharge(projectedTaxableIncome, annualTaxAmount, input.regime));
 
   const incomeAfterSurcharge = annualTaxAmount + surcharge;
   const educationCess = Math.round(incomeAfterSurcharge * 0.04);

@@ -25,14 +25,14 @@ export function LoginPage() {
 
       // Fetch effective permissions for the user's role
       try {
-        const permRes = await apiClient.get(API_ENDPOINTS.permissions.role(user.role));
-        const roleData = permRes.data.data;
-        if (roleData?.permissions) {
+        const permRes = await apiClient.get(API_ENDPOINTS.auth.permissions);
+        const { permissions: effectivePerms } = permRes.data.data;
+        if (effectivePerms) {
           const { setPermissions } = useAuthStore.getState();
-          setPermissions(roleData.permissions);
+          setPermissions(effectivePerms);
         }
       } catch {
-        // Permission fetch failed — will use static defaults
+        message.warning('Failed to load permissions, using defaults');
       }
 
       message.success('Welcome back! Login successful.');
@@ -164,10 +164,12 @@ const inputStyle: React.CSSProperties = {
   fontSize: 14,
 };
 
-function LoginForm({ onSubmit, loading }: { onSubmit: (v: any) => void; loading: boolean }) {
+function LoginForm({ onSubmit, loading }: { onSubmit: (v: { email: string; password: string }) => void; loading: boolean }) {
+  const isDemo = import.meta.env.VITE_DEMO_MODE === 'true';
+
   return (
     <>
-      <Form layout="vertical" onFinish={onSubmit} size="large" requiredMark={false}>
+      <Form layout="vertical" onFinish={onSubmit} size="large" requiredMark={false} aria-label="Login form">
       <Form.Item
         name="email"
         label={<span style={{ fontWeight: 500, fontSize: 13, color: 'var(--hrms-text-primary)' }}>Email address</span>}
@@ -177,6 +179,8 @@ function LoginForm({ onSubmit, loading }: { onSubmit: (v: any) => void; loading:
         <Input
           placeholder="admin@hrms.com"
           style={inputStyle}
+          aria-label="Email address"
+          autoComplete="email"
           prefix={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2" /><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" /></svg>}
         />
       </Form.Item>
@@ -189,6 +193,8 @@ function LoginForm({ onSubmit, loading }: { onSubmit: (v: any) => void; loading:
         <Input.Password
           placeholder="Enter your password"
           style={inputStyle}
+          aria-label="Password"
+          autoComplete="current-password"
           prefix={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>}
         />
       </Form.Item>
@@ -198,6 +204,7 @@ function LoginForm({ onSubmit, loading }: { onSubmit: (v: any) => void; loading:
           htmlType="submit"
           block
           loading={loading}
+          aria-label="Sign in"
           style={{
             height: 48,
             fontSize: 14,
@@ -215,6 +222,26 @@ function LoginForm({ onSubmit, loading }: { onSubmit: (v: any) => void; loading:
       <div style={{ textAlign: 'right', marginBottom: 16 }}>
         <a href="/forgot-password" style={{ fontSize: 13, color: 'var(--hrms-primary)' }}>Forgot password?</a>
       </div>
+
+      {isDemo && (
+        <div
+          role="region"
+          aria-label="Demo credentials"
+          style={{
+            marginTop: 16,
+            padding: '12px 16px',
+            borderRadius: 8,
+            background: '#f0f5ff',
+            border: '1px solid #d6e4ff',
+            fontSize: 13,
+          }}
+        >
+          <div style={{ fontWeight: 600, color: '#1d39c4', marginBottom: 4 }}>Demo credentials</div>
+          <div style={{ color: '#595959' }}>
+            <code>admin@hrms.com</code> / <code>Admin@1234</code>
+          </div>
+        </div>
+      )}
     </>
   );
 }

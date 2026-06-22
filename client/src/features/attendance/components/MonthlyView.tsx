@@ -1,7 +1,8 @@
 import { memo, useMemo } from 'react';
-import { Button, Table, Badge } from 'antd';
+import { Button, Card, Badge } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { LeftOutlined, RightOutlined } from '@ant-design/icons';
+import { DataTable } from '../../../core/components/DataTable';
 import { MonthlyAttendanceView } from '../services/attendanceService';
 import dayjs from 'dayjs';
 
@@ -45,7 +46,7 @@ export const MonthlyView = memo(function MonthlyView({ selectedMonth, monthlyDat
       align: 'center' as const,
       render: (_: unknown, record: MonthlyAttendanceView) => {
         const dayData = record.days?.[day];
-        if (!dayData) return <span style={{ color: '#ccc' }}>-</span>;
+        if (!dayData) return <span style={{ color: 'var(--hrms-text-muted)' }}>-</span>;
         return (
           <Badge
             color={STATUS_COLORS[dayData.status] || 'default'}
@@ -58,39 +59,27 @@ export const MonthlyView = memo(function MonthlyView({ selectedMonth, monthlyDat
   ], [dayHeaders]);
 
   return (
-    <div className="hrms-table-card">
-      <div className="hrms-table-toolbar">
-        <div className="hrms-table-toolbar-left" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <Button
-            icon={<LeftOutlined />}
-            size="small"
-            onClick={() => onMonthChange(selectedMonth.subtract(1, 'month'))}
-          />
+    <Card
+      title={
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <Button icon={<LeftOutlined />} size="small" onClick={() => onMonthChange(selectedMonth.subtract(1, 'month'))} />
           <span style={{ fontWeight: 600, minWidth: 120, textAlign: 'center' }}>
             {selectedMonth.format('MMMM YYYY')}
           </span>
-          <Button
-            icon={<RightOutlined />}
-            size="small"
-            onClick={() => onMonthChange(selectedMonth.add(1, 'month'))}
-            disabled={selectedMonth.isAfter(dayjs(), 'month')}
-          />
+          <Button icon={<RightOutlined />} size="small" onClick={() => onMonthChange(selectedMonth.add(1, 'month'))} disabled={selectedMonth.isAfter(dayjs(), 'month')} />
         </div>
-        <div className="hrms-table-toolbar-right">
-          <span style={{ fontSize: 13, color: 'var(--hrms-text-muted)' }}>
-            {monthlyData?.length ?? 0} employees
-          </span>
-        </div>
-      </div>
-      <Table
+      }
+    >
+      <DataTable
         columns={monthlyColumns}
         dataSource={monthlyData}
         rowKey={(record) => record.employee?.id || ''}
         loading={monthlyLoading}
         scroll={{ x: daysInMonth * 45 + 180 }}
-        size="small"
-        pagination={false}
+        hidePagination
+        noCard
+        disableRowClick
       />
-    </div>
+    </Card>
   );
 });

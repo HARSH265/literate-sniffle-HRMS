@@ -2,12 +2,14 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import User from '../../models/User.model.js';
 import PasswordResetToken from '../../models/PasswordResetToken.model.js';
+import RolePermission from '../../models/RolePermission.model.js';
 import { AppError } from '../../core/errors/AppError.js';
 import { env } from '../../config/env.js';
 import { AuditService } from '../../core/audit/AuditService.js';
 import { TokenBlacklist } from '../../core/auth/TokenBlacklist.js';
 import { logger } from '../../core/logger/logger.js';
 import { EmailService } from '../../core/email/EmailService.js';
+import { permissions as defaultPermissions } from '../../core/permissions/permissions.config.js';
 import CompanySettings from '../../models/CompanySettings.model.js';
 
 async function getAuthConfig(): Promise<{ tokenExpiry: string; refreshTokenExpiry: string }> {
@@ -22,7 +24,48 @@ async function getAuthConfig(): Promise<{ tokenExpiry: string; refreshTokenExpir
   }
 }
 
+export interface PasswordPolicy {
+  passwordMinLength: number;
+  requireUppercase: boolean;
+  requireLowercase: boolean;
+  requireNumber: boolean;
+  requireSpecialChar: boolean;
+  passwordHistoryCount: number;
+}
+
 export class AuthService {
+  static async getPasswordPolicy(): Promise<PasswordPolicy> {
+    try {
+      const settings = await CompanySettings.findOne().lean() as any;
+      const cfg = settings?.authConfig || {};
+      return {
+        passwordMinLength: cfg.passwordMinLength ?? 8,
+        requireUppercase: cfg.requireUppercase ?? true,
+        requireLowercase: cfg.requireLowercase ?? true,
+        requireNumber: cfg.requireNumber ?? true,
+        requireSpecialChar: cfg.requireSpecialChar ?? true,
+        passwordHistoryCount: cfg.passwordHistoryCount ?? 5,
+      };
+    } catch {
+      return {
+        passwordMinLength: 8,
+        requireUppercase: true,
+        requireLowercase: true,
+        requireNumber: true,
+        requireSpecialChar: true,
+        passwordHistoryCount: 5,
+      };
+    }
+  }
+
+  static async getEffectivePermissions(role: string): Promise<string[]> {
+    const custom = await RolePermission.findOne({ role }).lean();
+    if (custom) {
+      return custom.permissions as string[];
+    }
+    return (defaultPermissions[role as keyof typeof defaultPermissions] || []) as string[];
+  }
+
   static async login(email: string, password: string, ipAddress?: string, userAgent?: string) {
 
 
@@ -225,6 +268,19 @@ export class AuthService {
       throw new AppError('Account is deactivated', 401);
     }
 
+    try {
+      const decoded = jwt.decode(refreshToken) as { exp?: number };
+      const ttl = decoded?.exp ? decoded.exp - Math.floor(Date.now() / 1000) : 3600;
+      await TokenBlacklist.add(refreshToken, Math.max(ttl, 1));
+    } catch (err) {
+      logger.error('Failed to blacklist old refresh token during rotation', err);
+      try {
+        await TokenBlacklist.add(refreshToken, 3600);
+      } catch (fallbackErr) {
+        logger.error('Fallback blacklist add also failed', fallbackErr);
+      }
+    }
+
     const { tokenExpiry, refreshTokenExpiry } = await getAuthConfig();
 
     const newToken = jwt.sign(
@@ -365,6 +421,11 @@ if (token) {
 
     resetToken.used = true;
     await resetToken.save();
+
+    await PasswordResetToken.updateMany(
+      { user: user._id, used: false, _id: { $ne: resetToken._id } },
+      { $set: { used: true } },
+    );
 
     await AuditService.log({
       action: 'update',

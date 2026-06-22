@@ -8,10 +8,11 @@ import CompanySettings from '../../models/CompanySettings.model.js';
 import { AppError } from '../../core/errors/AppError.js';
 import { AuditService } from '../../core/audit/AuditService.js';
 import { PaginationUtil, PaginationMeta } from '../../core/utils/PaginationUtil.js';
-import { encryptBankDetails, decryptBankDetails } from '../../core/utils/EncryptionUtil.js';
+import { encryptBankDetails, decryptBankDetails, encryptIdField, decryptIdField } from '../../core/utils/EncryptionUtil.js';
 import { RedisCacheService } from '../../core/cache/RedisCacheService.js';
 import { CACHE_KEYS } from '../../core/cache/cache.keys.js';
 import { logger } from '../../core/logger/logger.js';
+import { refToIdName } from '../../core/utils/PopulateUtil.js';
 
 interface MulterFile {
   fieldname: string;
@@ -25,16 +26,6 @@ interface MulterFile {
 const SALARY_ACCESS_ROLES = ['super-admin', 'hr-admin', 'hr-staff', 'accounts'];
 
 const SENSITIVE_FIELDS = ['pfUAN', 'esiNumber', 'pfNumber', 'panNumber', 'aadhaarNumber'];
-
-/** Extract { id, name } from a populated Mongoose sub-document or return null */
-function refToIdName(val: unknown): { id: string; name: string } | null {
-  if (!val || typeof val !== 'object') return null;
-  const doc = val as Record<string, unknown>;
-  const id = doc._id ?? doc.id;
-  const name = doc.name ?? '';
-  if (!id) return null;
-  return { id: String(id), name: String(name) };
-}
 
 /** Lean shape for CompanySettings fields used by employees module */
 interface CompanySettingsLean {
@@ -62,6 +53,9 @@ const sanitizeEmployee = (emp: Record<string, unknown>, userRole: string): Recor
         sanitized[field] = val.length > 4 ? '*'.repeat(val.length - 4) + val.slice(-4) : '****';
       }
     }
+  } else {
+    if (emp.panNumber) sanitized.panNumber = decryptIdField(String(emp.panNumber));
+    if (emp.aadhaarNumber) sanitized.aadhaarNumber = decryptIdField(String(emp.aadhaarNumber));
   }
   
   if (emp.bankDetails) {
@@ -170,6 +164,24 @@ export class EmployeesService {
     return sanitizeEmployee(employee, userRole);
   }
 
+  private static async getReportingChain(startId: string, targetId: string, maxDepth = 20): Promise<Set<string>> {
+    const visited = new Set<string>();
+    let currentId: string | null = startId;
+    let depth = 0;
+
+    while (currentId && depth < maxDepth) {
+      if (currentId === targetId) {
+        visited.add(currentId);
+        break;
+      }
+      visited.add(currentId);
+      const manager = await Employee.findById(currentId).select('reportingTo').lean() as { reportingTo?: mongoose.Types.ObjectId } | null;
+      currentId = manager?.reportingTo ? String(manager.reportingTo) : null;
+      depth++;
+    }
+    return visited;
+  }
+
   static async generateNextEmployeeCode(): Promise<string> {
     const settings = await CompanySettings.findOne().lean() as unknown as CompanySettingsLean;
     const config = settings?.employeeCodeConfig || { prefix: 'EMP', padding: 3, startNumber: 1, isAutoGenerate: true };
@@ -264,10 +276,19 @@ export class EmployeesService {
       throw new AppError(`Employee with code '${employeeCode}' already exists`, 400);
     }
 
+    if (data.email && typeof data.email === 'string' && data.email.trim()) {
+      const existingEmail = await Employee.findOne({ email: data.email.trim().toLowerCase() }).lean();
+      if (existingEmail) {
+        throw new AppError(`Employee with email '${data.email}' already exists`, 400);
+      }
+    }
+
     const encryptedData = {
       ...data,
       employeeCode: employeeCode.toUpperCase(),
       bankDetails: data.bankDetails ? encryptBankDetails(data.bankDetails as Record<string, unknown>) : undefined,
+      panNumber: data.panNumber ? encryptIdField(String(data.panNumber)) : data.panNumber,
+      aadhaarNumber: data.aadhaarNumber ? encryptIdField(String(data.aadhaarNumber)) : data.aadhaarNumber,
       createdBy: createdById,
     };
 
@@ -338,6 +359,16 @@ export class EmployeesService {
 
     const previousVersion = emp.__v;
 
+    if (data.reportingTo !== undefined && data.reportingTo !== '' && data.reportingTo !== null) {
+      if (data.reportingTo === id) {
+        throw new AppError('An employee cannot report to themselves', 400, 'VALIDATION_ERROR');
+      }
+      const ancestors = await EmployeesService.getReportingChain(data.reportingTo as string, id);
+      if (ancestors.has(id)) {
+        throw new AppError('Circular reporting chain detected — this assignment would create a loop', 400, 'VALIDATION_ERROR');
+      }
+    }
+
     const workingDays = (await CompanySettings.findOne().lean() as unknown as CompanySettingsLean)?.payrollConfig?.defaultWorkingDays || 26;
     this.autoCalculateSalary(data, workingDays);
 
@@ -360,6 +391,12 @@ export class EmployeesService {
     // Only encrypt and include bankDetails when explicitly provided
     if (data.bankDetails) {
       updateData.bankDetails = encryptBankDetails(data.bankDetails as Record<string, unknown>);
+    }
+    if (data.panNumber !== undefined) {
+      updateData.panNumber = data.panNumber ? encryptIdField(String(data.panNumber)) : data.panNumber;
+    }
+    if (data.aadhaarNumber !== undefined) {
+      updateData.aadhaarNumber = data.aadhaarNumber ? encryptIdField(String(data.aadhaarNumber)) : data.aadhaarNumber;
     }
 
     // Optimistic lock: update only if version matches
@@ -636,6 +673,7 @@ export class EmployeesService {
     const allDesigNames = new Set<string>();
     const allShiftNames = new Set<string>();
     const allEmpCodes = new Set<string>();
+    const allEmails = new Set<string>();
     const rowData: { row: any; data: unknown[] }[] = [];
 
     for (const row of rows) {
@@ -645,24 +683,28 @@ export class EmployeesService {
       const designationName = data[6] ? String(data[6]).trim() : '';
       const shiftName = data[7] ? String(data[7]).trim() : '';
       const employeeCode = data[0] ? String(data[0]).trim() : '';
+      const email = data[16] ? String(data[16]).trim().toLowerCase() : '';
       if (departmentName) allDeptNames.add(departmentName);
       if (designationName) allDesigNames.add(designationName);
       if (shiftName) allShiftNames.add(shiftName);
       if (employeeCode) allEmpCodes.add(employeeCode.toUpperCase());
+      if (email) allEmails.add(email);
       rowData.push({ row, data });
     }
 
-    const [departments, designations, shifts, existingEmployees] = await Promise.all([
+    const [departments, designations, shifts, existingEmployees, existingEmails] = await Promise.all([
       allDeptNames.size > 0 ? Department.find({ name: { $in: Array.from(allDeptNames).map(n => new RegExp(`^${escapeRegex(n)}$`, 'i')) } }) : [],
       allDesigNames.size > 0 ? Designation.find({ name: { $in: Array.from(allDesigNames).map(n => new RegExp(`^${escapeRegex(n)}$`, 'i')) } }) : [],
       allShiftNames.size > 0 ? Shift.find({ name: { $in: Array.from(allShiftNames).map(n => new RegExp(`^${escapeRegex(n)}$`, 'i')) } }) : [],
       allEmpCodes.size > 0 ? Employee.find({ employeeCode: { $in: Array.from(allEmpCodes) } }).select('employeeCode') : [],
+      allEmails.size > 0 ? Employee.find({ email: { $in: Array.from(allEmails) } }).select('email') : [],
     ]);
 
     const deptMap = new Map(departments.map((d: any) => [d.name.toLowerCase(), d]));
     const desigMap = new Map(designations.map((d: any) => [d.name.toLowerCase(), d]));
     const shiftMap = new Map(shifts.map((s: any) => [s.name.toLowerCase(), s]));
     const empCodeSet = new Set(existingEmployees.map((e: any) => e.employeeCode.toUpperCase()));
+    const emailSet = new Set(existingEmails.map((e: any) => e.email?.toLowerCase()).filter(Boolean));
 
     try {
       for (const { row, data } of rowData) {
@@ -689,6 +731,9 @@ export class EmployeesService {
         const status = data[13] ? String(data[13]).trim().toLowerCase() : 'active';
         const contactNumber = data[14] ? String(data[14]).trim() : '';
         const address = data[15] ? String(data[15]).trim() : '';
+        const email = data[16] ? String(data[16]).trim().toLowerCase() : '';
+        const panNumber = data[17] ? String(data[17]).trim() : '';
+        const aadhaarNumber = data[18] ? String(data[18]).trim() : '';
 
         if (!employeeCode || !fullName || !fatherName) {
           results.failed++;
@@ -703,6 +748,12 @@ export class EmployeesService {
         if (empCodeSet.has(employeeCode.toUpperCase())) {
           results.failed++;
           results.errors.push(`Row ${row.number}: Employee code ${employeeCode} already exists`);
+          continue;
+        }
+
+        if (email && emailSet.has(email)) {
+          results.failed++;
+          results.errors.push(`Row ${row.number}: Email ${email} already exists`);
           continue;
         }
 
@@ -724,10 +775,14 @@ export class EmployeesService {
             status,
             contactNumber,
             address,
+            email: email || undefined,
+            panNumber: panNumber ? encryptIdField(panNumber) : undefined,
+            aadhaarNumber: aadhaarNumber ? encryptIdField(aadhaarNumber) : undefined,
             createdBy: new mongoose.Types.ObjectId(importedById),
           }, { session });
 
           empCodeSet.add(employeeCode.toUpperCase());
+          if (email) emailSet.add(email);
           results.success++;
         } catch (err: any) {
           results.failed++;

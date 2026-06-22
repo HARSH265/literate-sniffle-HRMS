@@ -8,16 +8,7 @@ import { PaginationMeta } from '../../core/utils/PaginationUtil.js';
 import { ExcelGeneratorService } from '../../core/excel/ExcelGeneratorService.js';
 import Employee from '../../models/Employee.model.js';
 import CompanySettings from '../../models/CompanySettings.model.js';
-
-/** Extract { id, name } from a populated Mongoose sub-document or return null */
-function refToIdName(val: unknown): { id: string; name: string } | null {
-  if (!val || typeof val !== 'object') return null;
-  const doc = val as Record<string, unknown>;
-  const id = doc._id ?? doc.id;
-  const name = doc.name ?? '';
-  if (!id) return null;
-  return { id: String(id), name: String(name) };
-}
+import { refToIdName } from '../../core/utils/PopulateUtil.js';
 
 const list = asyncHandler(async (req: Request, res: Response) => {
   const userRole = req.user!.role;

@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Button, Modal, Form, Input, Select, DatePicker, message, Popconfirm, Tag, Tooltip, Row, Col, Tabs } from 'antd';
+import { Button, Card, Modal, Form, Input, Select, DatePicker, message, Popconfirm, Tag, Tooltip, Row, Col, Tabs } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, CalendarOutlined, UnorderedListOutlined } from '@ant-design/icons';
+import { PageContainer } from '../../../core/components/PageContainer';
 import { PageHeader } from '../../../core/components/PageHeader';
 import { DataTable } from '../../../core/components/DataTable';
 import { holidayService, Holiday, CreateHoliday } from '../services/holidayService';
@@ -179,14 +180,14 @@ export function HolidaysPage() {
   ];
 
   return (
-    <div style={{ padding: '0 4px' }}>
+    <PageContainer>
       <PageHeader
         title="Holidays"
         subtitle="Manage company holidays and festivals"
         actions={<Button type="primary" icon={<PlusOutlined />} onClick={() => { setActiveTab('list'); setIsModalOpen(true); }}>Add Holiday</Button>}
       />
 
-      <div className="hrms-table-card" style={{ padding: '0 8px' }}>
+      <Card style={{ padding: '0 8px' }}>
         <Tabs
           activeKey={activeTab}
           onChange={(key) => setActiveTab(key)}
@@ -274,7 +275,7 @@ export function HolidaysPage() {
             },
           ]}
         />
-      </div>
+      </Card>
 
       <Modal
         title={editingId ? 'Edit Holiday' : 'Add Holiday'}
@@ -312,6 +313,6 @@ export function HolidaysPage() {
           </Row>
         </Form>
       </Modal>
-    </div>
+    </PageContainer>
   );
 }

@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { PageContainer } from '../../../core/components/PageContainer';
 import { PageHeader } from '../../../core/components/PageHeader';
 import { DataTable } from '../../../core/components/DataTable';
 import { Button, Select, message, Tag } from 'antd';
@@ -109,7 +110,7 @@ export function SalarySlipsPage() {
   ];
 
   return (
-    <div>
+    <PageContainer>
       <PageHeader
         title="Salary Slips"
         subtitle="View and download employee salary slips"
@@ -131,6 +132,6 @@ export function SalarySlipsPage() {
           />
         }
       />
-    </div>
+    </PageContainer>
   );
 }

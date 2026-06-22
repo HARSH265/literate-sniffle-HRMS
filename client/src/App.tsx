@@ -185,7 +185,7 @@ function App() {
         <Route path="/login" element={<Navigate to={authenticatedHomePath} replace />} />
         <Route path="/m/scan" element={<Suspense fallback={<PageLoader />}><ScanPage /></Suspense>} />
         <Route path="/m/confirm" element={<Suspense fallback={<PageLoader />}><ScanPage /></Suspense>} />
-        <Route path="/ess" element={<EssLayout />}>
+        <Route path="/ess" element={<ProtectedRoute permission="view-own-profile"><EssLayout /></ProtectedRoute>}>
           <Route index element={<Suspense fallback={<PageLoader />}><EssDashboardPageLazy /></Suspense>} />
           <Route path="profile" element={<Suspense fallback={<PageLoader />}><EssProfilePageLazy /></Suspense>} />
           <Route path="documents" element={<Suspense fallback={<PageLoader />}><EssDocumentsPageLazy /></Suspense>} />
@@ -207,31 +207,31 @@ function App() {
             <Route path="employees/new" element={<ProtectedRoute permission="manage-employees"><EmployeeNewPage /></ProtectedRoute>} />
             <Route path="employees/:id" element={<ProtectedRoute permission="view-employees"><EmployeeDetailPage /></ProtectedRoute>} />
             <Route path="employees/:id/edit" element={<ProtectedRoute permission="manage-employees"><EmployeeEditPage /></ProtectedRoute>} />
-            <Route path="departments" element={<DepartmentsPage />} />
-            <Route path="designations" element={<DesignationsPage />} />
+            <Route path="departments" element={<ProtectedRoute permission="view-departments"><DepartmentsPage /></ProtectedRoute>} />
+            <Route path="designations" element={<ProtectedRoute permission="view-departments"><DesignationsPage /></ProtectedRoute>} />
             <Route path="shifts" element={<ProtectedRoute permission="view-shifts"><ShiftsPage /></ProtectedRoute>} />
-            <Route path="holidays" element={<HolidaysPage />} />
-            <Route path="weekly-off-rules" element={<WeeklyOffRulesPage />} />
+            <Route path="holidays" element={<ProtectedRoute permission="view-departments"><HolidaysPage /></ProtectedRoute>} />
+            <Route path="weekly-off-rules" element={<ProtectedRoute permission="view-departments"><WeeklyOffRulesPage /></ProtectedRoute>} />
             <Route path="attendance" element={<ProtectedRoute permission="manage-attendance"><AttendancePage /></ProtectedRoute>} />
             <Route path="kiosk/devices" element={<ProtectedRoute permission="manage-attendance"><KioskDevicesPage /></ProtectedRoute>} />
-            <Route path="overtime" element={<OvertimePage />} />
-            <Route path="overtime/rules" element={<OvertimeRulesPage />} />
+            <Route path="overtime" element={<ProtectedRoute permission="view-employees"><OvertimePage /></ProtectedRoute>} />
+            <Route path="overtime/rules" element={<ProtectedRoute permission="view-departments"><OvertimeRulesPage /></ProtectedRoute>} />
             <Route path="payroll" element={<ProtectedRoute permission="process-payroll"><PayrollPage /></ProtectedRoute>} />
             <Route path="payroll/:id" element={<ProtectedRoute permission="process-payroll"><PayrollDetailsPage /></ProtectedRoute>} />
             <Route path="salary-structure-templates" element={<ProtectedRoute permission="process-payroll"><SalaryStructureTemplatesPageLazy /></ProtectedRoute>} />
-            <Route path="salary-slips" element={<SalarySlipsPage />} />
-            <Route path="salary-slips/:id" element={<SalarySlipDetailsPage />} />
-            <Route path="leave/approvals" element={<Suspense fallback={<PageLoader />}><LeaveApprovalsPage /></Suspense>} />
-            <Route path="leave/balances" element={<Suspense fallback={<PageLoader />}><LeaveBalancesPage /></Suspense>} />
-            <Route path="leave/applications" element={<Suspense fallback={<PageLoader />}><LeaveApplicationsPage /></Suspense>} />
+            <Route path="salary-slips" element={<ProtectedRoute permission="view-reports"><SalarySlipsPage /></ProtectedRoute>} />
+            <Route path="salary-slips/:id" element={<ProtectedRoute permission="view-reports"><SalarySlipDetailsPage /></ProtectedRoute>} />
+            <Route path="leave/approvals" element={<ProtectedRoute permission="approve-leave"><Suspense fallback={<PageLoader />}><LeaveApprovalsPage /></Suspense></ProtectedRoute>} />
+            <Route path="leave/balances" element={<ProtectedRoute permission="view-leave"><Suspense fallback={<PageLoader />}><LeaveBalancesPage /></Suspense></ProtectedRoute>} />
+            <Route path="leave/applications" element={<ProtectedRoute permission="view-leave"><Suspense fallback={<PageLoader />}><LeaveApplicationsPage /></Suspense></ProtectedRoute>} />
 
-            <Route path="loans" element={<LoansPage />} />
-            <Route path="loans/apply" element={<LoanApplyPage />} />
-            <Route path="loans/:id" element={<LoanDetailPage />} />
-            <Route path="loan-types" element={<ProtectedRoute permission="manage-users"><LoanTypesPageLazy /></ProtectedRoute>} />
-            <Route path="statutory" element={<StatutoryDashboard />} />
+            <Route path="loans" element={<ProtectedRoute permission="view-loans"><LoansPage /></ProtectedRoute>} />
+            <Route path="loans/apply" element={<ProtectedRoute permission="apply-loan"><LoanApplyPage /></ProtectedRoute>} />
+            <Route path="loans/:id" element={<ProtectedRoute permission="view-loans"><LoanDetailPage /></ProtectedRoute>} />
+            <Route path="loan-types" element={<ProtectedRoute permission="manage-loans"><LoanTypesPageLazy /></ProtectedRoute>} />
+            <Route path="statutory" element={<ProtectedRoute permission="view-statutory"><StatutoryDashboard /></ProtectedRoute>} />
             <Route path="compliance" element={<ProtectedRoute permission="view-payroll"><CompliancePageLazy /></ProtectedRoute>} />
-            <Route path="reports" element={<ReportsPage />} />
+            <Route path="reports" element={<ProtectedRoute permission="view-reports"><ReportsPage /></ProtectedRoute>} />
             <Route path="payroll-reports" element={<ProtectedRoute permission="view-payroll"><PayrollReportsPageLazy /></ProtectedRoute>} />
             <Route path="settings" element={<ProtectedRoute permission="manage-settings"><SettingsPage /></ProtectedRoute>} />
             <Route path="users" element={<ProtectedRoute permission="manage-users"><UsersPage /></ProtectedRoute>} />
@@ -240,35 +240,35 @@ function App() {
             <Route path="users/:id" element={<ProtectedRoute permission="manage-users"><Navigate to="activity" replace /></ProtectedRoute>} />
             <Route path="users/:id/activity" element={<ProtectedRoute permission="manage-users"><UserActivityPage /></ProtectedRoute>} />
             <Route path="audit-logs" element={<ProtectedRoute permission="view-audit"><AuditLogsPage /></ProtectedRoute>} />
-            <Route path="notifications" element={<NotificationsPage />} />
-            <Route path="announcements" element={<AnnouncementsPage />} />
-            <Route path="announcements/new" element={<AnnouncementFormPage />} />
-            <Route path="announcements/:id" element={<AnnouncementDetailPage />} />
-            <Route path="announcements/:id/edit" element={<AnnouncementFormPage />} />
-            <Route path="helpdesk" element={<HelpdeskPage />} />
-            <Route path="helpdesk/new" element={<TicketFormPage />} />
-            <Route path="helpdesk/:id" element={<TicketDetailPage />} />
-            <Route path="helpdesk/:id/edit" element={<TicketFormPage />} />
-            <Route path="assets" element={<Suspense fallback={<PageLoader />}><AssetsPage /></Suspense>} />
-            <Route path="assets/new" element={<Suspense fallback={<PageLoader />}><AssetFormPage /></Suspense>} />
-            <Route path="assets/:id" element={<Suspense fallback={<PageLoader />}><AssetDetailPage /></Suspense>} />
-            <Route path="assets/:id/edit" element={<Suspense fallback={<PageLoader />}><AssetFormPage /></Suspense>} />
-            <Route path="documents" element={<Suspense fallback={<PageLoader />}><DocumentsPage /></Suspense>} />
-            <Route path="documents/new" element={<Suspense fallback={<PageLoader />}><DocumentUploadPage /></Suspense>} />
-            <Route path="documents/:id" element={<Suspense fallback={<PageLoader />}><DocumentDetailPage /></Suspense>} />
-            <Route path="documents/:id/edit" element={<Suspense fallback={<PageLoader />}><DocumentUploadPage /></Suspense>} />
-            <Route path="shift-swaps" element={<ShiftSwapsPage />} />
-            <Route path="shift-swaps/approvals" element={<ShiftSwapApprovalsPage />} />
-            <Route path="shift-swaps/preferences" element={<ShiftPreferencesPage />} />
-            <Route path="training" element={<Suspense fallback={<PageLoader />}><TrainingProgramsPage /></Suspense>} />
-            <Route path="training/new" element={<Suspense fallback={<PageLoader />}><TrainingProgramFormPage /></Suspense>} />
-            <Route path="training/enrollments" element={<Suspense fallback={<PageLoader />}><TrainingEnrollmentsPage /></Suspense>} />
-            <Route path="training/skills" element={<Suspense fallback={<PageLoader />}><SkillMatrixPage /></Suspense>} />
-            <Route path="training/skill-gap" element={<Suspense fallback={<PageLoader />}><SkillGapPage /></Suspense>} />
-            <Route path="training/certifications" element={<Suspense fallback={<PageLoader />}><CertificationsPage /></Suspense>} />
-            <Route path="training/:id" element={<Suspense fallback={<PageLoader />}><TrainingProgramDetailPage /></Suspense>} />
-            <Route path="performance" element={<Suspense fallback={<PageLoader />}><PerformancePage /></Suspense>} />
-            <Route path="performance/reviews/:id" element={<Suspense fallback={<PageLoader />}><PerformanceReviewDetailPage /></Suspense>} />
+            <Route path="notifications" element={<ProtectedRoute permission="view-notifications"><NotificationsPage /></ProtectedRoute>} />
+            <Route path="announcements" element={<ProtectedRoute permission="view-announcements"><AnnouncementsPage /></ProtectedRoute>} />
+            <Route path="announcements/new" element={<ProtectedRoute permission="manage-announcements"><AnnouncementFormPage /></ProtectedRoute>} />
+            <Route path="announcements/:id" element={<ProtectedRoute permission="view-announcements"><AnnouncementDetailPage /></ProtectedRoute>} />
+            <Route path="announcements/:id/edit" element={<ProtectedRoute permission="manage-announcements"><AnnouncementFormPage /></ProtectedRoute>} />
+            <Route path="helpdesk" element={<ProtectedRoute permission="view-tickets"><HelpdeskPage /></ProtectedRoute>} />
+            <Route path="helpdesk/new" element={<ProtectedRoute permission="manage-tickets"><TicketFormPage /></ProtectedRoute>} />
+            <Route path="helpdesk/:id" element={<ProtectedRoute permission="view-tickets"><TicketDetailPage /></ProtectedRoute>} />
+            <Route path="helpdesk/:id/edit" element={<ProtectedRoute permission="manage-tickets"><TicketFormPage /></ProtectedRoute>} />
+            <Route path="assets" element={<ProtectedRoute permission="view-assets"><Suspense fallback={<PageLoader />}><AssetsPage /></Suspense></ProtectedRoute>} />
+            <Route path="assets/new" element={<ProtectedRoute permission="manage-assets"><Suspense fallback={<PageLoader />}><AssetFormPage /></Suspense></ProtectedRoute>} />
+            <Route path="assets/:id" element={<ProtectedRoute permission="view-assets"><Suspense fallback={<PageLoader />}><AssetDetailPage /></Suspense></ProtectedRoute>} />
+            <Route path="assets/:id/edit" element={<ProtectedRoute permission="manage-assets"><Suspense fallback={<PageLoader />}><AssetFormPage /></Suspense></ProtectedRoute>} />
+            <Route path="documents" element={<ProtectedRoute permission="view-documents"><Suspense fallback={<PageLoader />}><DocumentsPage /></Suspense></ProtectedRoute>} />
+            <Route path="documents/new" element={<ProtectedRoute permission="manage-documents"><Suspense fallback={<PageLoader />}><DocumentUploadPage /></Suspense></ProtectedRoute>} />
+            <Route path="documents/:id" element={<ProtectedRoute permission="view-documents"><Suspense fallback={<PageLoader />}><DocumentDetailPage /></Suspense></ProtectedRoute>} />
+            <Route path="documents/:id/edit" element={<ProtectedRoute permission="manage-documents"><Suspense fallback={<PageLoader />}><DocumentUploadPage /></Suspense></ProtectedRoute>} />
+            <Route path="shift-swaps" element={<ProtectedRoute permission="view-shift-swaps"><ShiftSwapsPage /></ProtectedRoute>} />
+            <Route path="shift-swaps/approvals" element={<ProtectedRoute permission="manage-shift-swaps"><ShiftSwapApprovalsPage /></ProtectedRoute>} />
+            <Route path="shift-swaps/preferences" element={<ProtectedRoute permission="view-own-shifts"><ShiftPreferencesPage /></ProtectedRoute>} />
+            <Route path="training" element={<ProtectedRoute permission="view-training"><Suspense fallback={<PageLoader />}><TrainingProgramsPage /></Suspense></ProtectedRoute>} />
+            <Route path="training/new" element={<ProtectedRoute permission="manage-training"><Suspense fallback={<PageLoader />}><TrainingProgramFormPage /></Suspense></ProtectedRoute>} />
+            <Route path="training/enrollments" element={<ProtectedRoute permission="view-own-training"><Suspense fallback={<PageLoader />}><TrainingEnrollmentsPage /></Suspense></ProtectedRoute>} />
+            <Route path="training/skills" element={<ProtectedRoute permission="view-training"><Suspense fallback={<PageLoader />}><SkillMatrixPage /></Suspense></ProtectedRoute>} />
+            <Route path="training/skill-gap" element={<ProtectedRoute permission="manage-training"><Suspense fallback={<PageLoader />}><SkillGapPage /></Suspense></ProtectedRoute>} />
+            <Route path="training/certifications" element={<ProtectedRoute permission="view-training"><Suspense fallback={<PageLoader />}><CertificationsPage /></Suspense></ProtectedRoute>} />
+            <Route path="training/:id" element={<ProtectedRoute permission="view-training"><Suspense fallback={<PageLoader />}><TrainingProgramDetailPage /></Suspense></ProtectedRoute>} />
+            <Route path="performance" element={<ProtectedRoute permission="view-performance"><Suspense fallback={<PageLoader />}><PerformancePage /></Suspense></ProtectedRoute>} />
+            <Route path="performance/reviews/:id" element={<ProtectedRoute permission="view-performance"><Suspense fallback={<PageLoader />}><PerformanceReviewDetailPage /></Suspense></ProtectedRoute>} />
             <Route path="*" element={<Navigate to={authenticatedHomePath} replace />} />
           </Route>
         </Routes>

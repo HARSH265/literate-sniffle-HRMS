@@ -18,6 +18,49 @@ interface StatutoryDeductions {
   professionalTax: number;
 }
 
+// Default PT slabs for common Indian states when admin hasn't configured any
+const DEFAULT_PT_SLABS = [
+  {
+    state: 'Karnataka',
+    slabs: [
+      { minSalary: 0, maxSalary: 14999, amount: 0, frequency: 'monthly' },
+      { minSalary: 15000, maxSalary: Infinity, amount: 200, frequency: 'monthly' },
+    ],
+  },
+  {
+    state: 'Maharashtra',
+    slabs: [
+      { minSalary: 0, maxSalary: 14999, amount: 0, frequency: 'monthly' },
+      { minSalary: 15000, maxSalary: 19999, amount: 150, frequency: 'monthly' },
+      { minSalary: 20000, maxSalary: 24999, amount: 200, frequency: 'monthly' },
+      { minSalary: 25000, maxSalary: 29999, amount: 300, frequency: 'monthly' },
+      { minSalary: 30000, maxSalary: Infinity, amount: 500, frequency: 'monthly' },
+    ],
+  },
+  {
+    state: 'Tamil Nadu',
+    slabs: [
+      { minSalary: 0, maxSalary: 9999, amount: 0, frequency: 'monthly' },
+      { minSalary: 10000, maxSalary: Infinity, amount: 208, frequency: 'monthly' },
+    ],
+  },
+  {
+    state: 'Telangana',
+    slabs: [
+      { minSalary: 0, maxSalary: 14999, amount: 0, frequency: 'monthly' },
+      { minSalary: 15000, maxSalary: 19999, amount: 150, frequency: 'monthly' },
+      { minSalary: 20000, maxSalary: Infinity, amount: 200, frequency: 'monthly' },
+    ],
+  },
+  {
+    state: 'Delhi',
+    slabs: [
+      { minSalary: 0, maxSalary: 14999, amount: 0, frequency: 'monthly' },
+      { minSalary: 15000, maxSalary: Infinity, amount: 200, frequency: 'monthly' },
+    ],
+  },
+];
+
 export async function getStatutoryDefaults(): Promise<{
   pfEnabled: boolean;
   pfWageCeiling: number;
@@ -50,7 +93,7 @@ export async function getStatutoryDefaults(): Promise<{
     esiEmployeeRate: config.esiEmployeeRate ?? 0.75,
     esiEmployerRate: config.esiEmployerRate ?? 3.25,
     ptEnabled: config.ptEnabled ?? true,
-    ptSlabs: config.ptSlabs ?? [],
+    ptSlabs: config.ptSlabs?.length ? config.ptSlabs : DEFAULT_PT_SLABS,
   };
 }
 

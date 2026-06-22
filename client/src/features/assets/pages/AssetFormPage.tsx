@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Form, Input, InputNumber, Select, Button, DatePicker, Spin, Row, Col } from 'antd';
 import { ArrowLeftOutlined, SaveOutlined, ToolOutlined, InfoCircleOutlined, FileTextOutlined, BarcodeOutlined } from '@ant-design/icons';
+import { PageContainer } from '../../../core/components/PageContainer';
 import { PageHeader } from '../../../core/components/PageHeader';
 import { FormSection } from '../../../core/components/FormSection';
 import { FORM_LAYOUT } from '../../../core/constants/employee';
@@ -55,7 +56,7 @@ export function AssetFormPage() {
   }
 
   return (
-    <div style={{ padding: '0 4px' }}>
+    <PageContainer>
       <PageHeader
         title={isEdit ? 'Edit Asset' : 'Add New Asset'}
         breadcrumbs={[{ label: 'Assets', path: '/assets' }, { label: isEdit ? 'Edit' : 'New' }]}
@@ -172,6 +173,6 @@ export function AssetFormPage() {
           </div>
         </Form>
       </div>
-    </div>
+    </PageContainer>
   );
 }

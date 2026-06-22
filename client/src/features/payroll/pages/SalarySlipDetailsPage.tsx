@@ -1,5 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { PageContainer } from '../../../core/components/PageContainer';
 import { PageHeader } from '../../../core/components/PageHeader';
 import { DataTable } from '../../../core/components/DataTable';
 import { SalarySlipDetailDrawer } from '../components/SalarySlipDetailDrawer';
@@ -79,7 +80,7 @@ export function SalarySlipDetailsPage() {
   }), { basic: 0, earnings: 0, deductions: 0, net: 0 }) ?? { basic: 0, earnings: 0, deductions: 0, net: 0 };
 
   return (
-    <div>
+    <PageContainer>
       <Breadcrumb
         items={[
           { title: <a onClick={() => navigate(ROUTES.salarySlips)}>Salary Slips</a> },
@@ -113,7 +114,7 @@ export function SalarySlipDetailsPage() {
         rowKey="employeeCode"
         loading={isLoading}
         columns={columns}
-        pagination={{ pageSize: 20 }}
+        pagination={{ pageSize: 10 }}
         detailDrawerTitle="Salary Slip Details"
         detailDrawerWidth={780}
         customDetailRenderer={(record) => <SalarySlipDetailDrawer record={record as any} />}
@@ -123,6 +124,6 @@ export function SalarySlipDetailsPage() {
           </span>
         }
       />
-    </div>
+    </PageContainer>
   );
 }

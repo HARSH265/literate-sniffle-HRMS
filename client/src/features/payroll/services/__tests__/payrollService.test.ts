@@ -74,7 +74,13 @@ describe('payrollService', () => {
       mockApiClient.post.mockResolvedValue({ data: { success: true, data: { status: 'approved' } } });
       const result = await payrollService.approveRun('run1');
       expect(result.data.status).toBe('approved');
-      expect(mockApiClient.post).toHaveBeenCalledWith('/payroll/run/run1/approve');
+      expect(mockApiClient.post).toHaveBeenCalledWith('/payroll/run/run1/approve', { comments: undefined });
+    });
+
+    it('sends comments when provided', async () => {
+      mockApiClient.post.mockResolvedValue({ data: { success: true, data: { status: 'approved' } } });
+      await payrollService.approveRun('run1', 'Looks good');
+      expect(mockApiClient.post).toHaveBeenCalledWith('/payroll/run/run1/approve', { comments: 'Looks good' });
     });
   });
 

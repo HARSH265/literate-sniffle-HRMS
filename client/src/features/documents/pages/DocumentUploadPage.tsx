@@ -5,6 +5,7 @@ import {
 } from 'antd';
 import { InboxOutlined, ArrowLeftOutlined, SaveOutlined, FileTextOutlined, SettingOutlined, UploadOutlined, PlusOutlined } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
+import { PageContainer } from '../../../core/components/PageContainer';
 import { PageHeader } from '../../../core/components/PageHeader';
 import { FormSection } from '../../../core/components/FormSection';
 import { FORM_LAYOUT } from '../../../core/constants/employee';
@@ -91,7 +92,7 @@ export function DocumentUploadPage() {
   };
 
   return (
-    <div style={{ padding: '0 4px' }}>
+    <PageContainer>
       <PageHeader
         title="Upload Document"
         breadcrumbs={[{ label: 'Documents', path: '/documents' }, { label: 'Upload' }]}
@@ -232,6 +233,6 @@ export function DocumentUploadPage() {
           </div>
         </Form>
       </div>
-    </div>
+    </PageContainer>
   );
 }

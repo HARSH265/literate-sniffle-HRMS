@@ -64,6 +64,17 @@ export function decryptBankDetails(bankDetails: Record<string, unknown> | undefi
   };
 }
 
+export function encryptIdField(value: string | undefined): string | undefined {
+  if (!value || !value.trim()) return undefined;
+  return encrypt(value.trim());
+}
+
+export function decryptIdField(value: string | undefined): string | undefined {
+  if (!value || !value.trim()) return undefined;
+  if (isEncrypted(value)) return decrypt(value);
+  return value;
+}
+
 function isEncrypted(value: string): boolean {
   const parts = value.split(':');
   return parts.length === 3 && /^[0-9a-f]+$/.test(parts[0]) && /^[0-9a-f]+$/.test(parts[1]);

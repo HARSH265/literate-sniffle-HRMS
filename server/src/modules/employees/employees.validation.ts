@@ -44,6 +44,8 @@ export const createEmployeeSchema = z.object({
   esiExempted: z.boolean().optional(),
   ptExempted: z.boolean().optional(),
   ptState: z.string().max(100).optional(),
+  panNumber: z.string().max(20).optional().or(z.literal('')),
+  aadhaarNumber: z.string().max(20).optional().or(z.literal('')),
 });
 
 export const updateEmployeeSchema = z.object({
@@ -67,6 +69,7 @@ export const updateEmployeeSchema = z.object({
   baseSalary: z.number().min(0).optional(),
   dailyWage: z.number().min(0).optional(),
   overtimeEligible: z.boolean().optional(),
+  status: z.enum(['active', 'inactive', 'terminated']).optional(),
   contactNumber: contactNumberSchema,
   address: z.string().max(500).optional(),
   bankDetails: bankDetailsSchema,
@@ -78,6 +81,8 @@ export const updateEmployeeSchema = z.object({
   esiExempted: z.boolean().optional(),
   ptExempted: z.boolean().optional(),
   ptState: z.string().max(100).optional(),
+  panNumber: z.string().max(20).optional().or(z.literal('')),
+  aadhaarNumber: z.string().max(20).optional().or(z.literal('')),
 }).refine(
   (data) => Object.keys(data).length > 0,
   { message: 'At least one field must be provided' },

@@ -5,5 +5,5 @@ export const updateRolePermissionsSchema = z.object({
 });
 
 export const roleParamSchema = z.object({
-  role: z.enum(['super-admin', 'hr-admin', 'hr-staff', 'accounts', 'manager']),
+  role: z.enum(['super-admin', 'hr-admin', 'hr-staff', 'accounts', 'manager', 'worker']),
 });

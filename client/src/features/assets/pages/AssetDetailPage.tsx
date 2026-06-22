@@ -10,6 +10,8 @@ import { AssetStatusBadge } from '../components/AssetStatusBadge';
 import { AssetHistoryTimeline } from '../components/AssetHistoryTimeline';
 import { AssetAllocateModal } from '../components/AssetAllocateModal';
 import { AssetReturnModal } from '../components/AssetReturnModal';
+import { PageContainer } from '../../../core/components/PageContainer';
+import { ErrorState } from '../../../core/components/ErrorState';
 import { usePermission } from '../../../core/hooks/usePermission';
 
 const { Text, Title } = Typography;
@@ -36,21 +38,20 @@ export function AssetDetailPage() {
   const asset = data?.data;
 
   if (isLoading) {
-    return <div style={{ display: 'flex', justifyContent: 'center', padding: 80 }}><Spin size="large" /></div>;
+    return <PageContainer><Spin size="large" style={{ display: 'flex', justifyContent: 'center', padding: 80 }} /></PageContainer>;
   }
 
   if (!asset) {
-    return <div style={{ padding: 40, textAlign: 'center' }}><Text type="danger">Asset not found</Text></div>;
+    return <PageContainer><ErrorState message="Asset not found" /></PageContainer>;
   }
 
   return (
-    <div>
+    <PageContainer>
       <Space style={{ marginBottom: 16 }}>
         <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/assets')}>Back to Assets</Button>
       </Space>
 
       <Card
-        style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
         title={
           <Space>
             <Title level={4} style={{ margin: 0 }}>{asset.name}</Title>
@@ -187,6 +188,6 @@ export function AssetDetailPage() {
           placeholder="Optional notes about retirement"
         />
       </Modal>
-    </div>
+    </PageContainer>
   );
 }

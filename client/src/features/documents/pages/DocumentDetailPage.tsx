@@ -8,6 +8,8 @@ import {
 } from '@ant-design/icons';
 import { useDocument, useDeleteDocument } from '../hooks/useDocuments';
 import { documentService } from '../services/documentService';
+import { PageContainer } from '../../../core/components/PageContainer';
+import { ErrorState } from '../../../core/components/ErrorState';
 import { usePermission } from '../../../core/hooks/usePermission';
 
 const { Text, Title } = Typography;
@@ -29,15 +31,15 @@ export function DocumentDetailPage() {
   const doc = data?.data;
 
   if (isLoading) {
-    return <div style={{ display: 'flex', justifyContent: 'center', padding: 80 }}><Spin size="large" /></div>;
+    return <PageContainer><Spin size="large" style={{ display: 'flex', justifyContent: 'center', padding: 80 }} /></PageContainer>;
   }
 
   if (!doc) {
-    return <div style={{ padding: 40, textAlign: 'center' }}><Text type="danger">Document not found</Text></div>;
+    return <PageContainer><ErrorState message="Document not found" /></PageContainer>;
   }
 
   return (
-    <div>
+    <PageContainer>
       <Space style={{ marginBottom: 16 }}>
         <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/documents')}>Back to Documents</Button>
       </Space>
@@ -45,7 +47,6 @@ export function DocumentDetailPage() {
       <Row gutter={24}>
         <Col xs={24} md={16}>
           <Card
-            style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
             title={
               <Space>
                 <Title level={4} style={{ margin: 0 }}>{doc.title}</Title>
@@ -123,6 +124,6 @@ export function DocumentDetailPage() {
           )}
         </Col>
       </Row>
-    </div>
+    </PageContainer>
   );
 }

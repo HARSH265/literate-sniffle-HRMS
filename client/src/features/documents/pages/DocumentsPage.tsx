@@ -3,6 +3,7 @@ import { Card, Button, Input, Select, Row, Col, Statistic, Typography, Tag } fro
 import { useNavigate } from 'react-router-dom';
 import { UploadOutlined, SearchOutlined, FileTextOutlined, TeamOutlined, BankOutlined, WarningOutlined } from '@ant-design/icons';
 import { useDocuments, useDocumentStats } from '../hooks/useDocuments';
+import { PageContainer } from '../../../core/components/PageContainer';
 import { PageHeader } from '../../../core/components/PageHeader';
 import { DataTable } from '../../../core/components/DataTable';
 import { usePermission } from '../../../core/hooks/usePermission';
@@ -76,7 +77,7 @@ export function DocumentsPage() {
   ];
 
   return (
-    <div>
+    <PageContainer>
       <PageHeader
         title="Document Repository"
         subtitle="Manage company policies, contracts, and employee documents"
@@ -111,7 +112,7 @@ export function DocumentsPage() {
               title="Expiring Soon"
               value={stats?.data?.expiringSoon || 0}
               prefix={<WarningOutlined />}
-              valueStyle={{ color: stats?.data?.expiringSoon ? '#faad14' : undefined }}
+              valueStyle={{ color: stats?.data?.expiringSoon ? 'var(--hrms-warning)' : undefined }}
             />
           </Card>
         </Col>
@@ -120,13 +121,11 @@ export function DocumentsPage() {
       <DataTable
         columns={columns}
         dataSource={data?.data || []}
-        rowKey="_id"
+        rowKey="id"
         loading={isLoading}
         total={data?.meta?.total}
         page={page}
-        pageSize={20}
         onPaginationChange={(p) => setPage(p)}
-        showSizeChanger={false}
         toolbarLeft={
           <>
             <Input
@@ -147,6 +146,6 @@ export function DocumentsPage() {
           </>
         }
       />
-    </div>
+    </PageContainer>
   );
 }

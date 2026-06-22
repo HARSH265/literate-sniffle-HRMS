@@ -324,7 +324,7 @@ function LoanOutstandingTab() {
     { title: 'Paid', dataIndex: 'paid', key: 'paid', render: (v: number) => formatMoney(v) },
     {
       title: 'Outstanding', dataIndex: 'outstanding', key: 'out',
-      render: (v: number) => <span style={{ color: v > 0 ? '#ff4d4f' : '#52c41a' }}>{formatMoney(v)}</span>,
+      render: (v: number) => <span style={{ color: v > 0 ? 'var(--hrms-danger)' : 'var(--hrms-success)' }}>{formatMoney(v)}</span>,
       sorter: (a, b) => a.outstanding - b.outstanding,
     },
     { title: 'EMI', dataIndex: 'emi', key: 'emi', render: (v: number) => formatMoney(v) },
@@ -373,7 +373,7 @@ function BudgetVsActualTab({ runId }: { runId: string }) {
     { title: 'Actual (Net Pay)', dataIndex: 'actual', key: 'act', render: (v: number) => formatMoney(v) },
     {
       title: 'Variance', dataIndex: 'variance', key: 'var',
-      render: (v: number) => <span style={{ color: v >= 0 ? '#52c41a' : '#ff4d4f' }}>{formatMoney(v)}</span>,
+      render: (v: number) => <span style={{ color: v >= 0 ? 'var(--hrms-success)' : 'var(--hrms-danger)' }}>{formatMoney(v)}</span>,
     },
     {
       title: 'Variance %', dataIndex: 'variancePct', key: 'varPct',

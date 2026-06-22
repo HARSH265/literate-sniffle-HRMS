@@ -17,14 +17,17 @@ export interface SalarySlipPreview {
   employees: Array<{
     id: string;
     employeeCode: string;
-    fullName: string;
+    name: string;
     department: string;
+    designation: string;
     basicSalary: number;
     totalEarnings: number;
     totalDeductions: number;
     netPay: number;
     presentDays: number;
-    effectiveWorkingDays: number;
+    workingDays: number;
+    allowances: Array<{ name: string; type: string; value: number; calculatedValue: number }>;
+    deductions: Array<{ name: string; type: string; value: number; calculatedValue: number }>;
   }>;
 }
 

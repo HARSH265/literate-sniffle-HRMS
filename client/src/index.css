@@ -515,6 +515,13 @@ body {
 .hrms-empty-title { font-size: 16px; font-weight: 600; color: var(--hrms-text-secondary); margin-bottom: 8px; }
 .hrms-empty-desc { font-size: 13px; }
 
+/* Dashboard quick action */
+.dashboard-quick-action:hover {
+  border-color: var(--hrms-primary-border) !important;
+  background: var(--hrms-primary-light);
+  transform: translateX(3px);
+}
+
 /* Skeleton shimmer */
 @keyframes shimmer {
   0% { background-position: -200% 0; }

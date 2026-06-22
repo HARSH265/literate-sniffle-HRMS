@@ -11,21 +11,33 @@ const router = Router();
 const loginRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
-  message: 'Too many login attempts from this IP, please try again after 15 minutes.',
+  message: 'Too many login attempts, please try again after 15 minutes.',
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: (req) => {
+    const ip = req.ip || req.socket.remoteAddress || 'unknown';
+    const email = req.body?.email?.toLowerCase() || '';
+    return `${ip}:${email}`;
+  },
 });
 
 const passwordResetRateLimit = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 5,
-  message: 'Too many password reset requests from this IP, please try again after 1 hour.',
+  message: 'Too many password reset requests, please try again after 1 hour.',
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: (req) => {
+    const ip = req.ip || req.socket.remoteAddress || 'unknown';
+    const email = req.body?.email?.toLowerCase() || '';
+    return `${ip}:${email}`;
+  },
 });
 
 router.post('/login', loginRateLimit, validate(loginSchema), authController.login);
 router.post('/refresh', validate(refreshTokenSchema), authController.refreshToken);
+router.get('/policy', authController.getPasswordPolicy);
+router.get('/permissions', authenticate, authController.getMyPermissions);
 router.post('/forgot-password', passwordResetRateLimit, validate(forgotPasswordSchema), authController.forgotPassword);
 router.post('/reset-password', passwordResetRateLimit, validate(resetPasswordSchema), authController.resetPassword);
 router.post('/logout', authenticate, authController.logout);

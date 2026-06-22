@@ -1,10 +1,13 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import mongoose from 'mongoose';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import User from '../../../models/User.model.js';
+import PasswordResetToken from '../../../models/PasswordResetToken.model.js';
 import { AuthService } from '../auth.service.js';
 import { AppError } from '../../../core/errors/AppError.js';
 import { env } from '../../../config/env.js';
+import { TokenBlacklist } from '../../../core/auth/TokenBlacklist.js';
 
 describe('AuthService', () => {
   const testUser = {
@@ -166,6 +169,135 @@ describe('AuthService', () => {
 
       const user = await User.findById(userId);
       expect(user!.refreshToken).toBeNull();
+    });
+  });
+
+  describe('locked account', () => {
+    it('returns locked error message on locked account', async () => {
+      await User.findByIdAndUpdate(userId, {
+        failedLoginAttempts: 5,
+        lockUntil: new Date(Date.now() + 15 * 60 * 1000),
+      });
+
+      try {
+        await AuthService.login(testUser.email, testUser.password);
+        expect.fail('Should have thrown');
+      } catch (err: any) {
+        expect(err).toBeInstanceOf(AppError);
+        expect(err.message).toMatch(/locked/i);
+      }
+    });
+
+    it('clears lockout after lock period expires', async () => {
+      await User.findByIdAndUpdate(userId, {
+        failedLoginAttempts: 5,
+        lockUntil: new Date(Date.now() - 1000),
+      });
+
+      const result = await AuthService.login(testUser.email, testUser.password);
+      expect(result).toHaveProperty('token');
+    });
+  });
+
+  describe('forgotPassword', () => {
+    it('creates a reset token for valid user', async () => {
+      await AuthService.forgotPassword(testUser.email);
+      const token = await PasswordResetToken.findOne({ user: userId });
+      expect(token).not.toBeNull();
+    });
+
+    it('returns success message even for non-existent email', async () => {
+      const result = await AuthService.forgotPassword('nonexistent@example.com');
+      expect(result).toHaveProperty('message');
+    });
+  });
+
+  describe('resetPassword', () => {
+    function hashToken(raw: string) {
+      return crypto.createHash('sha256').update(raw).digest('hex');
+    }
+
+    it('invalidates all other reset tokens for the user after successful reset', async () => {
+      const rawToken1 = 'raw-token-1';
+      const rawToken2 = 'raw-token-2';
+      const hashed1 = hashToken(rawToken1);
+      const hashed2 = hashToken(rawToken2);
+
+      await PasswordResetToken.create({
+        user: userId,
+        token: hashed1,
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+      });
+      await PasswordResetToken.create({
+        user: userId,
+        token: hashed2,
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+      });
+
+      await AuthService.resetPassword(rawToken1, 'NewPass1!');
+
+      const t1 = await PasswordResetToken.findOne({ token: hashed1 });
+      const t2 = await PasswordResetToken.findOne({ token: hashed2 });
+      expect(t1!.used).toBe(true);
+      expect(t2!.used).toBe(true);
+    });
+
+    it('throws on already used token', async () => {
+      await PasswordResetToken.create({
+        user: userId,
+        token: hashToken('used-token'),
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+        used: true,
+      });
+
+      await expect(AuthService.resetPassword('used-token', 'NewPass1!')).rejects.toThrow(AppError);
+    });
+
+    it('throws on expired token', async () => {
+      await PasswordResetToken.create({
+        user: userId,
+        token: hashToken('expired-token'),
+        expiresAt: new Date(Date.now() - 1000),
+      });
+
+      await expect(AuthService.resetPassword('expired-token', 'NewPass1!')).rejects.toThrow(AppError);
+    });
+  });
+
+  describe('token blacklist', () => {
+    it('blacklists token on logout', async () => {
+      const loginResult = await AuthService.login(testUser.email, testUser.password);
+      const decoded = jwt.decode(loginResult.token) as { exp?: number };
+      const ttl = decoded?.exp ? decoded.exp - Math.floor(Date.now() / 1000) : 3600;
+
+      await AuthService.logout(userId, loginResult.token);
+
+      const isBlacklisted = await TokenBlacklist.isBlacklisted(loginResult.token);
+      expect(isBlacklisted).toBe(true);
+    });
+  });
+
+  describe('refreshToken rotation', () => {
+    it('blacklists old refresh token after rotation', async () => {
+      const loginResult = await AuthService.login(testUser.email, testUser.password);
+      const oldRefreshToken = loginResult.refreshToken;
+
+      await AuthService.refreshToken(oldRefreshToken);
+
+      const isBlacklisted = await TokenBlacklist.isBlacklisted(oldRefreshToken);
+      expect(isBlacklisted).toBe(true);
+    });
+  });
+
+  describe('getPasswordPolicy', () => {
+    it('returns default password policy', async () => {
+      const policy = await AuthService.getPasswordPolicy();
+      expect(policy).toHaveProperty('passwordMinLength');
+      expect(policy).toHaveProperty('requireUppercase');
+      expect(policy).toHaveProperty('requireLowercase');
+      expect(policy).toHaveProperty('requireNumber');
+      expect(policy).toHaveProperty('requireSpecialChar');
+      expect(policy).toHaveProperty('passwordHistoryCount');
     });
   });
 });

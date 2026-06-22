@@ -1,8 +1,10 @@
 import { useState } from 'react';
-import { Card, Select, Typography, Tag, Space, Table, Empty, Spin } from 'antd';
+import { Card, Select, Typography, Tag, Space, Empty, Spin } from 'antd';
+import { DataTable } from '../../../core/components/DataTable';
 import { useQuery } from '@tanstack/react-query';
 import { trainingService } from '../services/trainingService';
 import { employeeService } from '../../employees/services/employeeService';
+import { PageContainer } from '../../../core/components/PageContainer';
 import { PageHeader } from '../../../core/components/PageHeader';
 
 const { Text } = Typography;
@@ -61,9 +63,9 @@ export function SkillGapPage() {
   ];
 
   return (
-    <div>
+    <PageContainer>
       <PageHeader title="Skill Gap Analysis" subtitle="Identify missing skills for employees" />
-      <Card style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+      <Card>
         <Space style={{ marginBottom: 16 }}>
           <Select placeholder="Select employee" value={selectedEmployee} onChange={setSelectedEmployee} allowClear showSearch optionFilterProp="label" style={{ width: 320 }}
             options={employeeList.map((e: any) => ({ label: `${e.fullName} (${e.employeeCode})`, value: getId(e) })).filter((option: any) => Boolean(option.value))}
@@ -75,15 +77,15 @@ export function SkillGapPage() {
         ) : skillsLoading ? <Spin /> : (
           <div>
             <Text strong style={{ fontSize: 16 }}>Existing Skills ({employeeSkills.length})</Text>
-            <Table dataSource={employeeSkills} columns={existingSkillColumns} rowKey={(record) => getId(record)} pagination={false} size="small" style={{ marginBottom: 24, marginTop: 8 }} />
+            <DataTable dataSource={employeeSkills} columns={existingSkillColumns} rowKey={(record) => getId(record)} hidePagination size="small" style={{ marginBottom: 24, marginTop: 8 }} />
 
             <Text strong style={{ fontSize: 16, color: missingSkills.length > 0 ? '#ff4d4f' : '#52c41a' }}>
               {missingSkills.length > 0 ? `Missing Skills (${missingSkills.length})` : 'No skill gaps found'}
             </Text>
-            <Table dataSource={missingSkills} columns={columns} rowKey={(record) => getId(record)} pagination={false} size="small" style={{ marginTop: 8 }} />
+            <DataTable dataSource={missingSkills} columns={columns} rowKey={(record) => getId(record)} hidePagination size="small" style={{ marginTop: 8 }} />
           </div>
         )}
       </Card>
-    </div>
+    </PageContainer>
   );
 }

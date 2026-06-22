@@ -44,7 +44,6 @@ type PayrollConfig = {
   roundingPrecision: number;
   negativeNetPayAllow: boolean;
   arrearsAutoCalculate: boolean;
-  lopPerDayBase: '30' | 'actual' | '26';
   lopComponentsAffected: string[];
   lopImpactsPf: boolean;
   lopImpactsEsi: boolean;
@@ -56,12 +55,11 @@ function buildPayrollConfig(settings: Record<string, unknown> | null): PayrollCo
   return {
     ...(pc as Partial<PayrollConfig>),
     perDayCalcMethod: (pc.perDayCalcMethod as string) || '30',
-    lopCalcMethod: (pc.lopCalcMethod as string) || '30',
+    lopCalcMethod: (pc.lopCalcMethod as string) || (pc.lopPerDayBase as string) || '30',
     roundingFinalSalary: (pc.roundingFinalSalary as string) || 'nearest',
     roundingPrecision: (pc.roundingPrecision as number) ?? 0,
     negativeNetPayAllow: (pc.negativeNetPayAllow as boolean) ?? false,
     arrearsAutoCalculate: (pc.arrearsAutoCalculate as boolean) ?? true,
-    lopPerDayBase: (pc.lopPerDayBase as string) || '30',
     lopComponentsAffected: (pc.lopComponentsAffected as string[]) || ['basic', 'hra', 'da', 'special'],
     lopImpactsPf: (pc.lopImpactsPf as boolean) ?? true,
     lopImpactsEsi: (pc.lopImpactsEsi as boolean) ?? true,
@@ -139,9 +137,9 @@ interface PayrollCalcResult {
   };
   complianceFlags: { check: string; status: 'pass' | 'warning' | 'fail'; actualValue: number; requiredValue: number; gap: number; notes?: string }[];
   taxComputation?: {
-    regime: 'old' | 'new';
+    taxRegime: 'old' | 'new';
     projectedAnnualGross: number;
-    projectedAnnualExemptions: number;
+    projectedAnnualDeductions: number;
     projectedTaxableIncome: number;
     annualTaxAmount: number;
     surcharge: number;
@@ -153,6 +151,15 @@ interface PayrollCalcResult {
   componentWiseEarnings: PayrollItemComponentDetail[];
   componentWiseDeductions: PayrollItemComponentDetail[];
   arrears: ArrearItem[];
+  previousMonthComparison?: {
+    previousMonth: string;
+    previousGrossPay: number;
+    previousNetPay: number;
+    previousTotalDeductions: number;
+    grossPayVariance: number;
+    netPayVariance: number;
+    variancePercent: number;
+  };
 }
 
 interface PayrollResultRow {
@@ -162,6 +169,13 @@ interface PayrollResultRow {
 
 function getDaysInMonth(year: number, month: number): number {
   return new Date(year, month, 0).getDate();
+}
+
+/** Normalize a Date to local midnight (date-only, no time component) for safe comparisons. */
+function toDateOnly(d: Date): Date {
+  const normalized = new Date(d);
+  normalized.setHours(0, 0, 0, 0);
+  return normalized;
 }
 
 function formatDate(d: Date): string {
@@ -217,7 +231,7 @@ async function getApplicableOvertimeRule(category: string): Promise<LeanOvertime
   return rule;
 }
 
-function applyOvertimeRules(hours: number, rule: LeanOvertimeRule | null): number {
+export function applyOvertimeRules(hours: number, rule: LeanOvertimeRule | null): number {
   if (!rule) return hours;
   let allowedHours = hours;
   if (rule.maxHoursPerDay && allowedHours > rule.maxHoursPerDay) {
@@ -330,9 +344,9 @@ function calculateArrearsWithMap(
 
     // Calculate how many days of arrears apply
     const effectiveDate = currentStructure.effectiveFrom;
-    const arrearsStartDate = new Date(Math.max(effectiveDate.getTime(), monthStart.getTime()));
-    const arrearsEndDate = monthEnd;
-    const applicableArrearDays = Math.max(1, Math.ceil((arrearsEndDate.getTime() - arrearsStartDate.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+    const arrearsStartDate = toDateOnly(new Date(Math.max(effectiveDate.getTime(), monthStart.getTime())));
+    const arrearsEndDate = toDateOnly(monthEnd);
+    const applicableArrearDays = Math.max(1, Math.round((arrearsEndDate.getTime() - arrearsStartDate.getTime()) / (1000 * 60 * 60 * 24)) + 1);
 
     const dailyDifference = difference / Math.max(1, totalDays);
     const effectiveArrearAmount = Math.round(dailyDifference * Math.min(applicableArrearDays, totalDays));
@@ -615,7 +629,82 @@ interface PreFetchedData {
   prevSalaryStructuresMap: Map<string, any>;
 }
 
-async function calculatePayrollForEmployee(
+interface BulkFetchedData {
+  attendanceBulk: any[];
+  overtimeBulk: any[];
+  leaveAppBulk: any[];
+  employees: LeanEmployee[];
+  overtimeRulesRaw: any[];
+  salaryStructuresRaw: any[];
+  componentMastersRaw: any[];
+  ytdItemsBulk: any[];
+  loanRepaymentsBulk: any[];
+  prevStructuresRaw: any[];
+  statutoryDefaults: any;
+}
+
+function buildLookupMaps(bulk: BulkFetchedData): PreFetchedData {
+  const attendanceMap = new Map<string, any[]>();
+  for (const att of bulk.attendanceBulk) {
+    const key = String(att.employee);
+    const arr = attendanceMap.get(key) ?? [];
+    arr.push(att);
+    attendanceMap.set(key, arr);
+  }
+  const overtimeMap = new Map<string, any[]>();
+  for (const ot of bulk.overtimeBulk) {
+    const key = String(ot.employee);
+    const arr = overtimeMap.get(key) ?? [];
+    arr.push(ot);
+    overtimeMap.set(key, arr);
+  }
+  const leaveMap = new Map<string, any[]>();
+  for (const la of bulk.leaveAppBulk) {
+    const key = String(la.employee);
+    const arr = leaveMap.get(key) ?? [];
+    arr.push(la);
+    leaveMap.set(key, arr);
+  }
+  const overtimeRulesMap = new Map<string, LeanOvertimeRule | null>();
+  const categories = [...new Set(bulk.employees.map(e => e.category || 'worker'))];
+  for (const cat of categories) {
+    const applicableTo = cat === 'worker' ? 'worker' : 'office-staff';
+    const rule = bulk.overtimeRulesRaw.find((r: any) => r.applicableTo === applicableTo) ?? bulk.overtimeRulesRaw.find((r: any) => r.applicableTo === 'all') ?? null;
+    overtimeRulesMap.set(cat, rule as LeanOvertimeRule | null);
+  }
+  const salaryStructuresMap = new Map<string, any>();
+  for (const s of bulk.salaryStructuresRaw) { salaryStructuresMap.set(String(s.employee), s); }
+  const componentMasterMap = new Map<string, IComponentMaster>();
+  for (const c of bulk.componentMastersRaw) { componentMasterMap.set(String(c._id), c as unknown as IComponentMaster); }
+  const ytdItemsMap = new Map<string, any[]>();
+  for (const item of bulk.ytdItemsBulk) {
+    const key = String(item.employee);
+    const arr = ytdItemsMap.get(key) ?? [];
+    arr.push(item);
+    ytdItemsMap.set(key, arr);
+  }
+  const loanRepaymentsMap = new Map<string, any[]>();
+  for (const lr of bulk.loanRepaymentsBulk) {
+    const key = String(lr.employee);
+    const arr = loanRepaymentsMap.get(key) ?? [];
+    arr.push(lr);
+    loanRepaymentsMap.set(key, arr);
+  }
+  const prevSalaryStructuresMap = new Map<string, any>();
+  for (const s of bulk.prevStructuresRaw) {
+    const key = String(s.employee);
+    if (!prevSalaryStructuresMap.has(key)) { prevSalaryStructuresMap.set(key, s); }
+  }
+
+  return {
+    attendanceMap, overtimeMap, leaveMap,
+    statutoryDefaults: bulk.statutoryDefaults,
+    overtimeRulesMap, salaryStructuresMap, componentMasterMap,
+    ytdItemsMap, loanRepaymentsMap, prevSalaryStructuresMap,
+  };
+}
+
+export async function calculatePayrollForEmployee(
   emp: LeanEmployee, _month: number, _year: number, config: PayrollConfig, allowances: AllowanceConfig[], deductions: DeductionConfig[],
   startDate: Date, endDate: Date, totalDays: number, _workingDays: number, standardHours: number,
   minimumWageThreshold: number,
@@ -647,13 +736,15 @@ async function calculatePayrollForEmployee(
 
   const leaveDayMap: Record<string, { isPaid: boolean; deductionMethod: string }> = {};
   for (const app of leaveApplications) {
-    const appStart = new Date(Math.max(startDate.getTime(), new Date(app.startDate).getTime()));
-    const appEnd = new Date(Math.min(endDate.getTime(), new Date(app.endDate).getTime()));
+    const appStart = toDateOnly(new Date(Math.max(startDate.getTime(), new Date(app.startDate).getTime())));
+    const appEnd = toDateOnly(new Date(Math.min(endDate.getTime(), new Date(app.endDate).getTime())));
     const lt = app.leaveType as unknown as { isPaid: boolean; deductionMethod?: string } | null;
     if (!lt) continue;
-    for (let d = new Date(appStart); d <= appEnd; d.setDate(d.getDate() + 1)) {
-      const key = formatDate(d);
+    const cur = toDateOnly(appStart);
+    while (cur <= appEnd) {
+      const key = formatDate(cur);
       leaveDayMap[key] = { isPaid: lt.isPaid, deductionMethod: lt.deductionMethod || 'none' };
+      cur.setDate(cur.getDate() + 1);
     }
   }
 
@@ -661,7 +752,7 @@ async function calculatePayrollForEmployee(
   for (const att of attendances) {
     switch (att.status) {
       case 'present': {
-        if (att.isLatePresent) {
+        if (att.isLate || att.isLatePresent) {
           latePresentDays++;
           presentDays++;
         } else {
@@ -672,7 +763,7 @@ async function calculatePayrollForEmployee(
       case 'absent': absentDays++; break;
       case 'half-day': halfDays++; break;
       case 'leave': {
-        const dateKey = formatDate(new Date(att.date));
+        const dateKey = formatDate(toDateOnly(new Date(att.date)));
         const ld = leaveDayMap[dateKey];
         if (ld && ld.isPaid) paidLeaveDays++;
         else unpaidLeaveDays++;
@@ -685,7 +776,7 @@ async function calculatePayrollForEmployee(
 
   for (const ot of overtimes) totalOvertimeHours += ot.hours || 0;
 
-  if (config.otTricksEnabled && config.otRoundingMinutes) {
+  if (config.otTricksEnabled && config.otRoundingMinutes && config.otRoundingMinutes > 0) {
     const rm = config.otRoundingMinutes;
     if (config.otRoundingMethod === 'floor') {
       totalOvertimeHours = Math.floor(totalOvertimeHours * 60 / rm) * (rm / 60);
@@ -703,7 +794,7 @@ async function calculatePayrollForEmployee(
   const dailyWage = emp.dailyWage || 0;
   const isMonthly = emp.salaryType === 'monthly';
 
-  const paidWeeklyOffs = config.paidWeeklyOff ? weeklyOffs : 0;
+  const paidWeeklyOffs = (config.paidWeeklyOff && attendances.length > 0) ? weeklyOffs : 0;
   const paidHolidaysCount = config.paidHolidays ? holidaysCount : 0;
 
   const effectiveWorkingDays = presentDays + (halfDays * (1 - (config.halfDayDeductionPercent || 50) / 100)) + paidWeeklyOffs + paidHolidaysCount;
@@ -734,24 +825,31 @@ async function calculatePayrollForEmployee(
 
   const getWorkingDaysInMonth = (s: Date, e: Date) => {
     let wd = 0;
-    for (let d = new Date(s); d <= e; d.setDate(d.getDate() + 1)) {
-      if (!weeklyOffDays.includes(d.getDay())) wd++;
+    const cur = toDateOnly(s);
+    const end = toDateOnly(e);
+    while (cur <= end) {
+      if (!weeklyOffDays.includes(cur.getDay())) wd++;
+      cur.setDate(cur.getDate() + 1);
     }
     return wd;
   };
-  const monthWorkingDays = getWorkingDaysInMonth(startDate, endDate);
+  const monthWorkingDays = getWorkingDaysInMonth(startDate, endDate) || totalDays;
 
   if (emp.joiningDate) {
-    const doj = new Date(emp.joiningDate);
-    if (doj > startDate && doj <= endDate) {
+    const doj = toDateOnly(new Date(emp.joiningDate));
+    const s = toDateOnly(startDate);
+    const e = toDateOnly(endDate);
+    if (doj > s && doj <= e) {
       isJoiner = true;
       joinDate = doj;
     }
   }
 
   if (emp.leavingDate) {
-    const lod = new Date(emp.leavingDate as string | number);
-    if (lod >= startDate && lod < endDate) {
+    const lod = toDateOnly(new Date(emp.leavingDate as string | number));
+    const s = toDateOnly(startDate);
+    const e = toDateOnly(endDate);
+    if (lod >= s && lod < e) {
       isLeaver = true;
       leaveDate = lod;
     }
@@ -808,34 +906,21 @@ async function calculatePayrollForEmployee(
   if (unpaidLeaveDays > 0) {
     const dailyRate = isMonthly ? baseSalary / lopBase : dailyWage;
     lopPerDayRate = dailyRate;
+    const allowancePerDay = allowancesTotal / Math.max(1, lopBase);
+    const grossDailyRate = isMonthly
+      ? (baseSalary + allowancesTotal + overtimeAmount) / lopBase
+      : dailyWage + allowancePerDay + (overtimeAmount / Math.max(1, lopBase));
 
-    // Aggregate all unique unpaid leave types and apply the most severe deduction method
-    const unpaidLeaveMethods = new Set<string>();
-    for (const app of leaveApplications) {
-      const lt = app.leaveType as unknown as { isPaid: boolean; deductionMethod?: string } | null;
-      if (lt && !lt.isPaid) {
-        unpaidLeaveMethods.add(lt.deductionMethod || 'basic-only');
+    // Calculate per-day deduction using each day's actual deduction method (S6 fix)
+    for (const [, info] of Object.entries(leaveDayMap)) {
+      if (info.isPaid) continue;
+      switch (info.deductionMethod) {
+        case 'gross': unpaidLeaveDeduction += grossDailyRate; break;
+        case 'basic-plus-allowances': unpaidLeaveDeduction += dailyRate + allowancePerDay; break;
+        default: unpaidLeaveDeduction += dailyRate; break;
       }
     }
-
-    // Determine deduction method priority: gross > basic-plus-allowances > basic-only > none
-    let deductionMethod = 'none';
-    if (unpaidLeaveMethods.has('gross')) {
-      deductionMethod = 'gross';
-    } else if (unpaidLeaveMethods.has('basic-plus-allowances')) {
-      deductionMethod = 'basic-plus-allowances';
-    } else if (unpaidLeaveMethods.has('basic-only')) {
-      deductionMethod = 'basic-only';
-    }
-
-    switch (deductionMethod) {
-      case 'none': unpaidLeaveDeduction = 0; break;
-      case 'basic-only': unpaidLeaveDeduction = Math.round(dailyRate * unpaidLeaveDays); break;
-      case 'basic-plus-allowances':
-      case 'gross':
-        unpaidLeaveDeduction = Math.round((dailyRate + (allowancesTotal / Math.max(1, lopBase))) * unpaidLeaveDays);
-        break;
-    }
+    unpaidLeaveDeduction = Math.round(unpaidLeaveDeduction);
   }
 
   let grossEarnings = basicEarnings + allowancesTotal + overtimeAmount;
@@ -986,6 +1071,7 @@ async function calculatePayrollForEmployee(
       ytdTdsDeducted: ytdTdsFromItems,
       monthsRemaining,
       regime: taxRegime,
+      employeeAge: emp.dateOfBirth instanceof Date ? Math.floor((Date.now() - emp.dateOfBirth.getTime()) / (365.25 * 24 * 60 * 60 * 1000)) : undefined,
       declaration: {
         section80C: 0, section80CCD1B: 0, section80D: 0, section80E: 0, section24b: 0,
         hraExemption: 0, ltaExemption: 0, otherExemptions: 0,
@@ -1122,7 +1208,7 @@ async function calculatePayrollForEmployee(
   const bankSplitPercent = (emp as any).bankSplitPercent ?? 0;
   let primaryBankAmount: number | undefined;
   let secondaryBankAmount: number | undefined;
-  if (bankSplitPercent > 0 && bankSplitPercent < 100) {
+  if (bankSplitPercent > 0 && bankSplitPercent <= 100) {
     primaryBankAmount = Math.round(netPay * (bankSplitPercent / 100) * 100) / 100;
     secondaryBankAmount = Math.round((netPay - primaryBankAmount) * 100) / 100;
   }
@@ -1164,9 +1250,9 @@ async function calculatePayrollForEmployee(
     arrears,
     complianceFlags,
     taxComputation: taxComputation ? {
-      regime: taxComputation.regime,
+      taxRegime: taxComputation.regime,
       projectedAnnualGross: taxComputation.projectedAnnualGross,
-      projectedAnnualExemptions: taxComputation.projectedAnnualExemptions,
+      projectedAnnualDeductions: taxComputation.projectedAnnualExemptions,
       projectedTaxableIncome: taxComputation.projectedTaxableIncome,
       annualTaxAmount: taxComputation.annualTaxAmount,
       surcharge: taxComputation.surcharge,
@@ -1218,6 +1304,14 @@ export class PayrollService {
     }
     const monthStr = `${year}-${String(month).padStart(2, '0')}`;
     
+    // Prevent future-dated payroll runs (S12 fix)
+    const now = new Date();
+    const currentMonth = now.getMonth() + 1;
+    const currentYear = now.getFullYear();
+    if (year > currentYear || (year === currentYear && month > currentMonth)) {
+      throw new AppError(`Cannot run payroll for future month ${monthStr}`, 400);
+    }
+
     const session = await mongoose.startSession();
     session.startTransaction();
     
@@ -1232,12 +1326,16 @@ export class PayrollService {
       const allowances = (settings?.allowanceConfig as AllowanceConfig[]) || [];
       const deductions = (settings?.deductionConfig as DeductionConfig[]) || [];
       
+      if (!config.standardHoursPerDay || config.standardHoursPerDay <= 0) {
+        throw new AppError('standardHoursPerDay must be a positive number in company settings', 400);
+      }
+
       const startDate = new Date(year, month - 1, 1);
       const endDate = new Date(year, month, 0);
       const totalDays = getDaysInMonth(year, month);
-      const standardHours = config.standardHoursPerDay || 8;
+      const standardHours = config.standardHoursPerDay;
       
-      const employees = await Employee.find({ status: 'active' }).lean().session(session);
+      const employees = await Employee.find({ status: 'active', $or: [{ overrides: { $exists: false } }, { 'overrides.salaryHold': { $ne: true } }] }).lean().session(session);
       const employeeIds = employees.map(e => e._id);
       const [attendanceBulk, overtimeBulk, leaveAppBulk] = await Promise.all([
         AttendanceEntry.find({ employee: { $in: employeeIds }, date: { $gte: startDate, $lte: endDate } }).lean(),
@@ -1246,38 +1344,10 @@ export class PayrollService {
           .populate('leaveType', 'isPaid deductionMethod name')
           .lean(),
       ]);
-      const attendanceMap = new Map<string, any[]>();
-      for (const att of attendanceBulk) {
-        const key = String(att.employee);
-        const arr = attendanceMap.get(key) ?? [];
-        arr.push(att);
-        attendanceMap.set(key, arr);
-      }
-      const overtimeMap = new Map<string, any[]>();
-      for (const ot of overtimeBulk) {
-        const key = String(ot.employee);
-        const arr = overtimeMap.get(key) ?? [];
-        arr.push(ot);
-        overtimeMap.set(key, arr);
-      }
-      const leaveMap = new Map<string, any[]>();
-      for (const la of leaveAppBulk) {
-        const key = String(la.employee);
-        const arr = leaveMap.get(key) ?? [];
-        arr.push(la);
-        leaveMap.set(key, arr);
-      }
       const statutoryDefaults = await getStatutoryDefaults();
       
       // Batch-fetch overtime rules for all categories (S10 fix)
       const overtimeRulesRaw = await OvertimeRule.find({ isActive: true }).lean();
-      const overtimeRulesMap = new Map<string, LeanOvertimeRule | null>();
-      const categories = [...new Set(employees.map(e => e.category || 'worker'))];
-      for (const cat of categories) {
-        const applicableTo = cat === 'worker' ? 'worker' : 'office-staff';
-        const rule = overtimeRulesRaw.find(r => r.applicableTo === applicableTo) ?? overtimeRulesRaw.find(r => r.applicableTo === 'all') ?? null;
-        overtimeRulesMap.set(cat, rule as LeanOvertimeRule | null);
-      }
 
       // Batch-fetch salary structures, component masters, YTD items, loan repayments (S10 fix)
       const empIdStrs = employeeIds.map(String);
@@ -1310,50 +1380,39 @@ export class PayrollService {
         }).sort({ effectiveFrom: -1 }).lean(),
       ]);
 
-      // Build lookup maps
-      const salaryStructuresMap = new Map<string, any>();
-      for (const s of salaryStructuresRaw) {
-        salaryStructuresMap.set(String(s.employee), s);
-      }
-      const componentMasterMap = new Map<string, IComponentMaster>();
-      for (const c of componentMastersRaw) {
-        componentMasterMap.set(String(c._id), c as unknown as IComponentMaster);
-      }
-      const ytdItemsMap = new Map<string, any[]>();
-      for (const item of ytdItemsBulk) {
-        const key = String(item.employee);
-        const arr = ytdItemsMap.get(key) ?? [];
-        arr.push(item);
-        ytdItemsMap.set(key, arr);
-      }
-      const loanRepaymentsMap = new Map<string, any[]>();
-      for (const lr of loanRepaymentsBulk) {
-        const key = String(lr.employee);
-        const arr = loanRepaymentsMap.get(key) ?? [];
-        arr.push(lr);
-        loanRepaymentsMap.set(key, arr);
-      }
-      // For prevSalaryStructures, only keep the most recent per employee
-      const prevSalaryStructuresMap = new Map<string, any>();
-      for (const s of prevStructuresRaw) {
-        const key = String(s.employee);
-        if (!prevSalaryStructuresMap.has(key)) {
-          prevSalaryStructuresMap.set(key, s);
-        }
-      }
+      const preFetched = buildLookupMaps({
+        attendanceBulk, overtimeBulk, leaveAppBulk, employees, overtimeRulesRaw,
+        salaryStructuresRaw, componentMastersRaw, ytdItemsBulk, loanRepaymentsBulk, prevStructuresRaw,
+        statutoryDefaults,
+      });
       
 const minimumWageThreshold = settings?.payrollConfig?.minimumWage || PAYROLL.MINIMUM_WAGE_DEFAULT;
-      
+
+      // Hardening: validate salary data for all employees before processing (5.39, 5.40)
+      const salaryErrors: string[] = [];
+      for (const emp of employees) {
+        const code = emp.employeeCode || emp.fullName || String(emp._id);
+        if (emp.salaryType === 'daily' && (!emp.dailyWage || emp.dailyWage <= 0)) {
+          salaryErrors.push(`${code}: dailyWage must be > 0 for daily-salary employees`);
+        }
+        if (emp.salaryType === 'monthly' && (!emp.baseSalary || emp.baseSalary <= 0)) {
+          salaryErrors.push(`${code}: baseSalary must be > 0 for monthly-salary employees`);
+        }
+      }
+      if (salaryErrors.length > 0) {
+        throw new AppError(`Cannot run payroll — invalid salary data for ${salaryErrors.length} employee(s): ${salaryErrors.slice(0, 5).join('; ')}${salaryErrors.length > 5 ? ` ... and ${salaryErrors.length - 5} more` : ''}`, 400);
+      }
+
       let totalNetPay = 0, totalGrossPay = 0, totalDeductions = 0;
       const payrollItems = [];
       
       // Process in batches of 50 for large payrolls (2G)
-const BATCH_SIZE = PAYROLL.BATCH_SIZE;
+      const BATCH_SIZE = PAYROLL.BATCH_SIZE;
       for (let i = 0; i < employees.length; i += BATCH_SIZE) {
         const batch = employees.slice(i, i + BATCH_SIZE);
         const batchResults = await Promise.all(
           batch.map(emp =>
-            calculatePayrollForEmployee(emp, month, year, config, allowances, deductions, startDate, endDate, totalDays, totalDays, standardHours, minimumWageThreshold, { attendanceMap, overtimeMap, leaveMap, statutoryDefaults, overtimeRulesMap, salaryStructuresMap, componentMasterMap, ytdItemsMap, loanRepaymentsMap, prevSalaryStructuresMap })
+            calculatePayrollForEmployee(emp, month, year, config, allowances, deductions, startDate, endDate, totalDays, totalDays, standardHours, minimumWageThreshold, preFetched)
               .catch(err => {
                 throw new AppError(
                   `Payroll calculation failed for ${emp.employeeCode || emp.fullName || emp._id}: ${err instanceof Error ? err.message : 'Unknown error'}`,
@@ -1367,6 +1426,34 @@ const BATCH_SIZE = PAYROLL.BATCH_SIZE;
           totalGrossPay += result.grossEarnings;
           totalDeductions += result.totalDeductions;
           payrollItems.push(result);
+        }
+      }
+      
+      // Compute month-over-month variance for each employee
+      const prevMonth = month === 1 ? 12 : month - 1;
+      const prevYear = month === 1 ? year - 1 : year;
+      const prevMonthStr = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
+      const empIdsForMoM = payrollItems.map(item => item.employee.id);
+      const prevMonthItems = await PayrollItem.find({ month: prevMonthStr, employee: { $in: empIdsForMoM } }).lean();
+      const prevMonthMap = new Map<string, any>();
+      for (const prev of prevMonthItems) {
+        prevMonthMap.set(String(prev.employee), prev);
+      }
+      for (const item of payrollItems) {
+        const prevItem = prevMonthMap.get(item.employee.id);
+        if (prevItem) {
+          const prevGross = prevItem.grossEarnings || 0;
+          const prevNet = prevItem.netPay || 0;
+          const prevDeductions = prevItem.totalDeductions || 0;
+          item.previousMonthComparison = {
+            previousMonth: prevMonthStr,
+            previousGrossPay: prevGross,
+            previousNetPay: prevNet,
+            previousTotalDeductions: prevDeductions,
+            grossPayVariance: item.grossEarnings - prevGross,
+            netPayVariance: item.netPay - prevNet,
+            variancePercent: prevNet !== 0 ? Math.round(((item.netPay - prevNet) / prevNet) * 100 * 100) / 100 : 0,
+          };
         }
       }
       
@@ -1427,6 +1514,7 @@ const BATCH_SIZE = PAYROLL.BATCH_SIZE;
           bankSplitPercent: item.bankSplitPercent,
           primaryBankAmount: item.primaryBankAmount,
           secondaryBankAmount: item.secondaryBankAmount,
+          previousMonthComparison: item.previousMonthComparison,
       }));
       
       await PayrollItem.insertMany(payrollItemDocs, { session });
@@ -1469,18 +1557,30 @@ const BATCH_SIZE = PAYROLL.BATCH_SIZE;
   static async previewRun(month: number, year: number): Promise<Record<string, unknown>> {
     const monthStr = `${year}-${String(month).padStart(2, '0')}`;
 
+    // Prevent future-dated payroll preview (S12 fix)
+    const now = new Date();
+    const currentMonth = now.getMonth() + 1;
+    const currentYear = now.getFullYear();
+    if (year > currentYear || (year === currentYear && month > currentMonth)) {
+      throw new AppError(`Cannot preview payroll for future month ${monthStr}`, 400);
+    }
+
     const settings = await CompanySettings.findOne().lean();
     const config = buildPayrollConfig(settings as unknown as Record<string, unknown>);
     const allowances = (settings?.allowanceConfig as AllowanceConfig[]) || [];
     const deductions = (settings?.deductionConfig as DeductionConfig[]) || [];
     const minimumWageThreshold = settings?.payrollConfig?.minimumWage || PAYROLL.MINIMUM_WAGE_DEFAULT;
 
+    if (!config.standardHoursPerDay || config.standardHoursPerDay <= 0) {
+      throw new AppError('standardHoursPerDay must be a positive number in company settings', 400);
+    }
+
     const startDate = new Date(year, month - 1, 1);
     const endDate = new Date(year, month, 0);
     const totalDays = getDaysInMonth(year, month);
-    const standardHours = config.standardHoursPerDay || 8;
+    const standardHours = config.standardHoursPerDay;
 
-    const employees = await Employee.find({ status: 'active' }).lean();
+    const employees = await Employee.find({ status: 'active', $or: [{ overrides: { $exists: false } }, { 'overrides.salaryHold': { $ne: true } }] }).lean();
     const employeeIds = employees.map(e => e._id);
     const [attendanceBulk, overtimeBulk, leaveAppBulk, statutoryDefaults] = await Promise.all([
       AttendanceEntry.find({ employee: { $in: employeeIds }, date: { $gte: startDate, $lte: endDate } }).lean(),
@@ -1490,37 +1590,9 @@ const BATCH_SIZE = PAYROLL.BATCH_SIZE;
         .lean(),
       getStatutoryDefaults(),
     ]);
-    const attendanceMap = new Map<string, any[]>();
-    for (const att of attendanceBulk) {
-      const key = String(att.employee);
-      const arr = attendanceMap.get(key) ?? [];
-      arr.push(att);
-      attendanceMap.set(key, arr);
-    }
-    const overtimeMap = new Map<string, any[]>();
-    for (const ot of overtimeBulk) {
-      const key = String(ot.employee);
-      const arr = overtimeMap.get(key) ?? [];
-      arr.push(ot);
-      overtimeMap.set(key, arr);
-    }
-    const leaveMap = new Map<string, any[]>();
-    for (const la of leaveAppBulk) {
-      const key = String(la.employee);
-      const arr = leaveMap.get(key) ?? [];
-      arr.push(la);
-      leaveMap.set(key, arr);
-    }
 
     // Batch-fetch overtime rules for all categories (S10 fix)
     const overtimeRulesRaw = await OvertimeRule.find({ isActive: true }).lean();
-    const overtimeRulesMap = new Map<string, LeanOvertimeRule | null>();
-    const categories = [...new Set(employees.map(e => e.category || 'worker'))];
-    for (const cat of categories) {
-      const applicableTo = cat === 'worker' ? 'worker' : 'office-staff';
-      const rule = overtimeRulesRaw.find(r => r.applicableTo === applicableTo) ?? overtimeRulesRaw.find(r => r.applicableTo === 'all') ?? null;
-      overtimeRulesMap.set(cat, rule as LeanOvertimeRule | null);
-    }
 
     // Batch-fetch salary structures, component masters, YTD items, loan repayments (S10 fix)
     const empIdStrs = employeeIds.map(String);
@@ -1553,35 +1625,25 @@ const BATCH_SIZE = PAYROLL.BATCH_SIZE;
       }).sort({ effectiveFrom: -1 }).lean(),
     ]);
 
-    // Build lookup maps
-    const salaryStructuresMap = new Map<string, any>();
-    for (const s of salaryStructuresRaw) {
-      salaryStructuresMap.set(String(s.employee), s);
-    }
-    const componentMasterMap = new Map<string, IComponentMaster>();
-    for (const c of componentMastersRaw) {
-      componentMasterMap.set(String(c._id), c as unknown as IComponentMaster);
-    }
-    const ytdItemsMap = new Map<string, any[]>();
-    for (const item of ytdItemsBulk) {
-      const key = String(item.employee);
-      const arr = ytdItemsMap.get(key) ?? [];
-      arr.push(item);
-      ytdItemsMap.set(key, arr);
-    }
-    const loanRepaymentsMap = new Map<string, any[]>();
-    for (const lr of loanRepaymentsBulk) {
-      const key = String(lr.employee);
-      const arr = loanRepaymentsMap.get(key) ?? [];
-      arr.push(lr);
-      loanRepaymentsMap.set(key, arr);
-    }
-    const prevSalaryStructuresMap = new Map<string, any>();
-    for (const s of prevStructuresRaw) {
-      const key = String(s.employee);
-      if (!prevSalaryStructuresMap.has(key)) {
-        prevSalaryStructuresMap.set(key, s);
+    const preFetched = buildLookupMaps({
+      attendanceBulk, overtimeBulk, leaveAppBulk, employees, overtimeRulesRaw,
+      salaryStructuresRaw, componentMastersRaw, ytdItemsBulk, loanRepaymentsBulk, prevStructuresRaw,
+      statutoryDefaults,
+    });
+
+    // Hardening: validate salary data for all employees before processing (5.39, 5.40)
+    const salaryErrors: string[] = [];
+    for (const emp of employees) {
+      const code = emp.employeeCode || emp.fullName || String(emp._id);
+      if (emp.salaryType === 'daily' && (!emp.dailyWage || emp.dailyWage <= 0)) {
+        salaryErrors.push(`${code}: dailyWage must be > 0 for daily-salary employees`);
       }
+      if (emp.salaryType === 'monthly' && (!emp.baseSalary || emp.baseSalary <= 0)) {
+        salaryErrors.push(`${code}: baseSalary must be > 0 for monthly-salary employees`);
+      }
+    }
+    if (salaryErrors.length > 0) {
+      throw new AppError(`Cannot preview payroll — invalid salary data for ${salaryErrors.length} employee(s): ${salaryErrors.slice(0, 5).join('; ')}${salaryErrors.length > 5 ? ` ... and ${salaryErrors.length - 5} more` : ''}`, 400);
     }
 
     let totalNetPay = 0, totalGrossPay = 0, totalDeductions = 0;
@@ -1592,7 +1654,7 @@ const BATCH_SIZE = PAYROLL.BATCH_SIZE;
       const batch = employees.slice(i, i + BATCH_SIZE);
       const batchResults = await Promise.all(
         batch.map(emp =>
-          calculatePayrollForEmployee(emp, month, year, config, allowances, deductions, startDate, endDate, totalDays, totalDays, standardHours, minimumWageThreshold, { attendanceMap, overtimeMap, leaveMap, statutoryDefaults, overtimeRulesMap, salaryStructuresMap, componentMasterMap, ytdItemsMap, loanRepaymentsMap, prevSalaryStructuresMap })
+          calculatePayrollForEmployee(emp, month, year, config, allowances, deductions, startDate, endDate, totalDays, totalDays, standardHours, minimumWageThreshold, preFetched)
             .catch(() => null)
         ),
       );
@@ -1602,6 +1664,34 @@ const BATCH_SIZE = PAYROLL.BATCH_SIZE;
         totalGrossPay += result.grossEarnings;
         totalDeductions += result.totalDeductions;
         payrollItems.push(result);
+      }
+    }
+
+    // Compute month-over-month variance for preview
+    const prevMonth = month === 1 ? 12 : month - 1;
+    const prevYear = month === 1 ? year - 1 : year;
+    const prevMonthStr = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
+    const empIdsForMoM = payrollItems.map(item => item.employee.id);
+    const prevMonthItems = await PayrollItem.find({ month: prevMonthStr, employee: { $in: empIdsForMoM } }).lean();
+    const prevMonthMap = new Map<string, any>();
+    for (const prev of prevMonthItems) {
+      prevMonthMap.set(String(prev.employee), prev);
+    }
+    for (const item of payrollItems) {
+      const prevItem = prevMonthMap.get(item.employee.id);
+      if (prevItem) {
+        const prevGross = prevItem.grossEarnings || 0;
+        const prevNet = prevItem.netPay || 0;
+        const prevDeductions = prevItem.totalDeductions || 0;
+        item.previousMonthComparison = {
+          previousMonth: prevMonthStr,
+          previousGrossPay: prevGross,
+          previousNetPay: prevNet,
+          previousTotalDeductions: prevDeductions,
+          grossPayVariance: item.grossEarnings - prevGross,
+          netPayVariance: item.netPay - prevNet,
+          variancePercent: prevNet !== 0 ? Math.round(((item.netPay - prevNet) / prevNet) * 100 * 100) / 100 : 0,
+        };
       }
     }
 
@@ -1615,7 +1705,7 @@ const BATCH_SIZE = PAYROLL.BATCH_SIZE;
     };
   }
 
-  static async submitRun(id: string, userId: string): Promise<Record<string, unknown>> {
+  static async submitRun(id: string, userId: string, ipAddress?: string): Promise<Record<string, unknown>> {
     const session = await mongoose.startSession();
     session.startTransaction();
 
@@ -1628,7 +1718,7 @@ const BATCH_SIZE = PAYROLL.BATCH_SIZE;
       run.submittedBy = new mongoose.Types.ObjectId(userId);
       run.submittedAt = new Date();
       await addRevision(run, 'Submitted for approval', userId);
-      await addApprovalHistory(run, 'submitted', userId);
+      await addApprovalHistory(run, 'submitted', userId, undefined, ipAddress);
       await run.save();
 
       await PayrollItem.updateMany({ payrollRun: id }, { status: 'submitted' }).session(session);
@@ -1646,7 +1736,7 @@ const BATCH_SIZE = PAYROLL.BATCH_SIZE;
     }
   }
 
-  static async approveRun(id: string, userId: string, comments?: string): Promise<Record<string, unknown>> {
+  static async approveRun(id: string, userId: string, comments?: string, ipAddress?: string): Promise<Record<string, unknown>> {
     const session = await mongoose.startSession();
     session.startTransaction();
 
@@ -1667,7 +1757,7 @@ const BATCH_SIZE = PAYROLL.BATCH_SIZE;
       run.approvedAt = new Date();
       run.remarks = comments || run.remarks;
       await addRevision(run, 'Approved', userId);
-      await addApprovalHistory(run, 'approved', userId, comments);
+      await addApprovalHistory(run, 'approved', userId, comments, ipAddress);
       await run.save();
 
       await PayrollItem.updateMany({ payrollRun: id }, { status: 'approved' }).session(session);
@@ -1685,7 +1775,7 @@ const BATCH_SIZE = PAYROLL.BATCH_SIZE;
     }
   }
 
-  static async rejectRun(id: string, userId: string, reason?: string): Promise<Record<string, unknown>> {
+  static async rejectRun(id: string, userId: string, reason?: string, ipAddress?: string): Promise<Record<string, unknown>> {
     const session = await mongoose.startSession();
     session.startTransaction();
 
@@ -1706,7 +1796,7 @@ const BATCH_SIZE = PAYROLL.BATCH_SIZE;
       run.submittedAt = undefined;
       if (reason) run.remarks = `Rejected: ${reason}`;
       await addRevision(run, 'Rejected, returned to draft', userId, { reason });
-      await addApprovalHistory(run, 'rejected', userId, reason);
+      await addApprovalHistory(run, 'rejected', userId, reason, ipAddress);
       await run.save();
 
       await PayrollItem.updateMany({ payrollRun: id }, { status: 'draft' }).session(session);
@@ -1724,7 +1814,7 @@ const BATCH_SIZE = PAYROLL.BATCH_SIZE;
     }
   }
 
-  static async finalizeRun(id: string, userId: string, remarks?: string): Promise<Record<string, unknown>> {
+  static async finalizeRun(id: string, userId: string, remarks?: string, ipAddress?: string): Promise<Record<string, unknown>> {
     const session = await mongoose.startSession();
     session.startTransaction();
 
@@ -1746,12 +1836,23 @@ const BATCH_SIZE = PAYROLL.BATCH_SIZE;
         }
       }
 
+      // S13 fix: Warn on zero/negative net-pay items
+      const items = await PayrollItem.find({ payrollRun: id }).lean().session(session);
+      const zeroNetPayItems = items.filter((item) => (item.netPay ?? 0) <= 0);
+      if (zeroNetPayItems.length > 0) {
+        const empCodes = zeroNetPayItems.map((item) => (item.employee as any)?.employeeCode || String(item.employee)).join(', ');
+        throw new AppError(
+          `Cannot finalize: ${zeroNetPayItems.length} employee(s) have zero/negative net pay (${empCodes}). Review and adjust before finalizing.`,
+          400,
+        );
+      }
+
       run.status = 'finalized';
       run.finalizedBy = new mongoose.Types.ObjectId(userId);
       run.finalizedAt = new Date();
       if (remarks) run.remarks = remarks;
       await addRevision(run, 'Finalized', userId);
-      await addApprovalHistory(run, 'finalized', userId, remarks);
+      await addApprovalHistory(run, 'finalized', userId, remarks, ipAddress);
       await run.save();
 
       await PayrollItem.updateMany(
@@ -1899,16 +2000,29 @@ const BATCH_SIZE = PAYROLL.BATCH_SIZE;
     month: number, year: number, userId: string, employeeIds: string[], reason: string,
   ): Promise<Record<string, unknown>> {
     const monthStr = `${year}-${String(month).padStart(2, '0')}`;
+
+    // Prevent future-dated payroll runs (S12 fix)
+    const now = new Date();
+    const currentMonth = now.getMonth() + 1;
+    const currentYear = now.getFullYear();
+    if (year > currentYear || (year === currentYear && month > currentMonth)) {
+      throw new AppError(`Cannot run payroll for future month ${monthStr}`, 400);
+    }
+
     const settings = await CompanySettings.findOne().lean();
     const config = buildPayrollConfig(settings as unknown as Record<string, unknown>);
     const allowances = (settings?.allowanceConfig as AllowanceConfig[]) || [];
     const deductions = (settings?.deductionConfig as DeductionConfig[]) || [];
     const minimumWageThreshold = settings?.payrollConfig?.minimumWage || PAYROLL.MINIMUM_WAGE_DEFAULT;
 
+    if (!config.standardHoursPerDay || config.standardHoursPerDay <= 0) {
+      throw new AppError('standardHoursPerDay must be a positive number in company settings', 400);
+    }
+
     const startDate = new Date(year, month - 1, 1);
     const endDate = new Date(year, month, 0);
     const totalDays = getDaysInMonth(year, month);
-    const standardHours = config.standardHoursPerDay || 8;
+    const standardHours = config.standardHoursPerDay;
 
     // Batch-fetch all per-employee data (S10 fix)
     const empIdStrs = employeeIds.map(String);
@@ -1949,69 +2063,24 @@ const BATCH_SIZE = PAYROLL.BATCH_SIZE;
       }).sort({ effectiveFrom: -1 }).lean(),
     ]);
 
-    const attendanceMap = new Map<string, any[]>();
-    for (const att of attendanceBulk) {
-      const key = String(att.employee);
-      const arr = attendanceMap.get(key) ?? [];
-      arr.push(att);
-      attendanceMap.set(key, arr);
-    }
-    const overtimeMap = new Map<string, any[]>();
-    for (const ot of overtimeBulk) {
-      const key = String(ot.employee);
-      const arr = overtimeMap.get(key) ?? [];
-      arr.push(ot);
-      overtimeMap.set(key, arr);
-    }
-    const leaveMap = new Map<string, any[]>();
-    for (const la of leaveAppBulk) {
-      const key = String(la.employee);
-      const arr = leaveMap.get(key) ?? [];
-      arr.push(la);
-      leaveMap.set(key, arr);
-    }
-    const overtimeRulesMap = new Map<string, LeanOvertimeRule | null>();
-    const categories = [...new Set(employees.map(e => e.category || 'worker'))];
-    for (const cat of categories) {
-      const applicableTo = cat === 'worker' ? 'worker' : 'office-staff';
-      const rule = overtimeRulesRaw.find(r => r.applicableTo === applicableTo) ?? overtimeRulesRaw.find(r => r.applicableTo === 'all') ?? null;
-      overtimeRulesMap.set(cat, rule as LeanOvertimeRule | null);
-    }
-    const salaryStructuresMap = new Map<string, any>();
-    for (const s of salaryStructuresRaw) { salaryStructuresMap.set(String(s.employee), s); }
-    const componentMasterMap = new Map<string, IComponentMaster>();
-    for (const c of componentMastersRaw) { componentMasterMap.set(String(c._id), c as unknown as IComponentMaster); }
-    const ytdItemsMap = new Map<string, any[]>();
-    for (const item of ytdItemsBulk) {
-      const key = String(item.employee);
-      const arr = ytdItemsMap.get(key) ?? [];
-      arr.push(item);
-      ytdItemsMap.set(key, arr);
-    }
-    const loanRepaymentsMap = new Map<string, any[]>();
-    for (const lr of loanRepaymentsBulk) {
-      const key = String(lr.employee);
-      const arr = loanRepaymentsMap.get(key) ?? [];
-      arr.push(lr);
-      loanRepaymentsMap.set(key, arr);
-    }
-    const prevSalaryStructuresMap = new Map<string, any>();
-    for (const s of prevStructuresRaw) {
-      const key = String(s.employee);
-      if (!prevSalaryStructuresMap.has(key)) { prevSalaryStructuresMap.set(key, s); }
-    }
+    const preFetched = buildLookupMaps({
+      attendanceBulk, overtimeBulk, leaveAppBulk, employees, overtimeRulesRaw,
+      salaryStructuresRaw, componentMastersRaw, ytdItemsBulk, loanRepaymentsBulk, prevStructuresRaw,
+      statutoryDefaults,
+    });
 
     const payrollItemDocs = [];
-    let totalNetPay = 0, totalGrossPay = 0, totalDeductions = 0;
+    let totalNetPay = 0, totalGrossPay = 0, totalDeductions = 0, totalEmployerContributions = 0;
 
     for (const emp of employees) {
       const result = await calculatePayrollForEmployee(
         emp, month, year, config, allowances, deductions, startDate, endDate, totalDays, totalDays, standardHours, minimumWageThreshold,
-        { attendanceMap, overtimeMap, leaveMap, statutoryDefaults, overtimeRulesMap, salaryStructuresMap, componentMasterMap, ytdItemsMap, loanRepaymentsMap, prevSalaryStructuresMap },
+        preFetched,
       );
       totalNetPay += result.netPay;
       totalGrossPay += result.grossEarnings;
       totalDeductions += result.totalDeductions;
+      totalEmployerContributions += result.employerContributions.reduce((s, c) => s + c.calculatedValue, 0);
 
       payrollItemDocs.push({
         employee: emp._id,
@@ -2034,6 +2103,9 @@ const BATCH_SIZE = PAYROLL.BATCH_SIZE;
         grossEarnings: result.grossEarnings,
         deductions: result.deductions,
         totalDeductions: result.totalDeductions,
+        employerContributions: result.employerContributions || [],
+        loanEmiDeduction: result.loanEmiDeduction || 0,
+        loanRepayment: result._loanRepaymentIds?.[0] || undefined,
         netPay: result.netPay,
         status: 'draft',
         paidDaysBreakdown: result.paidDaysBreakdown,
@@ -2061,6 +2133,7 @@ const BATCH_SIZE = PAYROLL.BATCH_SIZE;
         totalNetPay,
         totalGrossPay,
         totalDeductions,
+        totalEmployerContributions,
         processedBy: new mongoose.Types.ObjectId(userId),
         isSupplementary: true,
         remarks: `Supplementary: ${reason}`,
@@ -2113,10 +2186,7 @@ const BATCH_SIZE = PAYROLL.BATCH_SIZE;
         employee: {
           id: String(emp._id),
           name: emp.fullName,
-          code: (function(){
-            const val = String(emp.employeeCode);
-            return val.length > 4 ? '*'.repeat(val.length - 4) + val.slice(-4) : '****';
-          })(),
+          code: emp.employeeCode,
         },
         totalDays: item.totalDays,
         presentDays: item.presentDays,
@@ -2238,7 +2308,6 @@ const BATCH_SIZE = PAYROLL.BATCH_SIZE;
             continue;
           }
           if (entry.data.basicEarnings !== undefined) item.basicEarnings = entry.data.basicEarnings as number;
-          if (entry.data.netPay !== undefined) item.netPay = entry.data.netPay as number;
           if (entry.data.allowances !== undefined) item.allowances = entry.data.allowances as IPayrollItem['allowances'];
           if (entry.data.deductions !== undefined) item.deductions = entry.data.deductions as IPayrollItem['deductions'];
           if (entry.data.presentDays !== undefined) item.presentDays = entry.data.presentDays as number;
@@ -2249,6 +2318,14 @@ const BATCH_SIZE = PAYROLL.BATCH_SIZE;
           if (entry.data.overtimeHours !== undefined) item.overtimeHours = entry.data.overtimeHours as number;
           if (entry.data.overtimeAmount !== undefined) item.overtimeAmount = entry.data.overtimeAmount as number;
           if (entry.data.totalDeductions !== undefined) item.totalDeductions = entry.data.totalDeductions as number;
+          if (entry.data.netPay !== undefined) item.netPay = entry.data.netPay as number;
+
+          const allowancesTotal = item.allowances?.reduce((sum: number, a: any) => sum + (a.calculatedValue || 0), 0) || 0;
+          item.grossEarnings = item.basicEarnings + allowancesTotal + (item.overtimeAmount || 0);
+          if (entry.data.netPay === undefined) {
+            item.netPay = item.grossEarnings - (item.totalDeductions || 0);
+          }
+
           await item.save({ session });
           results.push({ itemId: entry.itemId, status: 'updated' });
         } catch (error) {
@@ -2295,7 +2372,7 @@ const BATCH_SIZE = PAYROLL.BATCH_SIZE;
     try {
       const run = await PayrollRun.findById(id).session(session);
       if (!run) throw new AppError('Payroll run not found', 404);
-      if (run.status === 'finalized') throw new AppError('Cannot delete finalized payroll', 400);
+      if (run.status !== 'draft') throw new AppError('Can only delete draft payroll', 400);
 
       await LoanRepayment.updateMany(
         { payrollRun: run._id, status: 'deducted' },
@@ -2329,13 +2406,10 @@ const BATCH_SIZE = PAYROLL.BATCH_SIZE;
       return {
         id: String(item._id),
         month: item.month,
-employee: item.employee ? {
+        employee: item.employee ? {
           id: String((item.employee as any)._id),
           name: (item.employee as any).fullName,
-          code: (function(){
-            const val = String((item.employee as any).employeeCode);
-            return val.length > 4 ? '*'.repeat(val.length - 4) + val.slice(-4) : '****';
-          })(),
+          code: (item.employee as any).employeeCode,
         } : undefined,
         payrollRun: pr ? {
           id: String(pr._id),
