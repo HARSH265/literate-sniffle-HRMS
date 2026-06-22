@@ -1,6 +1,7 @@
 import { Table, Button, Space, Modal, Input } from 'antd';
 import { CheckOutlined, CloseOutlined } from '@ant-design/icons';
 import { usePendingApprovals, useApproveSwap, useRejectSwap } from '../hooks/useShiftSwaps';
+import { PageContainer } from '../../../core/components/PageContainer';
 import { PageHeader } from '../../../core/components/PageHeader';
 import { useState } from 'react';
 import dayjs from 'dayjs';
@@ -31,7 +32,7 @@ export function ShiftSwapApprovalsPage() {
   ];
 
   return (
-    <div>
+    <PageContainer>
       <PageHeader title="Swap Approvals" subtitle="Approve or reject shift swap requests" />
       <Table dataSource={data?.data || []} columns={columns} rowKey="_id" loading={isLoading} />
 
@@ -42,6 +43,6 @@ export function ShiftSwapApprovalsPage() {
       }} okText="Reject" okButtonProps={{ danger: true }} confirmLoading={rejectSwap.isPending}>
         <Input.TextArea rows={3} placeholder="Reason for rejection (optional)" value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} maxLength={500} />
       </Modal>
-    </div>
+    </PageContainer>
   );
 }

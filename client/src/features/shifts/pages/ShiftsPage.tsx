@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Button, Input, message, Modal, Form, Select, InputNumber, Tooltip, Tag, Popconfirm } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, SwapOutlined } from '@ant-design/icons';
+import { PageContainer } from '../../../core/components/PageContainer';
 import { PageHeader } from '../../../core/components/PageHeader';
 import { DataTable } from '../../../core/components/DataTable';
 import { shiftService, Shift } from '../services/shiftService';
@@ -75,9 +76,9 @@ export function ShiftsPage() {
       width: 200,
       render: (_: unknown, r: Shift) => (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div style={{ background: '#f0f9ff', borderRadius: 6, padding: '4px 10px', fontSize: 13, fontWeight: 600, color: '#0369a1' }}>{r.startTime}</div>
+          <div style={{ background: 'var(--hrms-primary-light)', borderRadius: 6, padding: '4px 10px', fontSize: 13, fontWeight: 600, color: 'var(--hrms-primary)' }}>{r.startTime}</div>
           <span style={{ color: 'var(--hrms-text-muted)' }}>→</span>
-          <div style={{ background: '#fff7ed', borderRadius: 6, padding: '4px 10px', fontSize: 13, fontWeight: 600, color: '#c2410c' }}>{r.endTime}</div>
+          <div style={{ background: 'var(--hrms-warning-light)', borderRadius: 6, padding: '4px 10px', fontSize: 13, fontWeight: 600, color: 'var(--hrms-warning)' }}>{r.endTime}</div>
         </div>
       ),
     },
@@ -92,7 +93,7 @@ export function ShiftsPage() {
         <div className="action-group">
           <Tooltip title="Edit"><Button type="text" size="small" icon={<EditOutlined />} onClick={() => { setEditingId(r.id); form.setFieldsValue(r); setIsModalOpen(true); }} style={{ color: 'var(--hrms-text-muted)', borderRadius: 6 }} /></Tooltip>
           <Popconfirm title="Delete this shift?" description="This cannot be undone." onConfirm={() => deleteMutation.mutate(r.id)} okText="Delete" okButtonProps={{ danger: true }} cancelText="Cancel">
-            <Tooltip title="Delete"><Button type="text" size="small" icon={<DeleteOutlined />} style={{ color: '#ef4444', borderRadius: 6 }} /></Tooltip>
+            <Tooltip title="Delete">          <Button type="text" size="small" icon={<DeleteOutlined />} style={{ color: 'var(--hrms-danger)', borderRadius: 6 }} /></Tooltip>
           </Popconfirm>
         </div>
       ),
@@ -100,7 +101,7 @@ export function ShiftsPage() {
   ];
 
   return (
-    <div style={{ padding: '0 4px' }}>
+    <PageContainer>
       <PageHeader title="Shifts" subtitle="Configure work schedules and timing" actions={
         <div style={{ display: 'flex', gap: 8 }}>
           <Button icon={<SwapOutlined />} onClick={() => { setBulkModalOpen(true); }}>Bulk Assign</Button>
@@ -180,6 +181,6 @@ export function ShiftsPage() {
           </Form.Item>
         </Form>
       </Modal>
-    </div>
+    </PageContainer>
   );
 }

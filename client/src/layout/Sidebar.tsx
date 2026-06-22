@@ -33,6 +33,7 @@ import {
   StarOutlined,
   ReadOutlined,
   ApartmentOutlined,
+  AuditOutlined,
 } from '@ant-design/icons';
 import { usePermission } from '../core/hooks/usePermission';
 import { useUIStore } from '../core/stores/uiStore';
@@ -60,6 +61,7 @@ export function Sidebar({ collapsed }: SidebarProps) {
     else if (path.includes('/attendance') || path.includes('/kiosk')) { setOpenKeys(['attendance']); }
     else if (path.includes('/overtime')) { setOpenKeys(['overtime']); }
     else if (path.includes('/shift-swaps')) { setOpenKeys(['shiftSwap']); }
+    else if (path.includes('/payroll-reports')) { setOpenKeys(['analytics']); }
     else if (path.includes('/payroll') || path.includes('/salary-slips')) { setOpenKeys(['payroll']); }
     else if (path.includes('/performance')) { setOpenKeys(['performance']); }
     else if (path.includes('/training')) { setOpenKeys(['training']); }
@@ -94,7 +96,9 @@ export function Sidebar({ collapsed }: SidebarProps) {
     if (path.includes('/overtime/rules')) return '/overtime/rules';
     return '/overtime';
   }
-    if (path.includes('/payroll') || path.includes('/salary-slips')) return '/payroll';
+    if (path.includes('/payroll-reports')) return '/payroll-reports';
+    if (path.includes('/salary-slips')) return '/salary-slips';
+    if (path.includes('/payroll')) return '/payroll';
     if (path.includes('/loans')) return '/loans';
     if (path.includes('/statutory')) return '/statutory';
     if (path.includes('/reports')) return '/reports';
@@ -180,16 +184,16 @@ export function Sidebar({ collapsed }: SidebarProps) {
       {
         key: 'performance', icon: <StarOutlined />, label: 'Performance', permission: 'view-performance',
         children: [
-          { key: '/performance', icon: <UnorderedListOutlined />, label: 'Reviews' },
+          { key: '/performance', icon: <StarOutlined />, label: 'Reviews' },
         ]
       },
       {
         key: 'training', icon: <ReadOutlined />, label: 'Training', permission: 'view-training',
         children: [
-          { key: '/training', icon: <UnorderedListOutlined />, label: 'Programs' },
+          { key: '/training', icon: <ReadOutlined />, label: 'Programs' },
           { key: '/training/enrollments', icon: <CheckSquareOutlined />, label: 'Enrollments' },
           { key: '/training/skills', icon: <ApartmentOutlined />, label: 'Skill Matrix' },
-          { key: '/training/skill-gap', icon: <BarChartOutlined />, label: 'Skill Gap' },
+          { key: '/training/skill-gap', icon: <AuditOutlined />, label: 'Skill Gap' },
           { key: '/training/certifications', icon: <SafetyCertificateOutlined />, label: 'Certifications' },
         ]
       },
@@ -199,7 +203,7 @@ export function Sidebar({ collapsed }: SidebarProps) {
         label: 'Shift Swaps',
         permission: ['view-shift-swaps', 'request-shift-swap'],
         children: [
-          { key: '/shift-swaps', icon: <UnorderedListOutlined />, label: 'All Swaps' },
+          { key: '/shift-swaps', icon: <SwapOutlined />, label: 'All Swaps' },
           { key: '/shift-swaps/approvals', icon: <CheckSquareOutlined />, label: 'Approvals', permission: 'manage-shift-swaps' },
           { key: '/shift-swaps/preferences', icon: <SettingOutlined />, label: 'Preferences' },
         ]
@@ -210,9 +214,9 @@ export function Sidebar({ collapsed }: SidebarProps) {
         label: 'Leave',
         permission: 'view-leave',
         children: [
-          { key: '/leave/applications', icon: <UnorderedListOutlined />, label: 'Applications' },
+          { key: '/leave/applications', icon: <CalendarOutlined />, label: 'Applications' },
           { key: '/leave/approvals', icon: <CheckSquareOutlined />, label: 'Approvals' },
-          { key: '/leave/balances', icon: <BarChartOutlined />, label: 'Balances' },
+          { key: '/leave/balances', icon: <FileDoneOutlined />, label: 'Balances' },
         ]
       },
       {
@@ -221,7 +225,7 @@ export function Sidebar({ collapsed }: SidebarProps) {
         label: 'Overtime',
         permission: 'manage-overtime',
         children: [
-          { key: '/overtime', icon: <PlayCircleOutlined />, label: 'Entries' },
+          { key: '/overtime', icon: <FieldTimeOutlined />, label: 'Entries' },
           { key: '/overtime/rules', icon: <SettingOutlined />, label: 'Rules' },
         ]
       },
@@ -248,6 +252,7 @@ export function Sidebar({ collapsed }: SidebarProps) {
         permission: 'view-reports',
         children: [
           { key: '/reports', icon: <BarChartOutlined />, label: 'Reports', permission: 'view-reports' },
+          { key: '/payroll-reports', icon: <DollarOutlined />, label: 'Payroll Reports', permission: 'view-payroll' },
           { key: '/statutory', icon: <SafetyCertificateOutlined />, label: 'Statutory', permission: 'view-statutory' },
         ]
       },
@@ -267,7 +272,7 @@ export function Sidebar({ collapsed }: SidebarProps) {
         label: 'Communication',
         children: [
           { key: '/announcements', icon: <BellOutlined />, label: 'Announcements', permission: 'view-announcements' },
-          { key: '/helpdesk', icon: <UnorderedListOutlined />, label: 'Help Desk', permission: 'view-tickets' },
+          { key: '/helpdesk', icon: <MessageOutlined />, label: 'Help Desk', permission: 'view-tickets' },
           { key: '/notifications', icon: <BellOutlined />, label: 'Notifications' },
         ]
       },

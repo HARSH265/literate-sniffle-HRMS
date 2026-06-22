@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { Button, Input, Select, message, Modal, Form, Tooltip, Popconfirm } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined } from '@ant-design/icons';
+import { PageContainer } from '../../../core/components/PageContainer';
 import { PageHeader } from '../../../core/components/PageHeader';
 import { DataTable } from '../../../core/components/DataTable';
 import { designationService, Designation, CreateDesignation } from '../services/designationService';
@@ -75,7 +76,7 @@ const { data, isLoading, isFetching } = useQuery({
           <Tooltip title="Edit"><Button type="text" size="small" icon={<EditOutlined />} onClick={() => { setEditingId(r.id); form.setFieldsValue({ name: r.name, department: r.department?.id }); setIsModalOpen(true); }} style={{ color: 'var(--hrms-text-muted)', borderRadius: 6 }} /></Tooltip>
           <Popconfirm title="Delete this designation?" description="This cannot be undone." onConfirm={() => deleteMutation.mutate(r.id)} okText="Delete" okButtonProps={{ danger: true }} cancelText="Cancel">
             <Tooltip title="Delete">
-              <Button type="text" size="small" icon={<DeleteOutlined />} style={{ color: '#ef4444', borderRadius: 6 }} />
+              <Button type="text" size="small" icon={<DeleteOutlined />} style={{ color: 'var(--hrms-danger)', borderRadius: 6 }} />
             </Tooltip>
           </Popconfirm>
         </div>
@@ -84,7 +85,7 @@ const { data, isLoading, isFetching } = useQuery({
   ], []);
 
   return (
-    <div style={{ padding: '0 4px' }}>
+    <PageContainer>
       <PageHeader
         title="Designations"
         subtitle="Define roles and positions within departments"
@@ -128,6 +129,6 @@ const { data, isLoading, isFetching } = useQuery({
           </Form.Item>
         </Form>
       </Modal>
-    </div>
+    </PageContainer>
   );
 }

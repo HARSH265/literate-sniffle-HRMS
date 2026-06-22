@@ -64,7 +64,7 @@
 }
 
 .actionBtnDanger {
-  color: #ef4444;
+  color: var(--hrms-danger);
   border-radius: 6px;
 }
 
@@ -178,7 +178,7 @@
 }
 
 .docDeleteIcon {
-  color: #ff4d4f;
+  color: var(--hrms-danger);
 }
 
 .modalField {

@@ -1,16 +1,19 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { Card, Descriptions, Button, Space, Spin, Typography, Divider, Tag, Row, Col, Statistic, Table } from 'antd';
+import { Card, Descriptions, Button, Space, Spin, Typography, Divider, Tag, Row, Col, Statistic } from 'antd';
 import { ArrowLeftOutlined, TeamOutlined, CalendarOutlined, EnvironmentOutlined, DollarOutlined, BookOutlined } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
 import { trainingService } from '../services/trainingService';
+import { DataTable } from '../../../core/components/DataTable';
 import { ProgramStatusBadge } from '../components/TrainingStatusBadge';
+import { PageContainer } from '../../../core/components/PageContainer';
+import { ErrorState } from '../../../core/components/ErrorState';
 const { Text, Title } = Typography;
 
 export function TrainingProgramDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['training', 'programs', id],
     queryFn: () => trainingService.getProgram(id!),
     enabled: !!id,
@@ -27,6 +30,10 @@ export function TrainingProgramDetailPage() {
 
   if (isLoading) {
     return <div style={{ display: 'flex', justifyContent: 'center', padding: 80 }}><Spin size="large" /></div>;
+  }
+
+  if (error) {
+    return <ErrorState message="Failed to load program" />;
   }
 
   if (!program) {
@@ -49,7 +56,7 @@ export function TrainingProgramDetailPage() {
   ];
 
   return (
-    <div>
+    <PageContainer>
       <Space style={{ marginBottom: 16 }}>
         <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/training')}>Back to Programs</Button>
       </Space>
@@ -101,8 +108,8 @@ export function TrainingProgramDetailPage() {
 
         <Divider />
         <Title level={5}>Enrollments ({enrolledCount})</Title>
-        <Table dataSource={enrollments} columns={enrollmentColumns} rowKey="_id" size="small" pagination={false} />
+        <DataTable dataSource={enrollments} columns={enrollmentColumns} rowKey="id" hidePagination />
       </Card>
-    </div>
+    </PageContainer>
   );
 }

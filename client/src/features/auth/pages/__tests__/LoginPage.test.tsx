@@ -48,11 +48,14 @@ describe('LoginPage', () => {
     expect(screen.getByPlaceholderText('Enter your password')).toBeInTheDocument();
   });
 
-  it('renders demo credentials', () => {
+  it('does not render demo credentials hint when not in demo mode', () => {
     renderPage();
-    expect(screen.getByText('Demo credentials')).toBeInTheDocument();
-    expect(screen.getByText('admin@hrms.com')).toBeInTheDocument();
-    expect(screen.getByText('Admin@1234')).toBeInTheDocument();
+    expect(screen.queryByText('Demo credentials')).not.toBeInTheDocument();
+  });
+
+  it('renders login form with accessible labels', () => {
+    renderPage();
+    expect(screen.getByRole('form', { name: /login form/i })).toBeInTheDocument();
   });
 
   it('renders brand panel with feature list', () => {

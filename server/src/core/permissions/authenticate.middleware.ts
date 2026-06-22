@@ -3,6 +3,8 @@ import jwt from 'jsonwebtoken';
 import { env } from '../../config/env.js';
 import { AppError } from '../errors/AppError.js';
 import { TokenBlacklist } from '../auth/TokenBlacklist.js';
+import { logger } from '../logger/logger.js';
+import { AUTH_CONSTANTS } from '../../modules/auth/auth.constants.js';
 
 export interface AuthUser {
   id: string;
@@ -26,8 +28,8 @@ export async function authenticate(
   try {
     let token: string | undefined;
 
-    if (req.cookies?.jwt) {
-      token = req.cookies.jwt;
+    if (req.cookies?.[AUTH_CONSTANTS.cookieNames.jwt]) {
+      token = req.cookies[AUTH_CONSTANTS.cookieNames.jwt];
     } else if (req.headers.authorization?.startsWith('Bearer ')) {
       token = req.headers.authorization.split(' ')[1];
     }
@@ -36,7 +38,13 @@ export async function authenticate(
       throw new AppError('No token provided', 401);
     }
 
-    if (await TokenBlacklist.isBlacklisted(token)) {
+    try {
+      if (await TokenBlacklist.isBlacklisted(token)) {
+        throw new AppError('Token has been revoked', 401);
+      }
+    } catch (err) {
+      logger.error('Token blacklist check failed:', err);
+      // Treat as revoked to prevent token misuse if blacklist unavailable
       throw new AppError('Token has been revoked', 401);
     }
 
@@ -44,7 +52,14 @@ export async function authenticate(
     req.user = decoded;
 
     next();
-  } catch {
-    next(new AppError('Invalid token', 401));
+  } catch (err: any) {
+    if (err.name === 'TokenExpiredError') {
+      next(new AppError('Token expired', 401));
+    } else if (err.name === 'JsonWebTokenError') {
+      next(new AppError('Invalid token', 401));
+    } else {
+      logger.error('Authentication error:', err);
+      next(new AppError('Invalid token', 401));
+    }
   }
 }

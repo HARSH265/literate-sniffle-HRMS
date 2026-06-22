@@ -5,6 +5,9 @@ import PayrollItem from '../../../models/PayrollItem.model.js';
 import LoanRepayment from '../../../models/LoanRepayment.model.js';
 import Employee from '../../../models/Employee.model.js';
 import User from '../../../models/User.model.js';
+import Notification from '../../../models/Notification.model.js';
+import AuditLog from '../../../models/AuditLog.model.js';
+import CompanySettings from '../../../models/CompanySettings.model.js';
 import { PayrollService } from '../payroll.service.js';
 import { AppError } from '../../../core/errors/AppError.js';
 
@@ -26,12 +29,32 @@ beforeAll(async () => {
     salaryType: 'monthly', baseSalary: 25000,
   });
   empId = emp._id.toString();
+
+  await CompanySettings.findOneAndUpdate({}, {
+    $set: {
+      payrollConfig: {
+        standardHoursPerDay: 8,
+        defaultWorkingDays: 30,
+        paidWeeklyOff: true,
+        paidHolidays: true,
+        halfDayDeductionPercent: 50,
+        overtimeBase: 'basic',
+        overtimeMultiplier: 2,
+        roundingFinalSalary: 'nearest',
+        roundingPrecision: 0,
+        perDayCalcMethod: '30',
+        lopCalcMethod: '30',
+      },
+    },
+  }, { upsert: true });
 });
 
 beforeEach(async () => {
   await PayrollRun.deleteMany({});
   await PayrollItem.deleteMany({});
   await LoanRepayment.deleteMany({});
+  await Notification.deleteMany({ module: 'payroll' });
+  await AuditLog.deleteMany({ module: 'payroll' });
 
   const run = await PayrollRun.create({
     month: '2025-03', status: 'draft', totalEmployees: 5, totalNetPay: 250000,
@@ -283,6 +306,64 @@ describe('PayrollService integration', () => {
     it('returns empty array for employee with no records', async () => {
       const result = await PayrollService.getByEmployee(new mongoose.Types.ObjectId().toString());
       expect(result).toHaveLength(0);
+    });
+  });
+
+  describe('finalizeRun - notification verification (5.43)', () => {
+    it('sends notification to HR admins after finalization', async () => {
+      await PayrollService.submitRun(payrollRunId, userId);
+      await PayrollService.approveRun(payrollRunId, userId);
+      await PayrollService.finalizeRun(payrollRunId, userId);
+
+      const notifications = await Notification.find({ module: 'payroll', recipient: userId }).lean();
+      expect(notifications.length).toBeGreaterThanOrEqual(1);
+      expect(notifications[0].title).toBe('Payroll Finalized');
+      expect(notifications[0].type).toBe('success');
+    });
+  });
+
+  describe('audit log verification (5.44)', () => {
+    it('logs create action on runPayroll', async () => {
+      await PayrollRun.deleteMany({});
+      await PayrollItem.deleteMany({});
+      await PayrollService.runPayroll(3, 2025, userId);
+
+      const logs = await AuditLog.find({ module: 'payroll', action: 'create' }).lean();
+      expect(logs.length).toBeGreaterThanOrEqual(1);
+      expect(logs[0].userId.toString()).toBe(userId);
+    });
+
+    it('logs update action on submitRun', async () => {
+      await PayrollService.submitRun(payrollRunId, userId);
+
+      const logs = await AuditLog.find({ module: 'payroll', action: 'update', userId }).lean();
+      expect(logs.length).toBeGreaterThanOrEqual(1);
+      expect(logs[0].targetId?.toString()).toBe(payrollRunId);
+    });
+
+    it('logs approve action on approveRun', async () => {
+      await PayrollService.submitRun(payrollRunId, userId);
+      await PayrollService.approveRun(payrollRunId, userId);
+
+      const logs = await AuditLog.find({ module: 'payroll', action: 'approve', userId }).lean();
+      expect(logs.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('logs finalize action on finalizeRun', async () => {
+      await PayrollService.submitRun(payrollRunId, userId);
+      await PayrollService.approveRun(payrollRunId, userId);
+      await PayrollService.finalizeRun(payrollRunId, userId);
+
+      const logs = await AuditLog.find({ module: 'payroll', action: 'finalize', userId }).lean();
+      expect(logs.length).toBeGreaterThanOrEqual(1);
+      expect(logs[0].details).toMatchObject({ month: expect.any(String) });
+    });
+
+    it('logs delete action on deleteRun', async () => {
+      await PayrollService.deleteRun(payrollRunId, userId);
+
+      const logs = await AuditLog.find({ module: 'payroll', action: 'delete', userId }).lean();
+      expect(logs.length).toBeGreaterThanOrEqual(1);
     });
   });
 });

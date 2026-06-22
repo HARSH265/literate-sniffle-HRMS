@@ -1,11 +1,20 @@
 import PayrollItem from '../../models/PayrollItem.model.js';
 import PayrollRun from '../../models/PayrollRun.model.js';
 import Employee from '../../models/Employee.model.js';
+import Loan from '../../models/Loan.model.js';
+import LoanRepayment from '../../models/LoanRepayment.model.js';
 import mongoose from 'mongoose';
+
+interface PopulatedDept { _id: unknown; name: string; }
+interface PopulatedEmp { _id: unknown; fullName: string; employeeCode: string; department?: string; }
+
+const MAX_REPORT_ITEMS = parseInt(process.env.MAX_REPORT_ITEMS || '50000', 10);
+const MAX_LOAN_ITEMS = parseInt(process.env.MAX_LOAN_ITEMS || '10000', 10);
 
 export async function getHeadcountCostReport(year: number): Promise<Record<string, unknown>> {
   const employees = await Employee.find({ status: 'active' })
     .populate('department', 'name')
+    .limit(MAX_REPORT_ITEMS)
     .lean();
 
   const byDept: Record<string, {
@@ -14,7 +23,8 @@ export async function getHeadcountCostReport(year: number): Promise<Record<strin
   }> = {};
 
   for (const emp of employees) {
-    const deptName = (emp.department as any)?.name || 'Unassigned';
+    const dept = emp.department as PopulatedDept | undefined;
+    const deptName = dept?.name || 'Unassigned';
     if (!byDept[deptName]) {
       byDept[deptName] = { department: deptName, headcount: 0, workers: 0, officeStaff: 0, permanent: 0, contract: 0, totalMonthlySalary: 0 };
     }
@@ -23,7 +33,9 @@ export async function getHeadcountCostReport(year: number): Promise<Record<strin
     else byDept[deptName].officeStaff++;
     if (emp.employmentType === 'contract') byDept[deptName].contract++;
     else byDept[deptName].permanent++;
-    byDept[deptName].totalMonthlySalary += (emp.baseSalary || emp.dailyWage || 0) * (emp.salaryType === 'monthly' ? 1 : 26);
+    byDept[deptName].totalMonthlySalary += emp.salaryType === 'monthly'
+      ? (emp.baseSalary || 0)
+      : (emp.dailyWage || 0) * 26;
   }
 
   return {
@@ -68,9 +80,13 @@ export async function getMoMVarianceReport(): Promise<Record<string, unknown>> {
   };
 }
 
+const FY_START_MONTH = parseInt(process.env.FY_START_MONTH || '4', 10);
+
 export async function getYtdCostAnalysis(year: number): Promise<Record<string, unknown>> {
-  const startStr = `${year}-04`;
-  const endStr = `${year + 1}-03`;
+  const startStr = `${year}-${String(FY_START_MONTH).padStart(2, '0')}`;
+  const endMonth = FY_START_MONTH === 1 ? 12 : FY_START_MONTH - 1;
+  const endYear = FY_START_MONTH === 1 ? year : year + 1;
+  const endStr = `${endYear}-${String(endMonth).padStart(2, '0')}`;
 
   const runs = await PayrollRun.find({
     status: 'finalized',
@@ -117,12 +133,12 @@ export async function getOtLopAnalysis(
   const byDept: Record<string, { otHours: number; otAmount: number; lopDays: number; lopAmount: number }> = {};
 
   for (const item of items) {
-    const emp = item.employee as any;
+    const emp = item.employee as PopulatedEmp | undefined;
     const deptName = emp?.department || 'Unknown';
     const otHours = item.overtimeHours || 0;
     const otAmount = item.overtimeAmount || 0;
     const lopDays = item.unpaidLeaveDays || 0;
-    const lopAmount = (item.lopDetails as any)?.lopAmount || 0;
+    const lopAmount = (item as any).lopDetails?.lopAmount || 0;
 
     totalOtHours += otHours;
     totalOtAmount += otAmount;
@@ -146,12 +162,12 @@ export async function getOtLopAnalysis(
 }
 
 export async function getLoanOutstandingReport(): Promise<Record<string, unknown>> {
-  const loans = await (await import('../../models/Loan.model.js')).default.find({ status: 'approved' })
+  const loans = await Loan.find({ status: 'approved' })
     .populate('employee', 'fullName employeeCode')
+    .limit(MAX_LOAN_ITEMS)
     .lean();
 
-  const loanIds = loans.map((l: any) => l._id);
-  const LoanRepayment = (await import('../../models/LoanRepayment.model.js')).default;
+  const loanIds = loans.map((l) => l._id);
   const repayments = await LoanRepayment.find({ loan: { $in: loanIds }, status: 'deducted' }).lean();
 
   const paidByLoan = new Map<string, number>();
@@ -161,13 +177,14 @@ export async function getLoanOutstandingReport(): Promise<Record<string, unknown
   }
 
   let totalOutstanding = 0;
-  const details = loans.map((loan: any) => {
+  const details = loans.map((loan) => {
+    const empPopulated = loan.employee as PopulatedEmp | undefined;
     const totalPaid = paidByLoan.get(String(loan._id)) || 0;
     const outstanding = (loan.amount || 0) - totalPaid;
     totalOutstanding += outstanding;
     return {
-      employee: (loan.employee as any)?.fullName || 'Unknown',
-      employeeCode: (loan.employee as any)?.employeeCode || '',
+      employee: empPopulated?.fullName || 'Unknown',
+      employeeCode: empPopulated?.employeeCode || '',
       loanType: loan.loanType || '',
       amount: loan.amount || 0,
       paid: totalPaid,
@@ -190,20 +207,26 @@ export async function getBudgetVsActual(runId: string): Promise<Record<string, u
     .lean();
 
   const byDept: Record<string, { budgeted: number; actual: number; variance: number; variancePct: number }> = {};
-  const employees = await Employee.find({ status: 'active' }).populate('department', 'name').lean();
-  const deptBudget: Record<string, number> = {};
-  for (const emp of employees) {
-    const deptName = (emp.department as any)?.name || 'Unassigned';
-    deptBudget[deptName] = (deptBudget[deptName] || 0) + (emp.baseSalary || emp.dailyWage || 0);
-  }
 
   for (const item of items) {
-    const emp = item.employee as any;
+    const emp = item.employee as PopulatedEmp | undefined;
     const deptName = (typeof emp === 'object' && emp?.department) || 'Unknown';
     if (!byDept[deptName]) {
-      byDept[deptName] = { budgeted: deptBudget[deptName] || 0, actual: 0, variance: 0, variancePct: 0 };
+      byDept[deptName] = { budgeted: 0, actual: 0, variance: 0, variancePct: 0 };
     }
     byDept[deptName].actual += item.netPay || 0;
+  }
+
+  const employees = await Employee.find({ status: 'active' }).populate('department', 'name').limit(MAX_REPORT_ITEMS).lean();
+  for (const emp of employees) {
+    const dept = emp.department as PopulatedDept | undefined;
+    const deptName = dept?.name || 'Unassigned';
+    if (!byDept[deptName]) {
+      byDept[deptName] = { budgeted: 0, actual: 0, variance: 0, variancePct: 0 };
+    }
+    byDept[deptName].budgeted += emp.salaryType === 'monthly'
+      ? (emp.baseSalary || 0)
+      : (emp.dailyWage || 0) * 26;
   }
 
   for (const [, data] of Object.entries(byDept)) {

@@ -1,8 +1,10 @@
 import { useState } from 'react';
-import { Card, Select, Typography, Tag, Space, Modal, InputNumber, Switch, Button, Table, Empty } from 'antd';
+import { Card, Select, Typography, Tag, Space, Modal, InputNumber, Switch, Button, Empty } from 'antd';
+import { DataTable } from '../../../core/components/DataTable';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { trainingService } from '../services/trainingService';
 import { employeeService } from '../../employees/services/employeeService';
+import { PageContainer } from '../../../core/components/PageContainer';
 import { PageHeader } from '../../../core/components/PageHeader';
 import { usePermission } from '../../../core/hooks/usePermission';
 import { message } from 'antd';
@@ -91,9 +93,9 @@ export function SkillMatrixPage() {
   ];
 
   return (
-    <div>
+    <PageContainer>
       <PageHeader title="Skill Matrix" subtitle="View and manage employee skills" />
-      <Card style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+      <Card>
         <Space style={{ marginBottom: 16 }}>
           <Select placeholder="Select an employee" value={selectedEmployee} onChange={(v) => { setSelectedEmployee(v); setEditModalOpen(false); }} allowClear showSearch optionFilterProp="label" style={{ width: 320 }}
             options={employeeList.map((e: any) => ({ label: `${e.fullName} (${e.employeeCode})`, value: getId(e) })).filter((option: any) => Boolean(option.value))}
@@ -102,7 +104,7 @@ export function SkillMatrixPage() {
         {!selectedEmployee ? (
           <Empty description="Select an employee to view their skills" />
         ) : (
-          <Table dataSource={allSkills} columns={columns} rowKey={(record) => getId(record)} loading={isLoading} pagination={false} size="small" />
+          <DataTable dataSource={allSkills} columns={columns} rowKey={(record) => getId(record)} loading={isLoading} hidePagination size="small" />
         )}
       </Card>
 
@@ -124,6 +126,6 @@ export function SkillMatrixPage() {
           </Space>
         )}
       </Modal>
-    </div>
+    </PageContainer>
   );
 }

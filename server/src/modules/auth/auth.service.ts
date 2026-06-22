@@ -2,11 +2,14 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import User from '../../models/User.model.js';
 import PasswordResetToken from '../../models/PasswordResetToken.model.js';
+import RolePermission from '../../models/RolePermission.model.js';
 import { AppError } from '../../core/errors/AppError.js';
 import { env } from '../../config/env.js';
 import { AuditService } from '../../core/audit/AuditService.js';
 import { TokenBlacklist } from '../../core/auth/TokenBlacklist.js';
+import { logger } from '../../core/logger/logger.js';
 import { EmailService } from '../../core/email/EmailService.js';
+import { permissions as defaultPermissions } from '../../core/permissions/permissions.config.js';
 import CompanySettings from '../../models/CompanySettings.model.js';
 
 async function getAuthConfig(): Promise<{ tokenExpiry: string; refreshTokenExpiry: string }> {
@@ -21,7 +24,48 @@ async function getAuthConfig(): Promise<{ tokenExpiry: string; refreshTokenExpir
   }
 }
 
+export interface PasswordPolicy {
+  passwordMinLength: number;
+  requireUppercase: boolean;
+  requireLowercase: boolean;
+  requireNumber: boolean;
+  requireSpecialChar: boolean;
+  passwordHistoryCount: number;
+}
+
 export class AuthService {
+  static async getPasswordPolicy(): Promise<PasswordPolicy> {
+    try {
+      const settings = await CompanySettings.findOne().lean() as any;
+      const cfg = settings?.authConfig || {};
+      return {
+        passwordMinLength: cfg.passwordMinLength ?? 8,
+        requireUppercase: cfg.requireUppercase ?? true,
+        requireLowercase: cfg.requireLowercase ?? true,
+        requireNumber: cfg.requireNumber ?? true,
+        requireSpecialChar: cfg.requireSpecialChar ?? true,
+        passwordHistoryCount: cfg.passwordHistoryCount ?? 5,
+      };
+    } catch {
+      return {
+        passwordMinLength: 8,
+        requireUppercase: true,
+        requireLowercase: true,
+        requireNumber: true,
+        requireSpecialChar: true,
+        passwordHistoryCount: 5,
+      };
+    }
+  }
+
+  static async getEffectivePermissions(role: string): Promise<string[]> {
+    const custom = await RolePermission.findOne({ role }).lean();
+    if (custom) {
+      return custom.permissions as string[];
+    }
+    return (defaultPermissions[role as keyof typeof defaultPermissions] || []) as string[];
+  }
+
   static async login(email: string, password: string, ipAddress?: string, userAgent?: string) {
 
 
@@ -33,7 +77,7 @@ export class AuthService {
     }
 
     if (user.lockUntil && user.lockUntil > new Date()) {
-      throw new AppError('Account is locked. Please try again later.', 401);
+      throw new AppError('Account locked', 423);
     }
 
     const isMatch = await user.comparePassword(password);
@@ -224,6 +268,19 @@ export class AuthService {
       throw new AppError('Account is deactivated', 401);
     }
 
+    try {
+      const decoded = jwt.decode(refreshToken) as { exp?: number };
+      const ttl = decoded?.exp ? decoded.exp - Math.floor(Date.now() / 1000) : 3600;
+      await TokenBlacklist.add(refreshToken, Math.max(ttl, 1));
+    } catch (err) {
+      logger.error('Failed to blacklist old refresh token during rotation', err);
+      try {
+        await TokenBlacklist.add(refreshToken, 3600);
+      } catch (fallbackErr) {
+        logger.error('Fallback blacklist add also failed', fallbackErr);
+      }
+    }
+
     const { tokenExpiry, refreshTokenExpiry } = await getAuthConfig();
 
     const newToken = jwt.sign(
@@ -253,23 +310,33 @@ export class AuthService {
         const decoded = jwt.decode(token) as { exp?: number };
         const ttl = decoded?.exp ? decoded.exp - Math.floor(Date.now() / 1000) : 3600;
         await TokenBlacklist.add(token, Math.max(ttl, 1));
-      } catch {
-        await TokenBlacklist.add(token, 3600);
+      } catch (err) {
+        logger.error('Failed to add token to blacklist during logout', err);
+        try {
+          await TokenBlacklist.add(token, 3600);
+        } catch (fallbackErr) {
+          logger.error('Fallback blacklist add also failed', fallbackErr);
+        }
       }
     }
   }
 
   static async logoutAllDevices(userId: string, token?: string, ipAddress?: string, userAgent?: string) {
     await User.findByIdAndUpdate(userId, { refreshToken: null });
-    if (token) {
-      try {
-        const decoded = jwt.decode(token) as { exp?: number };
-        const ttl = decoded?.exp ? decoded.exp - Math.floor(Date.now() / 1000) : 3600;
-        await TokenBlacklist.add(token, Math.max(ttl, 1));
-      } catch {
-        await TokenBlacklist.add(token, 3600);
+if (token) {
+        try {
+          const decoded = jwt.decode(token) as { exp?: number };
+          const ttl = decoded?.exp ? decoded.exp - Math.floor(Date.now() / 1000) : 3600;
+          await TokenBlacklist.add(token, Math.max(ttl, 1));
+        } catch (err) {
+          logger.error('Failed to add token to blacklist during logoutAllDevices', err);
+          try {
+            await TokenBlacklist.add(token, 3600);
+          } catch (fallbackErr) {
+            logger.error('Fallback blacklist add also failed', fallbackErr);
+          }
+        }
       }
-    }
 
     await AuditService.log({
       action: 'logout-all-devices',
@@ -302,14 +369,19 @@ export class AuthService {
 
     const resetUrl = `${env.CLIENT_URL}/reset-password?token=${rawToken}`;
 
-    await EmailService.send(
-      user.email,
-      'Password Reset Request',
-      `<p>You requested a password reset. Click the link below to reset your password:</p>
-       <p><a href="${resetUrl}">${resetUrl}</a></p>
-       <p>This link expires in 1 hour.</p>
-       <p>If you didn't request this, ignore this email.</p>`,
-    );
+    try {
+        await EmailService.send(
+          user.email,
+          'Password Reset Request',
+          `<p>You requested a password reset. Click the link below to reset your password:</p>
+           <p><a href="${resetUrl}">${resetUrl}</a></p>
+           <p>This link expires in 1 hour.</p>
+           <p>If you didn't request this, ignore this email.</p>`,
+        );
+      } catch (err) {
+        logger.error('Forgot password email failed:', err);
+        return { message: 'Email service unavailable' };
+      }
 
     return { message: 'If an account exists, a reset email has been sent.' };
   }
@@ -349,6 +421,11 @@ export class AuthService {
 
     resetToken.used = true;
     await resetToken.save();
+
+    await PasswordResetToken.updateMany(
+      { user: user._id, used: false, _id: { $ne: resetToken._id } },
+      { $set: { used: true } },
+    );
 
     await AuditService.log({
       action: 'update',

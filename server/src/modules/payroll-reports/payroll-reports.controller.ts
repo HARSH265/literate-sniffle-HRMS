@@ -1,10 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
 import mongoose from 'mongoose';
+import ExcelJS from 'exceljs';
 import { generatePayslipPdf } from './payslip.service.js';
 import { generateBankFile } from './bankfile.service.js';
 import { generateSalaryRegister } from './salary-register.service.js';
 import PayrollRun from '../../models/PayrollRun.model.js';
 import PayrollItem from '../../models/PayrollItem.model.js';
+import { AuditService } from '../../core/audit/AuditService.js';
 import {
   getHeadcountCostReport, getMoMVarianceReport, getYtdCostAnalysis,
   getOtLopAnalysis, getLoanOutstandingReport, getBudgetVsActual,
@@ -87,6 +89,16 @@ export const downloadRunPdf = async (req: Request, res: Response, next: NextFunc
       employees,
     } as any;
     res.status(200).json({ success: true, data: pdfData });
+
+    if (req.user) {
+      await AuditService.log({
+        action: 'export',
+        module: 'payroll',
+        userId: req.user.id,
+        targetId: runId,
+        details: { type: 'run-data', month: run.month },
+      });
+    }
   } catch (error) {
     next(error);
   }
@@ -146,6 +158,37 @@ export const getBudgetVsActualReport = async (req: Request, res: Response, next:
     const { runId } = req.params;
     const data = await getBudgetVsActual(runId);
     res.status(200).json({ success: true, data });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const exportTable = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { filename, columns, rows } = req.body;
+    if (!filename || !columns || !rows) {
+      res.status(400).json({ success: false, message: 'Missing required fields: filename, columns, rows' });
+      return;
+    }
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('Export');
+    const headerStyle: Partial<ExcelJS.Style> = {
+      font: { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 },
+      fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2563EB' } },
+      border: { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } },
+      alignment: { horizontal: 'center', vertical: 'middle' },
+    };
+    const headerRow = sheet.addRow(columns);
+    headerRow.eachCell((cell) => { cell.style = headerStyle; });
+    for (const row of rows) {
+      sheet.addRow(row);
+    }
+    sheet.columns.forEach((col, i) => { if (i < columns.length) col.width = 18; });
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    const safeName = filename.replace(/[^a-zA-Z0-9_-]/g, '_');
+    res.setHeader('Content-Disposition', `attachment; filename=${safeName}.xlsx`);
+    await workbook.xlsx.write(res);
+    res.end();
   } catch (error) {
     next(error);
   }

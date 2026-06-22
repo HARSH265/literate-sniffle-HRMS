@@ -3,6 +3,8 @@ import { Button, Modal, Form, Input, Select, DatePicker, message, Tag, Row, Col,
 import type { ColumnsType } from 'antd/es/table';
 import { SaveOutlined, CalendarOutlined, LogoutOutlined } from '@ant-design/icons';
 import { PageHeader } from '../../../core/components/PageHeader';
+import { PageContainer } from '../../../core/components/PageContainer';
+import { ErrorState } from '../../../core/components/ErrorState';
 import { DataTable } from '../../../core/components/DataTable';
 import { attendanceService, AttendanceEntry } from '../services/attendanceService';
 import { MonthlyView } from '../components/MonthlyView';
@@ -218,11 +220,11 @@ export function AttendancePage() {
   ], []);
 
   return (
-    <div style={{ padding: '0 4px' }}>
+    <PageContainer>
       <PageHeader title="Attendance" subtitle="Mark and manage employee attendance" />
 
-      {listError && <Card style={{ marginBottom: 16, borderColor: '#ff4d4f' }}><span style={{ color: '#ff4d4f' }}>Failed to load attendance records. Please try again.</span></Card>}
-      {monthlyError && <Card style={{ marginBottom: 16, borderColor: '#ff4d4f' }}><span style={{ color: '#ff4d4f' }}>Failed to load monthly view. Please try again.</span></Card>}
+      {listError && <div style={{ marginBottom: 16 }}><ErrorState message="Failed to load attendance records. Please try again." /></div>}
+      {monthlyError && <div style={{ marginBottom: 16 }}><ErrorState message="Failed to load monthly view. Please try again." /></div>}
 
       <Tabs 
         defaultActiveKey="mark" 
@@ -296,26 +298,23 @@ export function AttendancePage() {
             key: 'monthly',
             label: <span><CalendarOutlined /> Monthly View</span>,
             children: (
-              <div className="hrms-table-card">
-                <div className="hrms-table-toolbar">
-                  <div className="hrms-table-toolbar-left" style={{ display: 'flex', gap: 8 }}>
-                    <Select
-                      placeholder="Department"
-                      allowClear
-                      style={{ width: 150 }}
-                      value={departmentFilter || undefined}
-                      onChange={(val) => setDepartmentFilter(val || '')}
-                      options={deptData?.data?.map((d: any) => ({ label: d.name, value: d.id })) || []}
-                    />
-                  </div>
-                </div>
+              <Card extra={
+                <Select
+                  placeholder="Department"
+                  allowClear
+                  style={{ width: 150 }}
+                  value={departmentFilter || undefined}
+                  onChange={(val) => setDepartmentFilter(val || '')}
+                  options={deptData?.data?.map((d: any) => ({ label: d.name, value: d.id })) || []}
+                />
+              }>
                 <MonthlyView
                   selectedMonth={selectedMonth}
                   monthlyData={monthlyData}
                   monthlyLoading={monthlyLoading}
                   onMonthChange={setSelectedMonth}
                 />
-              </div>
+              </Card>
             ),
           },
         ]}
@@ -326,12 +325,9 @@ export function AttendancePage() {
         open={isModalOpen}
         onCancel={() => { setIsModalOpen(false); form.resetFields(); }}
         width={1000}
-        footer={[
-          <Button key="cancel" onClick={() => setIsModalOpen(false)}>Cancel</Button>,
-          <Button key="save" type="primary" icon={<SaveOutlined />} onClick={handleBulkSave} loading={bulkMutation.isPending}>
-            Save Attendance
-          </Button>,
-        ]}
+        onOk={handleBulkSave}
+        confirmLoading={bulkMutation.isPending}
+        okText="Save Attendance"
       >
         <Form form={form} layout="vertical">
           <div style={{ maxHeight: 500, overflowY: 'auto' }}>
@@ -421,12 +417,9 @@ export function AttendancePage() {
         open={isBulkUpdateOpen}
         onCancel={() => { setIsBulkUpdateOpen(false); bulkForm.resetFields(); }}
         width={1000}
-        footer={[
-          <Button key="cancel" onClick={() => setIsBulkUpdateOpen(false)}>Cancel</Button>,
-          <Button key="update" type="primary" onClick={handleBulkUpdate} loading={bulkUpdateMutation.isPending}>
-            Update Selected
-          </Button>,
-        ]}
+        onOk={handleBulkUpdate}
+        confirmLoading={bulkUpdateMutation.isPending}
+        okText="Update Selected"
       >
         <Form form={bulkForm} layout="vertical">
           <div style={{ maxHeight: 500, overflowY: 'auto' }}>
@@ -551,6 +544,6 @@ export function AttendancePage() {
           />
         </div>
       </Modal>
-    </div>
+    </PageContainer>
   );
 }

@@ -46,6 +46,59 @@ export interface PayrollRun {
   items?: PayrollItem[];
 }
 
+export interface ComplianceFlag {
+  check: string;
+  status: 'pass' | 'warning' | 'fail';
+  actualValue: number;
+  requiredValue: number;
+  gap: number;
+  notes?: string;
+}
+
+export interface ProRataDetails {
+  isJoiner: boolean;
+  isLeaver: boolean;
+  joinDate?: string;
+  leaveDate?: string;
+  daysWorked: number;
+  totalDays: number;
+  proRataFactor: number;
+}
+
+export interface TaxComputation {
+  taxRegime: string;
+  projectedAnnualGross: number;
+  projectedAnnualDeductions: number;
+  projectedTaxableIncome: number;
+  annualTaxAmount: number;
+  surcharge: number;
+  educationCess: number;
+  totalTaxLiability: number;
+  monthlyTds: number;
+  rebate87a: number;
+}
+
+export interface ArrearLineItem {
+  component: { code: string; name: string; id: string };
+  month: string;
+  previousAmount: number;
+  currentAmount: number;
+  difference: number;
+  isPositive: boolean;
+  applicableArrearDays: number;
+  effectiveArrearAmount: number;
+}
+
+export interface PreviousMonthComparison {
+  previousMonth: string;
+  previousGrossPay: number;
+  previousNetPay: number;
+  previousTotalDeductions: number;
+  grossPayVariance: number;
+  netPayVariance: number;
+  variancePercent: number;
+}
+
 export interface PayrollItem {
   id: string;
   employee: { id: string; name: string; code: string };
@@ -68,6 +121,11 @@ export interface PayrollItem {
   totalDeductions: number;
   netPay: number;
   status: string;
+  complianceFlags?: ComplianceFlag[];
+  proRataDetails?: ProRataDetails;
+  taxComputation?: TaxComputation;
+  arrears?: ArrearLineItem[];
+  previousMonthComparison?: PreviousMonthComparison;
 }
 
 function validateResponse<T>(data: unknown, _requiredKeys: string[] = []): T {
@@ -103,8 +161,8 @@ export const payrollService = {
     return validateResponse(data);
   },
 
-  async approveRun(id: string): Promise<{ success: boolean; data: PayrollRun }> {
-    const { data } = await apiClient.post(API_ENDPOINTS.payroll.runs.approve(id));
+  async approveRun(id: string, comments?: string): Promise<{ success: boolean; data: PayrollRun }> {
+    const { data } = await apiClient.post(API_ENDPOINTS.payroll.runs.approve(id), { comments });
     return validateResponse(data);
   },
 
@@ -118,7 +176,7 @@ export const payrollService = {
     return validateResponse(data);
   },
 
-  async batchUpdateItems(runId: string, items: Array<{ itemId: string; data: Record<string, unknown> }>): Promise<{ success: boolean; data: PayrollRun }> {
+  async batchUpdateItems(runId: string, items: Array<{ itemId: string; data: Record<string, unknown> }>): Promise<{ success: boolean; data: { updated: number; failed: number; results: any[] } }> {
     const { data } = await apiClient.patch(API_ENDPOINTS.payroll.items.batch(runId), { items });
     return validateResponse(data);
   },

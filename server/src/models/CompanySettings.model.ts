@@ -65,6 +65,7 @@ export interface ICompanySettings extends Document {
     arrearsAutoCalculate: boolean;
     multiBankSplit: boolean;
     makerCheckerEnabled: boolean;
+    /** @deprecated Use lopCalcMethod instead. Kept for backward compatibility with existing DB data. */
     lopPerDayBase: '30' | 'actual' | '26';
     lopComponentsAffected: string[];
     lopImpactsPf: boolean;

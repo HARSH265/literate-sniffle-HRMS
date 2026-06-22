@@ -135,7 +135,7 @@ const EmployeeSchema = new Schema<IEmployee>(
     gender: { type: String, enum: ['male', 'female', 'other'] },
     bloodGroup: { type: String },
     maritalStatus: { type: String, enum: ['single', 'married', 'divorced', 'widowed'] },
-    email: { type: String },
+    email: { type: String, lowercase: true, trim: true },
     emergencyContact: { type: String },
     permanentAddress: { type: String },
     category: {
@@ -223,6 +223,7 @@ EmployeeSchema.index({ shift: 1 });
 EmployeeSchema.index({ designation: 1 });
 EmployeeSchema.index({ fullName: 1 });
 EmployeeSchema.index({ fatherName: 1 });
+EmployeeSchema.index({ email: 1 }, { unique: true, sparse: true });
 
 const Employee = mongoose.model<IEmployee, EmployeeModel>('Employee', EmployeeSchema);
 

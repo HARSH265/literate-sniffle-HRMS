@@ -7,10 +7,10 @@ interface HolidayCalendarProps {
 }
 
 const typeColors: Record<string, string> = {
-  national: '#1890ff',
-  state: '#13c2c2',
-  company: '#52c41a',
-  festival: '#fa8c16',
+  national: '#4f46e5',
+  state: '#0891b2',
+  company: '#059669',
+  festival: '#d97706',
 };
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -95,7 +95,7 @@ export function HolidayCalendar({ holidays, year }: HolidayCalendarProps) {
                       borderRadius: 8,
                       minHeight: 48,
                       background: dayHolidays.length > 0 ? '#fff7e6' : isToday ? '#e6f7ff' : 'transparent',
-                      border: isToday ? '1.5px solid #1890ff' : '1px solid transparent',
+                      border: isToday ? '1.5px solid var(--hrms-primary)' : '1px solid transparent',
                     }}
                   >
                     <div style={{

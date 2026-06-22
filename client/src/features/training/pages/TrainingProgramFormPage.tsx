@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Form, Input, Select, InputNumber, DatePicker, Button, Row, Col, Switch } from 'antd';
 import { ArrowLeftOutlined, SaveOutlined, ReadOutlined, CalendarOutlined, EnvironmentOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
+import { PageContainer } from '../../../core/components/PageContainer';
 import { PageHeader } from '../../../core/components/PageHeader';
 import { FormSection } from '../../../core/components/FormSection';
 import { useCreateTrainingProgram } from '../hooks/useTraining';
@@ -54,7 +55,7 @@ export function TrainingProgramFormPage() {
   };
 
   return (
-    <div style={{ padding: '0 4px' }}>
+    <PageContainer>
       <PageHeader
         title="New Training Program"
         breadcrumbs={[{ label: 'Training', path: '/training' }, { label: 'New Program' }]}
@@ -196,6 +197,6 @@ export function TrainingProgramFormPage() {
           </div>
         </Form>
       </div>
-    </div>
+    </PageContainer>
   );
 }

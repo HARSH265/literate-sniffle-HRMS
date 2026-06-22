@@ -4,6 +4,8 @@ import { Layout, Spin } from 'antd';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { useUIStore } from '../core/stores/uiStore';
+import { SessionTimeoutWarning } from '../core/components/SessionTimeoutWarning';
+import { CookieBlockedBanner } from '../core/components/CookieBlockedBanner';
 
 const { Content } = Layout;
 
@@ -18,6 +20,8 @@ export function AppLayout() {
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
+      <CookieBlockedBanner />
+      <SessionTimeoutWarning />
       <Sidebar collapsed={sidebarCollapsed} />
       <Layout style={{ marginLeft: sidebarCollapsed ? 80 : 260, transition: 'margin-left 0.2s' }}>
         <Header />

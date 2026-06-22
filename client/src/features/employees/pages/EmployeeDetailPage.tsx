@@ -3,6 +3,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Row, Col, Avatar, Button, Spin, Card, Descriptions, Tag, message, Upload, Select, Popconfirm, Modal, Tabs } from 'antd';
 import { ArrowLeftOutlined, EditOutlined, UserOutlined, CheckCircleOutlined, CloseCircleOutlined, DeleteOutlined, UploadOutlined, FileTextOutlined, EyeOutlined, DownloadOutlined, CalendarOutlined, DollarOutlined } from '@ant-design/icons';
 import { PageHeader } from '../../../core/components/PageHeader';
+import { PageContainer } from '../../../core/components/PageContainer';
+import { EmptyState } from '../../../core/components/EmptyState';
+import { ErrorState } from '../../../core/components/ErrorState';
 import { DataTable } from '../../../core/components/DataTable';
 import { employeeService } from '../services/employeeService';
 import { attendanceService } from '../../attendance/services/attendanceService';
@@ -11,7 +14,6 @@ import { EMPLOYEE_STATUS_COLORS } from '../../../core/constants/statusColors';
 import { formatCurrency } from '../../../core/constants/currency';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import styles from '../employees.module.css';
 
 const docTypeLabels: Record<string, string> = {
   aadhar: 'Aadhar Card',
@@ -25,6 +27,8 @@ const docTypeLabels: Record<string, string> = {
 const CATEGORY_LABELS: Record<'worker' | 'office-staff', string> = {
   worker: 'Worker', 'office-staff': 'Office Staff',
 };
+
+const loadingFlex: React.CSSProperties = { display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' };
 
 export function EmployeeDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -92,39 +96,31 @@ export function EmployeeDetailPage() {
     { title: 'Basic', dataIndex: 'basicEarnings', key: 'basicEarnings', render: (v: number) => formatCurrency(v ?? 0) },
     { title: 'Allowances', dataIndex: 'allowancesTotal', key: 'allowancesTotal', render: (v: number) => formatCurrency(v ?? 0) },
     { title: 'Deductions', dataIndex: 'totalDeductions', key: 'totalDeductions', render: (v: number) => formatCurrency(v ?? 0) },
-    { title: 'Net Pay', dataIndex: 'netPay', key: 'netPay', render: (v: number) => <span className={styles.salaryBold}>{formatCurrency(v ?? 0)}</span> },
+    { title: 'Net Pay', dataIndex: 'netPay', key: 'netPay', render: (v: number) => <span style={{ fontWeight: 600, color: 'var(--hrms-success)' }}>{formatCurrency(v ?? 0)}</span> },
     { title: 'Status', dataIndex: 'status', key: 'status', render: (s: string) => <Tag color={s === 'finalized' ? 'green' : 'orange'}>{s}</Tag> },
   ], []);
 
   if (!queryEnabled || isLoading) {
     return (
-      <div className={styles.loadingCenter}>
-        <Spin size="large" />
-      </div>
+      <PageContainer>
+        <div style={loadingFlex}><Spin size="large" /></div>
+      </PageContainer>
     );
   }
 
-  const hasError = error && !isFetching;
-
-  if (hasError) {
+  if (error && !isFetching) {
     return (
-      <div className={styles.errorCenter}>
-        <div>Something went wrong</div>
-        <Button type="primary" onClick={() => refetch()}>
-          Retry
-        </Button>
-      </div>
+      <PageContainer>
+        <ErrorState message="Something went wrong" onRetry={() => refetch()} />
+      </PageContainer>
     );
   }
 
   if (!data?.data) {
     return (
-      <div className={styles.errorCenter}>
-        <div>Employee not found</div>
-        <Button type="primary" onClick={() => navigate('/employees')}>
-          Go Back
-        </Button>
-      </div>
+      <PageContainer>
+        <EmptyState title="Employee not found" action={{ label: 'Go Back', onClick: () => navigate('/employees') }} />
+      </PageContainer>
     );
   }
 
@@ -142,7 +138,7 @@ export function EmployeeDetailPage() {
   };
 
   return (
-    <div className={styles.pageWrap}>
+    <PageContainer>
       <PageHeader
         title={employee.fullName}
         breadcrumbs={[
@@ -150,7 +146,7 @@ export function EmployeeDetailPage() {
           { label: employee.employeeCode },
         ]}
         actions={
-          <div className={styles.actionGroup}>
+          <div style={{ display: 'flex', gap: 8 }}>
             <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/employees')} aria-label="Go back to employees list">
               Back
             </Button>
@@ -165,43 +161,43 @@ export function EmployeeDetailPage() {
           </div>
         }
         subtitle={
-          <div className={styles.employeeRow} style={{ marginTop: 8 }}>
-            <Tag color={EMPLOYEE_STATUS_COLORS[employee.status as keyof typeof EMPLOYEE_STATUS_COLORS]} className={styles.statusTag}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 8 }}>
+            <Tag color={EMPLOYEE_STATUS_COLORS[employee.status as keyof typeof EMPLOYEE_STATUS_COLORS]} style={{ margin: 0 }}>
               {employee.status?.toUpperCase()}
             </Tag>
-            <span className={styles.statusText}>
+            <span style={{ color: 'var(--hrms-text-muted)', fontSize: 13 }}>
               {employee.employeeCode}
             </span>
           </div>
         }
       />
 
-      <div className={styles.detailContent}>
+      <div style={{ maxWidth: 1200, margin: '0 auto' }}>
         <Row gutter={24}>
           <Col xs={24} lg={8}>
-            <Card style={{ borderRadius: 12, marginBottom: 24 }}>
-              <div className={styles.profileHeader}>
+            <Card style={{ marginBottom: 24 }}>
+              <div style={{ textAlign: 'center', padding: '20px 0' }}>
                 <Avatar
                   size={100}
                   src={employee.photo}
                   icon={<UserOutlined />}
-                  className={styles.avatarGradient}
+                  style={{ background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', flexShrink: 0 }}
                 />
-                <div className={styles.profileName}>
+                <div style={{ fontSize: 20, fontWeight: 700, marginTop: 16, color: 'var(--hrms-text-primary)' }}>
                   {employee.fullName}
                 </div>
-                <div className={styles.profileSub}>
+                <div style={{ fontSize: 14, color: 'var(--hrms-text-muted)', marginTop: 4 }}>
                   {employee.fatherName ? `S/o ${employee.fatherName}` : ''}
                 </div>
-                <div className={styles.profileTagWrap}>
-                  <Tag color={employee.category === 'worker' ? 'blue' : 'purple'} className={styles.profileTag}>
+                <div style={{ marginTop: 16 }}>
+                  <Tag color={employee.category === 'worker' ? 'blue' : 'purple'} style={{ fontSize: 12, padding: '4px 12px' }}>
                     {CATEGORY_LABELS[employee.category] || employee.category}
                   </Tag>
                 </div>
               </div>
 
-              <div className={styles.profileDivider}>
-                <div className={styles.sectionLabel}>
+              <div style={{ borderTop: '1px solid var(--hrms-border-light)', paddingTop: 20, marginTop: 20 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--hrms-text-muted)', marginBottom: 12 }}>
                   Employment Details
                 </div>
                 <Descriptions column={1} size="small" colon={false}>
@@ -213,8 +209,8 @@ export function EmployeeDetailPage() {
                   </Descriptions.Item>
                   <Descriptions.Item label="Overtime Eligible">
                     {employee.overtimeEligible
-                      ? <CheckCircleOutlined style={{ color: '#22c55e' }} />
-                      : <CloseCircleOutlined style={{ color: '#9ca3af' }} />
+                      ? <CheckCircleOutlined style={{ color: 'var(--hrms-success)' }} />
+                      : <CloseCircleOutlined style={{ color: 'var(--hrms-text-muted)' }} />
                     }
                   </Descriptions.Item>
                 </Descriptions>
@@ -223,40 +219,36 @@ export function EmployeeDetailPage() {
           </Col>
 
           <Col xs={24} lg={16}>
-            <Card title="Organization" style={{ borderRadius: 12, marginBottom: 24 }}>
+            <Card title="Organization" style={{ marginBottom: 24 }}>
               <Descriptions column={{ xs: 1, sm: 2, md: 3 }} size="small">
                 <Descriptions.Item label="Department">{employee.department?.name || '—'}</Descriptions.Item>
                 <Descriptions.Item label="Department Head">
-                  {employee.department?.head ? (
-                    <span>
-                      {employee.department.name} - {employee.department.head?.fullName}
-                    </span>
-                  ) : '—'}
+                  {employee.department?.name || '—'}
                 </Descriptions.Item>
                 <Descriptions.Item label="Designation">{employee.designation?.name || '—'}</Descriptions.Item>
                 <Descriptions.Item label="Shift">{employee.shift?.name || '—'}</Descriptions.Item>
               </Descriptions>
             </Card>
 
-            <Card title="Salary Information" style={{ borderRadius: 12, marginBottom: 24 }}>
+            <Card title="Salary Information" style={{ marginBottom: 24 }}>
               <Descriptions column={{ xs: 1, sm: 2 }} size="small">
                 <Descriptions.Item label="Salary Type">
                   <Tag color="cyan">{employee.salaryType === 'monthly' ? 'Monthly' : 'Daily'}</Tag>
                 </Descriptions.Item>
                 <Descriptions.Item label="Base Salary">
-                  <span className={styles.salaryBold}>
+                  <span style={{ fontWeight: 600, color: 'var(--hrms-success)' }}>
                     {formatCurrency(employee.baseSalary || 0)}/month
                   </span>
                 </Descriptions.Item>
                 {employee.dailyWage && (
                   <Descriptions.Item label="Daily Wage">
-                    <span className={styles.salaryDaily}>{formatCurrency(employee.dailyWage || 0)}/day</span>
+                    <span style={{ fontWeight: 600 }}>{formatCurrency(employee.dailyWage || 0)}/day</span>
                   </Descriptions.Item>
                 )}
               </Descriptions>
             </Card>
 
-            <Card title="Contact & Address" style={{ borderRadius: 12, marginBottom: 24 }}>
+            <Card title="Contact & Address" style={{ marginBottom: 24 }}>
               <Descriptions column={{ xs: 1, sm: 2 }} size="small">
                 <Descriptions.Item label="Contact Number">{employee.contactNumber || '—'}</Descriptions.Item>
                 <Descriptions.Item label="Email">{employee.email || '—'}</Descriptions.Item>
@@ -273,7 +265,7 @@ export function EmployeeDetailPage() {
             </Card>
 
             {employee.bankDetails && (
-              <Card title="Bank Details" style={{ borderRadius: 12, marginBottom: 24 }}>
+              <Card title="Bank Details" style={{ marginBottom: 24 }}>
                 <Descriptions column={{ xs: 1, sm: 2 }} size="small">
                   <Descriptions.Item label="Bank Name">{employee.bankDetails.bankName || '—'}</Descriptions.Item>
                   <Descriptions.Item label="Account Number">{employee.bankDetails.accountNumber || '—'}</Descriptions.Item>
@@ -288,7 +280,7 @@ export function EmployeeDetailPage() {
               </Card>
             )}
 
-            <Card title="Statutory Compliance" style={{ borderRadius: 12, marginBottom: 24 }}>
+            <Card title="Statutory Compliance" style={{ marginBottom: 24 }}>
               <Descriptions column={{ xs: 1, sm: 2 }} size="small">
                 <Descriptions.Item label="PF UAN">{employee.pfUAN || '—'}</Descriptions.Item>
                 <Descriptions.Item label="ESI Number">{employee.esiNumber || '—'}</Descriptions.Item>
@@ -306,7 +298,7 @@ export function EmployeeDetailPage() {
               </Descriptions>
             </Card>
 
-            <Card style={{ borderRadius: 12, marginTop: 24 }}>
+            <Card style={{ marginTop: 24 }}>
               <Tabs
                 activeKey={activeTab}
                 onChange={setActiveTab}
@@ -316,7 +308,7 @@ export function EmployeeDetailPage() {
                     label: <span><FileTextOutlined /> Documents</span>,
                     children: (
                       <div>
-                        <Button type="primary" icon={<UploadOutlined />} onClick={() => setUploadModalOpen(true)} className={styles.errorMargin} aria-label="Upload document">
+                        <Button type="primary" icon={<UploadOutlined />} onClick={() => setUploadModalOpen(true)} style={{ marginBottom: 16 }} aria-label="Upload document">
                           Add Document
                         </Button>
                         {employee.documents && employee.documents.length > 0 ? (
@@ -328,17 +320,17 @@ export function EmployeeDetailPage() {
                                     <EyeOutlined key="view" onClick={() => window.open(doc.filePath, '_blank,noopener,noreferrer')} />,
                                     <DownloadOutlined key="download" onClick={() => window.open(employeeService.getDocumentUrl(employee.id, doc._id), '_blank,noopener,noreferrer')} />,
                                     <Popconfirm key="delete" title="Delete this document?" onConfirm={() => deleteMutation.mutate(doc._id)}>
-                                      <DeleteOutlined className={styles.docDeleteIcon} />
+                                      <DeleteOutlined style={{ color: '#dc2626' }} />
                                     </Popconfirm>
                                   ]}
                                 >
-                                  <Card.Meta avatar={<FileTextOutlined className={styles.docIcon} />} title={docTypeLabels[doc.type] || doc.type} description={doc.fileName} />
+                                  <Card.Meta avatar={<FileTextOutlined style={{ fontSize: 24, color: '#4f46e5' }} />} title={docTypeLabels[doc.type] || doc.type} description={doc.fileName} />
                                 </Card>
                               </Col>
                             ))}
                           </Row>
                         ) : (
-                          <div className={styles.emptyDocs}>No documents uploaded yet</div>
+                          <EmptyState title="No documents uploaded yet" />
                         )}
                       </div>
                     ),
@@ -385,8 +377,8 @@ export function EmployeeDetailPage() {
           onCancel={() => setUploadModalOpen(false)}
           footer={null}
         >
-          <div className={styles.modalField}>
-            <label className={styles.modalLabel}>Document Type</label>
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ display: 'block', marginBottom: 8 }}>Document Type</label>
             <Select
               style={{ width: '100%' }}
               value={selectedDocType}
@@ -416,6 +408,6 @@ export function EmployeeDetailPage() {
           </Upload.Dragger>
         </Modal>
       </div>
-    </div>
+    </PageContainer>
   );
 }

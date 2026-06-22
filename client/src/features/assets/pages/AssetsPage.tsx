@@ -6,6 +6,7 @@ import { useAssets, useAssetStats } from '../hooks/useAssets';
 import { AssetStatusBadge } from '../components/AssetStatusBadge';
 import { BulkAllocateModal } from '../components/BulkAllocateModal';
 import { DataTable } from '../../../core/components/DataTable';
+import { PageContainer } from '../../../core/components/PageContainer';
 import { PageHeader } from '../../../core/components/PageHeader';
 import { usePermission } from '../../../core/hooks/usePermission';
 import { useDebounce } from '../../../core/hooks/useDebounce';
@@ -69,7 +70,7 @@ export function AssetsPage() {
   ];
 
   return (
-    <div>
+    <PageContainer>
       <PageHeader
         title="Asset Management"
         subtitle="Track and manage company assets"
@@ -102,7 +103,7 @@ export function AssetsPage() {
             <Statistic
               title="Available"
               value={stats?.data?.byStatus?.available || 0}
-              valueStyle={{ color: '#52c41a' }}
+              valueStyle={{ color: 'var(--hrms-success)' }}
             />
           </Card>
         </Col>
@@ -111,7 +112,7 @@ export function AssetsPage() {
             <Statistic
               title="Allocated"
               value={stats?.data?.byStatus?.allocated || 0}
-              valueStyle={{ color: '#1890ff' }}
+              valueStyle={{ color: 'var(--hrms-primary)' }}
             />
           </Card>
         </Col>
@@ -120,7 +121,7 @@ export function AssetsPage() {
             <Statistic
               title="Maintenance"
               value={stats?.data?.byStatus?.maintenance || 0}
-              valueStyle={{ color: '#faad14' }}
+              valueStyle={{ color: 'var(--hrms-warning)' }}
             />
           </Card>
         </Col>
@@ -129,13 +130,12 @@ export function AssetsPage() {
       <DataTable
         columns={columns}
         dataSource={data?.data || []}
-        rowKey="_id"
+        rowKey="id"
         loading={isLoading}
         total={data?.meta?.total}
         page={page}
-        pageSize={20}
+        pageSize={10}
         onPaginationChange={(p) => setPage(p)}
-        showSizeChanger={false}
         toolbarLeft={
           <>
             <Input
@@ -185,6 +185,6 @@ export function AssetsPage() {
         onCancel={() => setBulkOpen(false)}
         onDone={() => { setBulkOpen(false); refetch(); }}
       />
-    </div>
+    </PageContainer>
   );
 }

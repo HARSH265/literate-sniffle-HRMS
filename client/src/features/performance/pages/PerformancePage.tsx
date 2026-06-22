@@ -6,6 +6,7 @@ import { usePerformanceCycles, usePerformanceReviews } from '../hooks/usePerform
 import { ReviewStatusBadge } from '../components/ReviewStatusBadge';
 import { CreateCycleModal } from '../components/CreateCycleModal';
 import { DataTable } from '../../../core/components/DataTable';
+import { PageContainer } from '../../../core/components/PageContainer';
 import { PageHeader } from '../../../core/components/PageHeader';
 import { usePermission } from '../../../core/hooks/usePermission';
 import { useDebounce } from '../../../core/hooks/useDebounce';
@@ -113,7 +114,7 @@ export function PerformancePage() {
   ];
 
   return (
-    <div>
+    <PageContainer>
       <PageHeader
         title="Performance Management"
         subtitle="Manage performance cycles, reviews, and appraisals"
@@ -136,12 +137,12 @@ export function PerformancePage() {
         </Col>
         <Col xs={12} sm={6}>
           <Card size="small">
-            <Statistic title="Active Cycles" value={cyclesData?.data?.filter((c: any) => c.status === 'active').length || 0} valueStyle={{ color: '#1890ff' }} prefix={<ClockCircleOutlined />} />
+            <Statistic title="Active Cycles" value={cyclesData?.data?.filter((c: any) => c.status === 'active').length || 0} valueStyle={{ color: 'var(--hrms-primary)' }} prefix={<ClockCircleOutlined />} />
           </Card>
         </Col>
         <Col xs={12} sm={6}>
           <Card size="small">
-            <Statistic title="Completed Reviews" value={reviewsData?.data?.filter((r: any) => r.status === 'completed').length || 0} valueStyle={{ color: '#52c41a' }} prefix={<CheckCircleOutlined />} />
+            <Statistic title="Completed Reviews" value={reviewsData?.data?.filter((r: any) => r.status === 'completed').length || 0} valueStyle={{ color: 'var(--hrms-success)' }} prefix={<CheckCircleOutlined />} />
           </Card>
         </Col>
       </Row>
@@ -160,9 +161,7 @@ export function PerformancePage() {
                   loading={cyclesLoading}
                   total={cyclesData?.meta?.total}
                   page={page}
-                  pageSize={20}
                   onPaginationChange={(p) => setPage(p)}
-                  showSizeChanger={false}
                   toolbarLeft={
                     <Input
                       placeholder="Search cycles..."
@@ -189,9 +188,7 @@ export function PerformancePage() {
                   loading={reviewsLoading}
                   total={reviewsData?.meta?.total}
                   page={page}
-                  pageSize={20}
                   onPaginationChange={(p) => setPage(p)}
-                  showSizeChanger={false}
                   onRowClick={(record) => navigate(`/performance/reviews/${record._id}`)}
                   toolbarLeft={
                     <>
@@ -227,6 +224,6 @@ export function PerformancePage() {
       </Card>
 
       <CreateCycleModal open={cycleModalOpen} onClose={() => setCycleModalOpen(false)} />
-    </div>
+    </PageContainer>
   );
 }

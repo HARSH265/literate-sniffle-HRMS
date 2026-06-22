@@ -6,6 +6,7 @@ import { useShiftSwaps, useRequestSwap } from '../hooks/useShiftSwaps';
 import { shiftService } from '../../shifts/services/shiftService';
 import { employeeService } from '../../employees/services/employeeService';
 import { DataTable } from '../../../core/components/DataTable';
+import { PageContainer } from '../../../core/components/PageContainer';
 import { PageHeader } from '../../../core/components/PageHeader';
 import dayjs from 'dayjs';
 import type { ShiftSwapPopulated, RequestSwapPayload } from '../types/shiftSwapTypes';
@@ -52,7 +53,7 @@ export function ShiftSwapsPage() {
   ], []);
 
   return (
-    <div>
+    <PageContainer>
       <PageHeader title="Shift Swaps" subtitle="Manage shift swap requests" actions={
         <Button type="primary" icon={<PlusOutlined />} onClick={() => setModalOpen(true)}>Request Swap</Button>
       } />
@@ -61,7 +62,6 @@ export function ShiftSwapsPage() {
         dataSource={data?.data || []}
         rowKey="_id"
         loading={isLoading}
-        pageSize={20}
         toolbarLeft={
           <Select placeholder="Status" allowClear style={{ width: 140 }} onChange={(v) => setFilters(p => ({ ...p, status: v }))}>
             <Select.Option value="pending">Pending</Select.Option>
@@ -130,6 +130,6 @@ export function ShiftSwapsPage() {
           </Row>
         </Form>
       </Modal>
-    </div>
+    </PageContainer>
   );
 }

@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Button, Modal, Form, Input, Select, message, Popconfirm, Tooltip, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, SettingOutlined } from '@ant-design/icons';
+import { PageContainer } from '../../../core/components/PageContainer';
 import { PageHeader } from '../../../core/components/PageHeader';
 import { DataTable } from '../../../core/components/DataTable';
 import { departmentService, Department, CreateDepartment, UpdateDepartment } from '../services/departmentService';
@@ -153,7 +154,7 @@ export function DepartmentsPage() {
             okText="Delete" okButtonProps={{ danger: true }}>
             <Tooltip title="Delete">
               <Button type="text" size="small" icon={<DeleteOutlined />}
-                style={{ color: '#ef4444', borderRadius: 6 }} />
+                style={{ color: 'var(--hrms-danger)', borderRadius: 6 }} />
             </Tooltip>
           </Popconfirm>
         </div>
@@ -162,7 +163,7 @@ export function DepartmentsPage() {
   ], [employeesData]);
 
   return (
-    <div style={{ padding: '0 4px' }}>
+    <PageContainer>
       <PageHeader
         title="Departments"
         subtitle="Manage your organization's departments and divisions"
@@ -260,6 +261,6 @@ export function DepartmentsPage() {
           </Form>
         </div>
       </Modal>
-    </div>
+    </PageContainer>
   );
 }

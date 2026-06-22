@@ -1,10 +1,13 @@
 import { useState } from 'react';
-import { Table, Card, Button, Select, Space, Typography, Modal, InputNumber, Input, Rate } from 'antd';
+import { Card, Button, Select, Space, Typography, Modal, InputNumber, Input, Rate } from 'antd';
+import { DataTable } from '../../../core/components/DataTable';
+import { ErrorState } from '../../../core/components/ErrorState';
 import { PlusOutlined, BookOutlined, ArrowRightOutlined } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
 import { useCompleteEnrollment, useDropEnrollment } from '../hooks/useTraining';
 import { EnrollEmployeeModal } from '../components/EnrollEmployeeModal';
 import { EnrollmentStatusBadge } from '../components/TrainingStatusBadge';
+import { PageContainer } from '../../../core/components/PageContainer';
 import { PageHeader } from '../../../core/components/PageHeader';
 import { usePermission } from '../../../core/hooks/usePermission';
 import { trainingService } from '../services/trainingService';
@@ -33,7 +36,7 @@ export function TrainingEnrollmentsPage() {
     queryFn: () => trainingService.listPrograms({ limit: 200 }),
   });
 
-  const { data: enrollmentsData, isLoading, refetch } = useQuery({
+  const { data: enrollmentsData, isLoading, error, refetch } = useQuery({
     queryKey: ['training', 'enrollments', statusFilter, programFilter, page],
     queryFn: () => trainingService.listEnrollments({ page, limit: 20, status: statusFilter, programId: programFilter }),
   });
@@ -73,15 +76,19 @@ export function TrainingEnrollmentsPage() {
     },
   ];
 
+  if (error) {
+    return <ErrorState message="Failed to load enrollments" />;
+  }
+
   return (
-    <div>
+    <PageContainer>
       <PageHeader
         title="Training Enrollments"
         subtitle="Manage employee enrollments in training programs"
         actions={canManage && <Space><Button type="primary" icon={<PlusOutlined />} onClick={() => { setSelectedProgram(''); setEnrollModalOpen(true); }}>Enroll Employee</Button></Space>}
       />
 
-      <Card style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+      <Card>
         <Space style={{ marginBottom: 16 }}>
           <Select placeholder="Program" value={programFilter} onChange={(v) => { setProgramFilter(v); setPage(1); }} allowClear style={{ width: 250 }}
             options={(programs?.data || []).map((p: any) => ({ label: p.title, value: getId(p) })).filter((option: any) => Boolean(option.value))} showSearch optionFilterProp="label"
@@ -93,9 +100,15 @@ export function TrainingEnrollmentsPage() {
             ]}
           />
         </Space>
-        <Table dataSource={enrollmentsData?.data || []} columns={columns} rowKey={(record) => getId(record)} loading={isLoading}
-          pagination={{ current: page, pageSize: 20, total: enrollmentsData?.meta?.total || 0, onChange: setPage, showSizeChanger: false }}
-        />
+<DataTable
+            dataSource={enrollmentsData?.data || []}
+            columns={columns}
+            rowKey={(record) => getId(record)}
+            loading={isLoading}
+            page={page}
+            total={enrollmentsData?.meta?.total ?? 0}
+            onPaginationChange={(p, size) => setPage(p)}
+          />
       </Card>
 
       {enrollModalOpen && selectedProgram && (
@@ -141,6 +154,6 @@ export function TrainingEnrollmentsPage() {
           <div><Text>Feedback:</Text><Input.TextArea rows={3} value={feedback} onChange={(e) => setFeedback(e.target.value)} style={{ marginTop: 4 }} /></div>
         </Space>
       </Modal>
-    </div>
+    </PageContainer>
   );
 }

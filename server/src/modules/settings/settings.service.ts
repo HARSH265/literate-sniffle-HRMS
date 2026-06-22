@@ -1,5 +1,6 @@
 import CompanySettings from '../../models/CompanySettings.model.js';
 import { AuditService } from '../../core/audit/AuditService.js';
+import { AppError } from '../../core/errors/AppError.js';
 import { encryptEmailConfig, decryptEmailConfig } from '../../core/utils/EncryptionUtil.js';
 import { RedisCacheService } from '../../core/cache/RedisCacheService.js';
 import { CACHE_KEYS } from '../../core/cache/cache.keys.js';
@@ -63,6 +64,13 @@ export class SettingsService {
     }
     if (data.payrollConfig) {
       const payrollConfig = { ...(data.payrollConfig as any) };
+      // Hardening: validate critical numeric fields
+      if (payrollConfig.standardHoursPerDay !== undefined && (typeof payrollConfig.standardHoursPerDay !== 'number' || payrollConfig.standardHoursPerDay <= 0)) {
+        throw new AppError('standardHoursPerDay must be a positive number', 400);
+      }
+      if (payrollConfig.defaultWorkingDays !== undefined && (typeof payrollConfig.defaultWorkingDays !== 'number' || payrollConfig.defaultWorkingDays <= 0 || payrollConfig.defaultWorkingDays > 31)) {
+        throw new AppError('defaultWorkingDays must be between 1 and 31', 400);
+      }
       if (payrollConfig.payrollLockDays !== undefined && payrollConfig.unfinalizeWindowDays === undefined) {
         payrollConfig.unfinalizeWindowDays = payrollConfig.payrollLockDays;
       }

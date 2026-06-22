@@ -4,6 +4,7 @@ import { ThunderboltOutlined } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { leaveService, LeaveBalance } from '../services/leaveService';
 import { employeeService } from '../../employees/services/employeeService';
+import { PageContainer } from '../../../core/components/PageContainer';
 import { PageHeader } from '../../../core/components/PageHeader';
 import { DataTable } from '../../../core/components/DataTable';
 import { QUERY_KEYS } from '../../../core/constants/queryKeys';
@@ -103,7 +104,7 @@ export function LeaveBalancesPage() {
   };
 
   return (
-    <div>
+    <PageContainer>
       <PageHeader
         title="Leave Balances"
         subtitle="View employee leave balances"
@@ -235,6 +236,6 @@ export function LeaveBalancesPage() {
           </p>
         )}
       </Modal>
-    </div>
+    </PageContainer>
   );
 }

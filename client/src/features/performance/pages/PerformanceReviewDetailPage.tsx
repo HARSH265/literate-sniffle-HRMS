@@ -8,6 +8,8 @@ import {
 import { usePerformanceReview, useSetGoals, useSubmitReview, useManagerReview, useAppealReview, useResolveAppeal } from '../hooks/usePerformance';
 import type { PerformanceReview } from '../services/performanceService';
 import { ReviewStatusBadge } from '../components/ReviewStatusBadge';
+import { PageContainer } from '../../../core/components/PageContainer';
+import { ErrorState } from '../../../core/components/ErrorState';
 import { usePermission } from '../../../core/hooks/usePermission';
 
 const { Text, Title } = Typography;
@@ -60,21 +62,20 @@ export function PerformanceReviewDetailPage() {
   };
 
   if (isLoading) {
-    return <div style={{ display: 'flex', justifyContent: 'center', padding: 80 }}><Spin size="large" /></div>;
+    return <PageContainer><Spin size="large" style={{ display: 'flex', justifyContent: 'center', padding: 80 }} /></PageContainer>;
   }
 
   if (!review) {
-    return <div style={{ padding: 40, textAlign: 'center' }}><Text type="danger">Review not found</Text></div>;
+    return <PageContainer><ErrorState message="Review not found" /></PageContainer>;
   }
 
   return (
-    <div>
+    <PageContainer>
       <Space style={{ marginBottom: 16 }}>
         <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/performance')}>Back to Performance</Button>
       </Space>
 
       <Card
-        style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
         title={
           <Space>
             <Title level={4} style={{ margin: 0 }}>{review.employee?.fullName}</Title>
@@ -307,6 +308,6 @@ export function PerformanceReviewDetailPage() {
           <Input.TextArea rows={3} placeholder="Resolution notes..." value={resolution} onChange={(e) => setResolution(e.target.value)} />
         </Space>
       </Modal>
-    </div>
+    </PageContainer>
   );
 }

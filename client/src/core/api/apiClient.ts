@@ -1,4 +1,5 @@
 import axios, { AxiosInstance, AxiosError, AxiosRequestConfig } from 'axios';
+import { message } from 'antd';
 import { useAuthStore } from '../stores/authStore';
 import { API_ENDPOINTS } from '../constants/api.endpoints';
 
@@ -65,10 +66,16 @@ apiClient.interceptors.response.use(
         );
         const { token } = res.data.data;
 
-        useAuthStore.getState().login(
-          useAuthStore.getState().user!,
-          token
-        );
+        const currentUser = useAuthStore.getState().user;
+        if (!currentUser) {
+          processQueue(new Error('No user in store'), null);
+          message.error('Your session expired, please log in again.');
+          useAuthStore.getState().logout();
+          setTimeout(() => { window.location.href = '/'; }, 500);
+          return Promise.reject(new Error('No user in store'));
+        }
+
+        useAuthStore.getState().login(currentUser, token);
 
         processQueue(null, token);
         if (originalRequest.headers) {
@@ -77,8 +84,9 @@ apiClient.interceptors.response.use(
         return apiClient(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError, null);
+        message.error('Your session expired, please log in again.');
         useAuthStore.getState().logout();
-        window.location.href = '/';
+        setTimeout(() => { window.location.href = '/'; }, 500);
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;

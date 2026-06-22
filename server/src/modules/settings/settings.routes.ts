@@ -8,7 +8,7 @@ const router = Router();
 
 router.use(authenticate);
 
-router.get('/', authorize('view-departments'), settingsController.get);
+router.get('/', authorize('view-settings'), settingsController.get);
 router.patch('/', authorize('manage-settings'), settingsController.update);
 router.post('/test-email', authorize('manage-settings'), settingsController.testEmail);
 router.post('/logo', authorize('manage-settings'), uploadSettingsLogo.single('logo'), settingsController.uploadLogo);

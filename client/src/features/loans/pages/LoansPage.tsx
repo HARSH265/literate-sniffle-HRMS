@@ -71,7 +71,6 @@ export function LoansPage() {
         columns={columns}
         rowKey="id"
         loading={isLoading}
-        pageSize={20}
         toolbarLeft={<Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/loans/apply')}>Apply Loan</Button>}
         filterContent={
           <Select allowClear placeholder="Filter by status" style={{ width: 160 }} value={statusFilter} onChange={setStatusFilter}

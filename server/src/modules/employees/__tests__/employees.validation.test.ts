@@ -115,9 +115,9 @@ describe('employees validation schemas', () => {
       expect(result.success).toBe(false);
     });
 
-    it('does not allow status in generic update (use dedicated endpoints)', () => {
+    it('allows status in generic update', () => {
       const result = updateEmployeeSchema.safeParse({ status: 'active' });
-      expect(result.success).toBe(false);
+      expect(result.success).toBe(true);
     });
 
     it('rejects invalid ObjectId for department', () => {

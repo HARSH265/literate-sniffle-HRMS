@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Button, Modal, Form, Input, Select, message, Popconfirm, Tag, Tooltip, Row, Col } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { PageContainer } from '../../../core/components/PageContainer';
 import { PageHeader } from '../../../core/components/PageHeader';
 import { DataTable } from '../../../core/components/DataTable';
 import { weeklyOffRuleService, WeeklyOffRule, CreateWeeklyOffRule } from '../services/weeklyOffRuleService';
@@ -153,7 +154,7 @@ export function WeeklyOffRulesPage() {
   ];
 
   return (
-    <div style={{ padding: '0 4px' }}>
+    <PageContainer>
       <PageHeader
         title="Weekly Off Rules"
         subtitle="Configure weekly off days for employees"
@@ -173,7 +174,6 @@ export function WeeklyOffRulesPage() {
         page={page}
         pageSize={limit}
         onPaginationChange={(p, size) => { setPage(p); setLimit(size ?? 10); }}
-        pageSizeOptions={['10', '20', '50']}
         filterContent={
           <Select
             placeholder="Filter by category"
@@ -227,6 +227,6 @@ export function WeeklyOffRulesPage() {
           </Row>
         </Form>
       </Modal>
-    </div>
+    </PageContainer>
   );
 }

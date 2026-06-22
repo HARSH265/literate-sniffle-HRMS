@@ -1,8 +1,10 @@
 import { useState } from 'react';
-import { Table, Card, Typography, Tag, Space, Select, Empty } from 'antd';
+import { Card, Typography, Tag, Space, Select, Empty } from 'antd';
+import { DataTable } from '../../../core/components/DataTable';
 import { useQuery } from '@tanstack/react-query';
 import { trainingService } from '../services/trainingService';
 import { employeeService } from '../../employees/services/employeeService';
+import { PageContainer } from '../../../core/components/PageContainer';
 import { PageHeader } from '../../../core/components/PageHeader';
 
 const { Text } = Typography;
@@ -40,9 +42,9 @@ export function CertificationsPage() {
   ];
 
   return (
-    <div>
+    <PageContainer>
       <PageHeader title="Certifications" subtitle="Track employee certifications" />
-      <Card style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+      <Card>
         <Space style={{ marginBottom: 16 }}>
           <Select placeholder="Select employee" value={selectedEmployee} onChange={setSelectedEmployee} allowClear showSearch optionFilterProp="label" style={{ width: 320 }}
             options={employeeList.map((e: any) => ({ label: `${e.fullName} (${e.employeeCode})`, value: getId(e) })).filter((option: any) => Boolean(option.value))}
@@ -53,10 +55,10 @@ export function CertificationsPage() {
         ) : (
           <>
             <Text strong style={{ fontSize: 16 }}>{certifications.length} Certification{certifications.length !== 1 ? 's' : ''}</Text>
-            <Table dataSource={certifications} columns={columns} rowKey={(record) => getId(record)} loading={isLoading} pagination={false} size="small" style={{ marginTop: 8 }} />
+            <DataTable dataSource={certifications} columns={columns} rowKey={(record) => getId(record)} loading={isLoading} hidePagination size="small" style={{ marginTop: 8 }} />
           </>
         )}
       </Card>
-    </div>
+    </PageContainer>
   );
 }

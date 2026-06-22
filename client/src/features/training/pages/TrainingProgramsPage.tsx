@@ -5,6 +5,7 @@ import { PlusOutlined, SearchOutlined } from '@ant-design/icons';
 import { useTrainingPrograms, useCancelTrainingProgram } from '../hooks/useTraining';
 import { ProgramStatusBadge } from '../components/TrainingStatusBadge';
 import { DataTable } from '../../../core/components/DataTable';
+import { PageContainer } from '../../../core/components/PageContainer';
 import { PageHeader } from '../../../core/components/PageHeader';
 import { usePermission } from '../../../core/hooks/usePermission';
 import { useDebounce } from '../../../core/hooks/useDebounce';
@@ -46,7 +47,7 @@ export function TrainingProgramsPage() {
   ];
 
   return (
-    <div>
+    <PageContainer>
       <PageHeader
         title="Training Programs"
         subtitle="Manage training and development programs"
@@ -60,9 +61,7 @@ export function TrainingProgramsPage() {
         loading={isLoading}
         total={data?.meta?.total}
         page={page}
-        pageSize={20}
         onPaginationChange={(p) => setPage(p)}
-        showSizeChanger={false}
         toolbarLeft={
           <>
             <Input placeholder="Search programs..." prefix={<SearchOutlined />} value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} style={{ width: 280 }} allowClear />
@@ -72,6 +71,6 @@ export function TrainingProgramsPage() {
           </>
         }
       />
-    </div>
+    </PageContainer>
   );
 }

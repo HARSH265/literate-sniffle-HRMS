@@ -35,17 +35,17 @@ const previewRun = asyncHandler(async (req: Request, res: Response) => {
 });
 
 const submitRun = asyncHandler(async (req: Request, res: Response) => {
-  const result = await PayrollService.submitRun(req.params.id, req.user!.id);
+  const result = await PayrollService.submitRun(req.params.id, req.user!.id, req.ip);
   ResponseHandler.success(res, result, 'Payroll submitted for approval');
 });
 
 const approveRun = asyncHandler(async (req: Request, res: Response) => {
-  const result = await PayrollService.approveRun(req.params.id, req.user!.id, req.body.comments);
+  const result = await PayrollService.approveRun(req.params.id, req.user!.id, req.body.comments, req.ip);
   ResponseHandler.success(res, result, 'Payroll run approved successfully');
 });
 
 const rejectRun = asyncHandler(async (req: Request, res: Response) => {
-  const result = await PayrollService.rejectRun(req.params.id, req.user!.id, req.body.reason);
+  const result = await PayrollService.rejectRun(req.params.id, req.user!.id, req.body.reason, req.ip);
   ResponseHandler.success(res, result, 'Payroll run rejected successfully');
 });
 
@@ -64,7 +64,7 @@ const supplementaryPayroll = asyncHandler(async (req: Request, res: Response) =>
 });
 
 const finalizeRun = asyncHandler(async (req: Request, res: Response) => {
-  const result = await PayrollService.finalizeRun(req.params.id, req.user!.id, req.body.remarks);
+  const result = await PayrollService.finalizeRun(req.params.id, req.user!.id, req.body.remarks, req.ip);
   ResponseHandler.success(res, result, 'Payroll finalized successfully');
 });
 
