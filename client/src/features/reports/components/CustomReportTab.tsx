@@ -129,7 +129,6 @@ export function CustomReportTab({ deptData }: CustomReportTabProps) {
               noCard
               hidePagination={false}
               total={customResult.total}
-              pageSize={50}
               pageSizeOptions={['10', '20', '50', '100']}
               disableRowClick
             />

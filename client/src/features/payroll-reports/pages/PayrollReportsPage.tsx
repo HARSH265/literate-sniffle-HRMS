@@ -345,7 +345,7 @@ function LoanOutstandingTab() {
         <Col span={6}><Card><Statistic title="Total Outstanding" value={result?.totalOutstanding || 0} prefix={getCurrencySymbol()} /></Card></Col>
       </Row>
       <Card extra={<ExportButton onExport={() => exportData} filename="loan-outstanding.xlsx" />}>
-        <DataTable dataSource={details} columns={columns} rowKey={(r) => `${r.employeeCode}-${r.loanType}`} pageSize={10} noCard disableRowClick />
+        <DataTable dataSource={details} columns={columns} rowKey={(r) => `${r.employeeCode}-${r.loanType}`} noCard disableRowClick />
       </Card>
     </Space>
   );

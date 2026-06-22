@@ -1,7 +1,8 @@
 import { useNavigate } from 'react-router-dom';
-import { Card, Row, Col, Statistic, Table, Tag, Spin, Button, Empty, Popconfirm } from 'antd';
+import { Card, Row, Col, Statistic, Tag, Spin, Button, Empty, Popconfirm } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { useMyLoans, useEssCancelLoan } from '../hooks/useEssLoans';
+import { DataTable } from '../../../core/components/DataTable';
 
 const cardStyle = { borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' };
 
@@ -132,17 +133,15 @@ export function EssLoansPage() {
         {loans.length === 0 ? (
           <Empty description="No loan applications yet" image={Empty.PRESENTED_IMAGE_SIMPLE} />
         ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <Table
-              dataSource={loans}
-              columns={columns}
-              rowKey="id"
-              pagination={false}
-              size="small"
-              scroll={{ x: 'max-content' }}
-              bordered
-            />
-          </div>
+          <DataTable
+            dataSource={loans}
+            columns={columns}
+            rowKey="id"
+            hidePagination
+            noCard
+            disableRowClick
+            scroll={{ x: 'max-content' }}
+          />
         )}
       </Card>
     </div>

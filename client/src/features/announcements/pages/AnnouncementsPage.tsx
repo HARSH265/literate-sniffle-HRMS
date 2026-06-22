@@ -119,11 +119,10 @@ export function AnnouncementsPage() {
       <DataTable
         columns={columns}
         dataSource={data?.data}
-        rowKey="_id"
+        rowKey="id"
         loading={isLoading}
         total={data?.meta?.total}
         page={page}
-        pageSize={limit}
         onPaginationChange={(p, ps) => { setPage(p); setLimit(ps); }}
         toolbarLeft={
           <>

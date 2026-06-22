@@ -1,7 +1,8 @@
-import { Card, Table, Tag, Spin, Empty } from 'antd';
+import { Card, Tag, Spin, Empty } from 'antd';
 import { LaptopOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useEssAssets } from '../hooks/useEssAssets';
+import { DataTable } from '../../../core/components/DataTable';
 
 const cardStyle = { borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' };
 
@@ -74,16 +75,15 @@ export function EssAssetsPage() {
       ) : assets.length === 0 ? (
         <Empty description="No assets allocated to you" image={Empty.PRESENTED_IMAGE_SIMPLE} />
       ) : (
-        <div style={{ overflowX: 'auto' }}>
-          <Table
-            dataSource={assets}
-            columns={columns}
-            rowKey={(r: any) => r._id || r.id}
-            size="small"
-            scroll={{ x: 'max-content' }}
-            bordered
-          />
-        </div>
+        <DataTable
+          dataSource={assets}
+          columns={columns}
+          rowKey="id"
+          hidePagination
+          noCard
+          disableRowClick
+          scroll={{ x: 'max-content' }}
+        />
       )}
     </Card>
   );

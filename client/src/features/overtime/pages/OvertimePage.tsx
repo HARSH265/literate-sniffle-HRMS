@@ -198,7 +198,6 @@ export function OvertimePage() {
         loading={isLoading}
         total={data?.meta?.total ?? 0}
         page={page}
-        pageSize={limit}
         onPaginationChange={(p, l) => { setPage(p); setLimit(l); }}
         toolbarLeft={
           <>

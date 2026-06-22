@@ -240,11 +240,10 @@ export function UserActivityPage() {
       <DataTable
         columns={activityColumns}
         dataSource={activityData?.data || []}
-        rowKey="_id"
+        rowKey="id"
         loading={activityLoading}
         total={activityData?.meta?.total || 0}
         page={page}
-        pageSize={limit}
         onPaginationChange={(p, l) => { setPage(p); setLimit(l || 20); }}
         pageSizeOptions={['10', '20', '50', '100']}
         disableRowClick

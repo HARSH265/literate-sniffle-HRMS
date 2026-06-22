@@ -1,4 +1,6 @@
-import { Table, Button, Space, Modal, Input } from 'antd';
+import { Button, Space, Modal, Input } from 'antd';
+import { DataTable } from '../../../core/components/DataTable';
+import { ErrorState } from '../../../core/components/ErrorState';
 import { CheckOutlined, CloseOutlined } from '@ant-design/icons';
 import { usePendingApprovals, useApproveSwap, useRejectSwap } from '../hooks/useShiftSwaps';
 import { PageContainer } from '../../../core/components/PageContainer';
@@ -7,7 +9,7 @@ import { useState } from 'react';
 import dayjs from 'dayjs';
 
 export function ShiftSwapApprovalsPage() {
-  const { data, isLoading } = usePendingApprovals();
+  const { data, isLoading, error } = usePendingApprovals();
   const approveSwap = useApproveSwap();
   const rejectSwap = useRejectSwap();
   const [rejectModal, setRejectModal] = useState<{ open: boolean; id: string }>({ open: false, id: '' });
@@ -31,10 +33,14 @@ export function ShiftSwapApprovalsPage() {
     },
   ];
 
+  if (error) {
+    return <ErrorState message="Failed to load approvals" />;
+  }
+
   return (
     <PageContainer>
       <PageHeader title="Swap Approvals" subtitle="Approve or reject shift swap requests" />
-      <Table dataSource={data?.data || []} columns={columns} rowKey="_id" loading={isLoading} />
+      <DataTable dataSource={data?.data || []} columns={columns} rowKey="id" loading={isLoading} hidePagination />
 
       <Modal title="Reject Swap" open={rejectModal.open} onCancel={() => setRejectModal({ open: false, id: '' })} onOk={() => {
         rejectSwap.mutate({ id: rejectModal.id, reason: rejectReason }, {

@@ -134,7 +134,6 @@ export function AssetsPage() {
         loading={isLoading}
         total={data?.meta?.total}
         page={page}
-        pageSize={10}
         onPaginationChange={(p) => setPage(p)}
         toolbarLeft={
           <>

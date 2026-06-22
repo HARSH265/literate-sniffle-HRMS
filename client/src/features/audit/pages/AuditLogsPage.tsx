@@ -245,11 +245,10 @@ export function AuditLogsPage() {
       <DataTable
         columns={columns}
         dataSource={data?.data || []}
-        rowKey="_id"
+        rowKey="id"
         loading={isLoading}
         total={data?.meta?.total || 0}
         page={page}
-        pageSize={limit}
         onPaginationChange={(p, l) => { setPage(p); setLimit(l || 10); }}
         pageSizeOptions={['10', '20', '50', '100']}
         disableRowClick

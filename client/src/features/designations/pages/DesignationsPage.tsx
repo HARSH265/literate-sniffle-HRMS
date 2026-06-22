@@ -99,7 +99,6 @@ const { data, isLoading, isFetching } = useQuery({
         loading={isLoading}
         total={data?.meta?.total ?? 0}
         page={page}
-        pageSize={limit}
         onPaginationChange={(p, size) => { setPage(p); setLimit(size ?? 10); }}
         toolbarLeft={
           <Input.Search placeholder="Search designations..." onSearch={(val) => { setSearch(val); setPage(1); }} style={{ width: 260 }} allowClear prefix={<SearchOutlined style={{ color: 'var(--hrms-text-muted)' }} />} enterButton={false} loading={isFetching} />

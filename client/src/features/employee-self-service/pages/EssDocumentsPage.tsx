@@ -1,7 +1,8 @@
-import { Card, Table, Tag, Button, Space, Spin, Empty } from 'antd';
+import { Card, Tag, Button, Space, Spin, Empty } from 'antd';
 import { DownloadOutlined, EyeOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useEssDocuments } from '../hooks/useEssDocuments';
+import { DataTable } from '../../../core/components/DataTable';
 
 const cardStyle = { borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' };
 
@@ -54,16 +55,15 @@ export function EssDocumentsPage() {
       ) : documents.length === 0 ? (
         <Empty description="No documents uploaded yet" image={Empty.PRESENTED_IMAGE_SIMPLE} />
       ) : (
-        <div style={{ overflowX: 'auto' }}>
-          <Table
-            dataSource={documents}
-            columns={columns}
-            rowKey={(r: any) => r._id || r.id}
-            size="small"
-            scroll={{ x: 'max-content' }}
-            bordered
-          />
-        </div>
+        <DataTable
+          dataSource={documents}
+          columns={columns}
+          rowKey="id"
+          hidePagination
+          noCard
+          disableRowClick
+          scroll={{ x: 'max-content' }}
+        />
       )}
     </Card>
   );

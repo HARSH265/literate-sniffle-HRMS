@@ -195,7 +195,6 @@ export function PayrollPage() {
         loading={isLoading}
         total={runsData?.meta?.total ?? 0}
         page={page}
-        pageSize={limit}
         onPaginationChange={(p, size) => { setPage(p); setLimit(size ?? 10); }}
       />
 

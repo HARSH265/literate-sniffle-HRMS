@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, Table, Tag, DatePicker, Spin, Empty, Button, Space } from 'antd';
+import { Card, Tag, DatePicker, Spin, Empty, Button, Space } from 'antd';
 import { QrcodeOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useEssAttendance } from '../hooks/useEssAttendance';
 import { useEssProfile } from '../hooks/useEssProfile';
+import { DataTable } from '../../../core/components/DataTable';
 
 const { MonthPicker } = DatePicker;
 
@@ -98,17 +99,15 @@ export function EssAttendancePage() {
       ) : records.length === 0 ? (
         <Empty description="No attendance records found" image={Empty.PRESENTED_IMAGE_SIMPLE} />
       ) : (
-        <div style={{ overflowX: 'auto' }}>
-          <Table
-            dataSource={records}
-            columns={columns}
-            rowKey={(r: any) => r._id || r.id}
-            pagination={{ pageSize: 15, size: 'small', showSizeChanger: false }}
-            size="small"
-            scroll={{ x: 'max-content' }}
-            bordered
-          />
-        </div>
+        <DataTable
+          dataSource={records}
+          columns={columns}
+          rowKey="id"
+          hidePagination
+          noCard
+          disableRowClick
+          scroll={{ x: 'max-content' }}
+        />
       )}
     </Card>
     </div>

@@ -77,12 +77,12 @@ export function SkillGapPage() {
         ) : skillsLoading ? <Spin /> : (
           <div>
             <Text strong style={{ fontSize: 16 }}>Existing Skills ({employeeSkills.length})</Text>
-            <DataTable dataSource={employeeSkills} columns={existingSkillColumns} rowKey={(record) => getId(record)} hidePagination size="small" style={{ marginBottom: 24, marginTop: 8 }} />
+            <div style={{ marginBottom: 24, marginTop: 8 }}><DataTable dataSource={employeeSkills} columns={existingSkillColumns} rowKey={(record) => getId(record)} hidePagination /></div>
 
             <Text strong style={{ fontSize: 16, color: missingSkills.length > 0 ? '#ff4d4f' : '#52c41a' }}>
               {missingSkills.length > 0 ? `Missing Skills (${missingSkills.length})` : 'No skill gaps found'}
             </Text>
-            <DataTable dataSource={missingSkills} columns={columns} rowKey={(record) => getId(record)} hidePagination size="small" style={{ marginTop: 8 }} />
+            <div style={{ marginTop: 8 }}><DataTable dataSource={missingSkills} columns={columns} rowKey={(record) => getId(record)} hidePagination /></div>
           </div>
         )}
       </Card>

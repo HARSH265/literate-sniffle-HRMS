@@ -107,7 +107,7 @@ export function TrainingEnrollmentsPage() {
             loading={isLoading}
             page={page}
             total={enrollmentsData?.meta?.total ?? 0}
-            onPaginationChange={(p, size) => setPage(p)}
+            onPaginationChange={(p) => setPage(p)}
           />
       </Card>
 

@@ -151,7 +151,6 @@ export function NotificationsPage() {
         loading={isLoading}
         total={data?.data?.pagination?.total ?? 0}
         page={page}
-        pageSize={limit}
         onPaginationChange={(p, size) => { setPage(p); setLimit(size ?? 20); }}
         pageSizeOptions={['10', '20', '50', '100']}
         disableRowClick

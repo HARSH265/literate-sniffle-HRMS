@@ -57,7 +57,7 @@ export function TrainingProgramsPage() {
       <DataTable
         columns={columns}
         dataSource={data?.data || []}
-        rowKey="_id"
+        rowKey="id"
         loading={isLoading}
         total={data?.meta?.total}
         page={page}

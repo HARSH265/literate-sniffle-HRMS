@@ -104,7 +104,7 @@ export function SkillMatrixPage() {
         {!selectedEmployee ? (
           <Empty description="Select an employee to view their skills" />
         ) : (
-          <DataTable dataSource={allSkills} columns={columns} rowKey={(record) => getId(record)} loading={isLoading} hidePagination size="small" />
+          <DataTable dataSource={allSkills} columns={columns} rowKey={(record) => getId(record)} loading={isLoading} hidePagination />
         )}
       </Card>
 

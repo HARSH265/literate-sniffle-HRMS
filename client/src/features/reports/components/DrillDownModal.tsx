@@ -28,7 +28,6 @@ export function DrillDownModal({ visible, onClose, data, loading }: DrillDownMod
           rowKey={(_, idx) => String(idx)}
           noCard
           total={data.records.length}
-          pageSize={10}
           disableRowClick
         />
       ) : (

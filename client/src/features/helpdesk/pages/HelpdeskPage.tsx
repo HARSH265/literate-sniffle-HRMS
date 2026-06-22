@@ -189,11 +189,10 @@ export function HelpdeskPage() {
       <DataTable
         columns={columns}
         dataSource={data?.data}
-        rowKey="_id"
+        rowKey="id"
         loading={isLoading}
         total={data?.meta?.total}
         page={page}
-        pageSize={limit}
         onPaginationChange={(p, s) => { setPage(p); setLimit(s); }}
         toolbarLeft={
           <>

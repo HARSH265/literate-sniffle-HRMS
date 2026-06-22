@@ -250,7 +250,6 @@ export function EmployeesPage() {
         loading={isLoading}
         total={data?.meta?.total ?? 0}
         page={page}
-        pageSize={limit}
         onPaginationChange={(p, size) => { setPage(p); setLimit(size ?? 10); }}
         onRowClick={(record) => navigate(`/employees/${record.id}`)}
         toolbarLeft={

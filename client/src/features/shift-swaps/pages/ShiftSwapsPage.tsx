@@ -60,7 +60,7 @@ export function ShiftSwapsPage() {
       <DataTable
         columns={columns}
         dataSource={data?.data || []}
-        rowKey="_id"
+        rowKey="id"
         loading={isLoading}
         toolbarLeft={
           <Select placeholder="Status" allowClear style={{ width: 140 }} onChange={(v) => setFilters(p => ({ ...p, status: v }))}>

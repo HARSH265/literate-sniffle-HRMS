@@ -157,7 +157,7 @@ export function PerformancePage() {
                 <DataTable
                   columns={cycleColumns}
                   dataSource={cyclesData?.data || []}
-                  rowKey="_id"
+                  rowKey="id"
                   loading={cyclesLoading}
                   total={cyclesData?.meta?.total}
                   page={page}
@@ -184,7 +184,7 @@ export function PerformancePage() {
                 <DataTable
                   columns={reviewColumns}
                   dataSource={reviewsData?.data || []}
-                  rowKey="_id"
+                  rowKey="id"
                   loading={reviewsLoading}
                   total={reviewsData?.meta?.total}
                   page={page}

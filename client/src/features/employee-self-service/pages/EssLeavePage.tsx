@@ -1,5 +1,6 @@
-import { Card, Row, Col, Statistic, Table, Tag, Spin, Button, Progress, Empty } from 'antd';
+import { Card, Row, Col, Statistic, Tag, Spin, Button, Progress, Empty } from 'antd';
 import { useLeaveBalances, useLeaveApplications } from '../hooks/useEssLeave';
+import { DataTable } from '../../../core/components/DataTable';
 
 const cardStyle = { borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' };
 
@@ -125,17 +126,15 @@ export function EssLeavePage() {
         {balances.length === 0 ? (
           <Empty description="No leave balances found" image={Empty.PRESENTED_IMAGE_SIMPLE} />
         ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <Table
-              dataSource={balances}
-              columns={leaveColumns}
-              rowKey={(r: any) => r._id || r.id}
-              pagination={false}
-              size="small"
-              scroll={{ x: 'max-content' }}
-              bordered
-            />
-          </div>
+          <DataTable
+            dataSource={balances}
+            columns={leaveColumns}
+            rowKey="id"
+            hidePagination
+            noCard
+            disableRowClick
+            scroll={{ x: 'max-content' }}
+          />
         )}
       </Card>
 
@@ -148,17 +147,15 @@ export function EssLeavePage() {
         {applications.length === 0 ? (
           <Empty description="No leave applications" image={Empty.PRESENTED_IMAGE_SIMPLE} />
         ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <Table
-              dataSource={applications}
-              columns={applicationColumns}
-              rowKey={(r: any) => r._id || r.id}
-              pagination={false}
-              size="small"
-              scroll={{ x: 'max-content' }}
-              bordered
-            />
-          </div>
+          <DataTable
+            dataSource={applications}
+            columns={applicationColumns}
+            rowKey="id"
+            hidePagination
+            noCard
+            disableRowClick
+            scroll={{ x: 'max-content' }}
+          />
         )}
       </Card>
     </div>

@@ -55,7 +55,7 @@ export function CertificationsPage() {
         ) : (
           <>
             <Text strong style={{ fontSize: 16 }}>{certifications.length} Certification{certifications.length !== 1 ? 's' : ''}</Text>
-            <DataTable dataSource={certifications} columns={columns} rowKey={(record) => getId(record)} loading={isLoading} hidePagination size="small" style={{ marginTop: 8 }} />
+            <div style={{ marginTop: 8 }}><DataTable dataSource={certifications} columns={columns} rowKey={(record) => getId(record)} loading={isLoading} hidePagination /></div>
           </>
         )}
       </Card>

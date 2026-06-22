@@ -1,6 +1,7 @@
-import { Card, Table, Tag, Button, Space, Spin, Empty, message } from 'antd';
+import { Card, Tag, Button, Space, Spin, Empty, message } from 'antd';
 import { DownloadOutlined, EyeOutlined } from '@ant-design/icons';
 import { useEssPayslips } from '../hooks/useEssPayslips';
+import { DataTable } from '../../../core/components/DataTable';
 import apiClient from '../../../core/api/apiClient';
 import dayjs from 'dayjs';
 
@@ -94,16 +95,15 @@ export function EssPayslipsPage() {
       ) : payslips.length === 0 ? (
         <Empty description="No payslips available yet" image={Empty.PRESENTED_IMAGE_SIMPLE} />
       ) : (
-        <div style={{ overflowX: 'auto' }}>
-          <Table
-            dataSource={payslips}
-            columns={columns}
-            rowKey={(r: any) => r._id || r.id}
-            size="small"
-            scroll={{ x: 'max-content' }}
-            bordered
-          />
-        </div>
+        <DataTable
+          dataSource={payslips}
+          columns={columns}
+          rowKey="id"
+          hidePagination
+          noCard
+          disableRowClick
+          scroll={{ x: 'max-content' }}
+        />
       )}
     </Card>
   );

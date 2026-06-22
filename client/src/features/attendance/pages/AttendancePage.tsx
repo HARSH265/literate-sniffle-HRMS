@@ -263,7 +263,6 @@ export function AttendancePage() {
                 loading={isLoading}
                 total={data?.meta?.total ?? 0}
                 page={page}
-                pageSize={limit}
                 onPaginationChange={(p, size) => { setPage(p); setLimit(size ?? 10); }}
                 toolbarLeft={
                   <div style={{ display: 'flex', gap: 8 }}>

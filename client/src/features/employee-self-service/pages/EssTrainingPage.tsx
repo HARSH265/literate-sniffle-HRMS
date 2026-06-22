@@ -1,8 +1,9 @@
-import { Card, Table, Tag, Spin, Empty, Typography, Rate } from 'antd';
+import { Card, Tag, Spin, Empty, Typography, Rate } from 'antd';
 import { BookOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useEssTraining } from '../hooks/useEssTraining';
 import { EnrollmentStatusBadge } from '../../training/components/TrainingStatusBadge';
+import { DataTable } from '../../../core/components/DataTable';
 
 const { Text } = Typography;
 const cardStyle = { borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' };
@@ -55,16 +56,15 @@ export function EssTrainingPage() {
       ) : enrollments.length === 0 ? (
         <Empty description="No training programs assigned to you" image={Empty.PRESENTED_IMAGE_SIMPLE} />
       ) : (
-        <div style={{ overflowX: 'auto' }}>
-          <Table
-            dataSource={enrollments}
-            columns={columns}
-            rowKey={(r: any) => r._id || r.id}
-            size="small"
-            scroll={{ x: 'max-content' }}
-            bordered
-          />
-        </div>
+        <DataTable
+          dataSource={enrollments}
+          columns={columns}
+          rowKey="id"
+          hidePagination
+          noCard
+          disableRowClick
+          scroll={{ x: 'max-content' }}
+        />
       )}
     </Card>
   );
