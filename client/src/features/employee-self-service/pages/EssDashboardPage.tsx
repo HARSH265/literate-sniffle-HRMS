@@ -10,7 +10,7 @@ const headerStyle: React.CSSProperties = {
   margin: -16,
   marginBottom: 16,
   padding: '24px 20px',
-  color: '#fff',
+  color: 'var(--hrms-surface)',
 };
 
 export function EssDashboardPage() {
@@ -37,7 +37,7 @@ export function EssDashboardPage() {
         />
         <Card style={cardStyle}>
           <div style={{ textAlign: 'center', padding: '32px 16px' }}>
-            <p style={{ fontSize: 15, color: '#888', margin: 0 }}>
+            <p style={{ fontSize: 15, color: 'var(--hrms-text-muted)', margin: 0 }}>
               ESS features will be available once your account is linked to an employee record.
             </p>
           </div>
@@ -60,7 +60,7 @@ export function EssDashboardPage() {
         <Col xs={12}>
           <Card style={cardStyle} bodyStyle={{ padding: '14px 12px' }}>
             <Statistic
-              title={<span style={{ fontSize: 12, color: '#888' }}>Employee Code</span>}
+              title={<span style={{ fontSize: 12, color: 'var(--hrms-text-muted)' }}>Employee Code</span>}
               value={profile?.employeeCode || '-'}
               valueStyle={{ fontSize: 16, fontWeight: 600 }}
             />
@@ -69,7 +69,7 @@ export function EssDashboardPage() {
         <Col xs={12}>
           <Card style={cardStyle} bodyStyle={{ padding: '14px 12px' }}>
             <Statistic
-              title={<span style={{ fontSize: 12, color: '#888' }}>Department</span>}
+              title={<span style={{ fontSize: 12, color: 'var(--hrms-text-muted)' }}>Department</span>}
               value={profile?.department?.name || '-'}
               valueStyle={{ fontSize: 16, fontWeight: 600 }}
             />
@@ -78,7 +78,7 @@ export function EssDashboardPage() {
         <Col xs={12}>
           <Card style={cardStyle} bodyStyle={{ padding: '14px 12px' }}>
             <Statistic
-              title={<span style={{ fontSize: 12, color: '#888' }}>Designation</span>}
+              title={<span style={{ fontSize: 12, color: 'var(--hrms-text-muted)' }}>Designation</span>}
               value={profile?.designation?.name || '-'}
               valueStyle={{ fontSize: 16, fontWeight: 600 }}
             />
@@ -87,7 +87,7 @@ export function EssDashboardPage() {
         <Col xs={12}>
           <Card style={cardStyle} bodyStyle={{ padding: '14px 12px' }}>
             <Statistic
-              title={<span style={{ fontSize: 12, color: '#888' }}>Shift</span>}
+              title={<span style={{ fontSize: 12, color: 'var(--hrms-text-muted)' }}>Shift</span>}
               value={profile?.shift?.name || '-'}
               valueStyle={{ fontSize: 16, fontWeight: 600 }}
             />
@@ -103,51 +103,51 @@ export function EssDashboardPage() {
         <Row gutter={[12, 12]}>
           <Col span={12}>
             <Card size="small" hoverable bodyStyle={{ padding: '14px 8px', textAlign: 'center' }} onClick={() => navigate('/ess/profile')}>
-              <UserOutlined style={{ fontSize: 20, color: '#4f46e5', marginBottom: 4 }} />
+              <UserOutlined style={{ fontSize: 20, color: 'var(--hrms-primary)', marginBottom: 4 }} />
               <div style={{ fontSize: 12, fontWeight: 600 }}>Profile</div>
-              <div style={{ fontSize: 11, color: '#888' }}>View & Edit</div>
+              <div style={{ fontSize: 11, color: 'var(--hrms-text-muted)' }}>View & Edit</div>
             </Card>
           </Col>
           <Col span={12}>
             <Card size="small" hoverable bodyStyle={{ padding: '14px 8px', textAlign: 'center' }} onClick={() => navigate(`/m/scan?employeeId=${profile?.id || ''}`)}>
-              <QrcodeOutlined style={{ fontSize: 20, color: '#0891b2', marginBottom: 4 }} />
+              <QrcodeOutlined style={{ fontSize: 20, color: 'var(--hrms-info)', marginBottom: 4 }} />
               <div style={{ fontSize: 12, fontWeight: 600 }}>Check In / Out</div>
-              <div style={{ fontSize: 11, color: '#888' }}>Scan QR</div>
+              <div style={{ fontSize: 11, color: 'var(--hrms-text-muted)' }}>Scan QR</div>
             </Card>
           </Col>
           <Col span={12}>
             <Card size="small" hoverable bodyStyle={{ padding: '14px 8px', textAlign: 'center' }} onClick={() => navigate('/ess/leave')}>
-              <FileTextOutlined style={{ fontSize: 20, color: '#059669', marginBottom: 4 }} />
+              <FileTextOutlined style={{ fontSize: 20, color: 'var(--hrms-success)', marginBottom: 4 }} />
               <div style={{ fontSize: 12, fontWeight: 600 }}>Leave</div>
-              <div style={{ fontSize: 11, color: '#888' }}>Apply / View</div>
+              <div style={{ fontSize: 11, color: 'var(--hrms-text-muted)' }}>Apply / View</div>
             </Card>
           </Col>
           <Col span={12}>
             <Card size="small" hoverable bodyStyle={{ padding: '14px 8px', textAlign: 'center' }} onClick={() => navigate('/ess/payslips')}>
-              <CheckCircleOutlined style={{ fontSize: 20, color: '#d97706', marginBottom: 4 }} />
+              <CheckCircleOutlined style={{ fontSize: 20, color: 'var(--hrms-warning)', marginBottom: 4 }} />
               <div style={{ fontSize: 12, fontWeight: 600 }}>Payslips</div>
-              <div style={{ fontSize: 11, color: '#888' }}>Download</div>
+              <div style={{ fontSize: 11, color: 'var(--hrms-text-muted)' }}>Download</div>
             </Card>
           </Col>
           <Col span={12}>
             <Card size="small" hoverable bodyStyle={{ padding: '14px 8px', textAlign: 'center' }} onClick={() => navigate('/ess/assets')}>
-              <LaptopOutlined style={{ fontSize: 20, color: '#0d9488', marginBottom: 4 }} />
+              <LaptopOutlined style={{ fontSize: 20, color: 'var(--hrms-success)', marginBottom: 4 }} />
               <div style={{ fontSize: 12, fontWeight: 600 }}>Assets</div>
-              <div style={{ fontSize: 11, color: '#888' }}>View Allocated</div>
+              <div style={{ fontSize: 11, color: 'var(--hrms-text-muted)' }}>View Allocated</div>
             </Card>
           </Col>
           <Col span={12}>
             <Card size="small" hoverable bodyStyle={{ padding: '14px 8px', textAlign: 'center' }} onClick={() => navigate('/ess/shift-swaps')}>
-              <SwapOutlined style={{ fontSize: 20, color: '#7c3aed', marginBottom: 4 }} />
+              <SwapOutlined style={{ fontSize: 20, color: 'var(--hrms-primary)', marginBottom: 4 }} />
               <div style={{ fontSize: 12, fontWeight: 600 }}>Shift Swap</div>
-              <div style={{ fontSize: 11, color: '#888' }}>Request / View</div>
+              <div style={{ fontSize: 11, color: 'var(--hrms-text-muted)' }}>Request / View</div>
             </Card>
           </Col>
           <Col span={12}>
             <Card size="small" hoverable bodyStyle={{ padding: '14px 8px', textAlign: 'center' }} onClick={() => navigate('/ess/training')}>
-              <BookOutlined style={{ fontSize: 20, color: '#0891b2', marginBottom: 4 }} />
+              <BookOutlined style={{ fontSize: 20, color: 'var(--hrms-info)', marginBottom: 4 }} />
               <div style={{ fontSize: 12, fontWeight: 600 }}>Training</div>
-              <div style={{ fontSize: 11, color: '#888' }}>View Programs</div>
+              <div style={{ fontSize: 11, color: 'var(--hrms-text-muted)' }}>View Programs</div>
             </Card>
           </Col>
         </Row>
@@ -166,13 +166,13 @@ export function EssDashboardPage() {
           <Spin style={{ display: 'block', margin: '12px auto' }} />
         ) : pendingRequests > 0 ? (
           <div style={{ textAlign: 'center', padding: '16px' }}>
-            <span style={{ fontSize: 28, fontWeight: 700, color: '#faad14' }}>{pendingRequests}</span>
-            <div style={{ marginTop: 4, fontSize: 13, color: '#888' }}>
+            <span style={{ fontSize: 28, fontWeight: 700, color: 'var(--hrms-warning)' }}>{pendingRequests}</span>
+            <div style={{ marginTop: 4, fontSize: 13, color: 'var(--hrms-text-muted)' }}>
               pending request{pendingRequests > 1 ? 's' : ''} awaiting approval
             </div>
           </div>
         ) : (
-          <div style={{ textAlign: 'center', padding: '16px', fontSize: 13, color: '#888' }}>
+          <div style={{ textAlign: 'center', padding: '16px', fontSize: 13, color: 'var(--hrms-text-muted)' }}>
             No pending requests
           </div>
         )}

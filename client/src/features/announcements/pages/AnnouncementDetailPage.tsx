@@ -28,7 +28,7 @@ export function AnnouncementDetailPage() {
 
   if (!announcement) {
     return (
-      <div style={{ textAlign: 'center', padding: 40, color: '#888' }}>
+      <div style={{ textAlign: 'center', padding: 40, color: 'var(--hrms-text-muted)' }}>
         Announcement not found
       </div>
     );
@@ -48,7 +48,7 @@ export function AnnouncementDetailPage() {
 
       <Card style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-          <BellOutlined style={{ fontSize: 24, color: priorityColors[announcement.priority] || '#999' }} />
+          <BellOutlined style={{ fontSize: 24, color: priorityColors[announcement.priority] || 'var(--hrms-text-muted)' }} />
           <div>
             <Title level={4} style={{ margin: 0 }}>{announcement.title}</Title>
             <Space style={{ marginTop: 4 }}>
@@ -61,7 +61,7 @@ export function AnnouncementDetailPage() {
 
         <Divider />
 
-        <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.8, color: '#333' }}>
+        <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.8, color: 'var(--hrms-text-primary)' }}>
           {announcement.content}
         </div>
 

@@ -6,7 +6,7 @@ export function AuthSection({ form, onSave }: { form: any; onSave: (values: any)
     <Form form={form} layout="vertical" onFinish={onSave}>
       <h3 style={{ marginBottom: 16 }}>Authentication Settings</h3>
 
-      <div style={{ marginBottom: 24, padding: 16, background: '#f8f9fa', borderRadius: 8 }}>
+      <div style={{ marginBottom: 24, padding: 16, background: 'var(--hrms-bg)', borderRadius: 8 }}>
         <h4 style={{ marginBottom: 12 }}>Token Configuration</h4>
         <Row gutter={16}>
           <Col span={12}>
@@ -22,7 +22,7 @@ export function AuthSection({ form, onSave }: { form: any; onSave: (values: any)
         </Row>
       </div>
 
-      <div style={{ marginBottom: 24, padding: 16, background: '#f8f9fa', borderRadius: 8 }}>
+      <div style={{ marginBottom: 24, padding: 16, background: 'var(--hrms-bg)', borderRadius: 8 }}>
         <h4 style={{ marginBottom: 12 }}>Password Requirements</h4>
         <Row gutter={16}>
           <Col span={8}>

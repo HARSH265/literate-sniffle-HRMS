@@ -17,7 +17,7 @@ export function StatutoryConfigSection({ form, onSave }: { form: any; onSave: (v
         {activeTab === 'pf' && (
           <>
             <h3 style={{ marginBottom: 16 }}>PF Configuration</h3>
-            <p style={{ marginBottom: 20, color: '#666', fontSize: 13 }}>Configure Provident Fund rates and wage ceiling for statutory compliance.</p>
+            <p style={{ marginBottom: 20, color: 'var(--hrms-text-secondary)', fontSize: 13 }}>Configure Provident Fund rates and wage ceiling for statutory compliance.</p>
             <Row gutter={16}>
               <Col span={8}>
                 <Form.Item name={['statutoryConfig', 'pfEnabled']} label="Enable PF" valuePropName="checked"><Switch /></Form.Item>
@@ -64,7 +64,7 @@ export function StatutoryConfigSection({ form, onSave }: { form: any; onSave: (v
         {activeTab === 'esi' && (
           <>
             <h3 style={{ marginBottom: 16 }}>ESI Configuration</h3>
-            <p style={{ marginBottom: 20, color: '#666', fontSize: 13 }}>Configure Employee State Insurance rates and threshold.</p>
+            <p style={{ marginBottom: 20, color: 'var(--hrms-text-secondary)', fontSize: 13 }}>Configure Employee State Insurance rates and threshold.</p>
             <Row gutter={16}>
               <Col span={8}>
                 <Form.Item name={['statutoryConfig', 'esiEnabled']} label="Enable ESI" valuePropName="checked"><Switch /></Form.Item>
@@ -91,7 +91,7 @@ export function StatutoryConfigSection({ form, onSave }: { form: any; onSave: (v
         {activeTab === 'pt' && (
           <>
             <h3 style={{ marginBottom: 16 }}>Professional Tax Configuration</h3>
-            <p style={{ marginBottom: 20, color: '#666', fontSize: 13 }}>Configure state-wise Professional Tax slabs. Employees can be assigned a state in their profile.</p>
+            <p style={{ marginBottom: 20, color: 'var(--hrms-text-secondary)', fontSize: 13 }}>Configure state-wise Professional Tax slabs. Employees can be assigned a state in their profile.</p>
             <Row gutter={16}>
               <Col span={8}>
                 <Form.Item name={['statutoryConfig', 'ptEnabled']} label="Enable Professional Tax" valuePropName="checked"><Switch /></Form.Item>

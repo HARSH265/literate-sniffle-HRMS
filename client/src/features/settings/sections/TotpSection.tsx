@@ -134,7 +134,7 @@ export function TotpSection({ employees }: TotpSectionProps) {
         )}
 
         {!totpQrUrl && (
-          <div style={{ textAlign: 'center', padding: 40, color: '#888' }}>
+          <div style={{ textAlign: 'center', padding: 40, color: 'var(--hrms-text-muted)' }}>
             <SafetyCertificateOutlined style={{ fontSize: 48, marginBottom: 12 }} />
             <div>Select an employee and click "Generate TOTP Secret" to enroll</div>
           </div>

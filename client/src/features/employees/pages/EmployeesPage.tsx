@@ -22,7 +22,7 @@ const StatusBadge = ({ status }: { status: string }) => {
 };
 
 const CatTag = ({ cat }: { cat: string }) => (
-  <span className="cat-tag" style={{ background: cat === 'worker' ? '#eff6ff' : '#faf5ff', color: cat === 'worker' ? '#2563eb' : '#7c3aed' }}>
+  <span className="cat-tag" style={{ background: cat === 'worker' ? 'var(--hrms-info-light)' : 'var(--hrms-primary-light)', color: cat === 'worker' ? 'var(--hrms-info)' : 'var(--hrms-primary)' }}>
     {cat === 'worker' ? 'Worker' : 'Office Staff'}
   </span>
 );

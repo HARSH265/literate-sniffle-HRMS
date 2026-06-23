@@ -89,7 +89,7 @@ export function LeaveBalancesPage() {
         return (
           <Space>
             <span style={{ fontSize: 16, fontWeight: 700, color: v > 0 ? 'var(--hrms-success)' : 'var(--hrms-danger)' }}>{v}</span>
-            <Progress percent={pct} size="small" style={{ width: 80 }} strokeColor={v > 0 ? '#52c41a' : '#ff4d4f'} />
+            <Progress percent={pct} size="small" style={{ width: 80 }} strokeColor={v > 0 ? 'var(--hrms-success)' : 'var(--hrms-danger)'} />
           </Space>
         );
       },

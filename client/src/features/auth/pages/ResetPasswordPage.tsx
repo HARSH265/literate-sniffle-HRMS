@@ -15,7 +15,7 @@ export function ResetPasswordPage() {
 
   if (!token) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f5f5f5' }}>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--hrms-bg)' }}>
         <Result status="error" title="Invalid Reset Link" subTitle="No reset token found. Please request a new one." extra={<a href="/forgot-password">Request New Link</a>} />
       </div>
     );
@@ -36,7 +36,7 @@ export function ResetPasswordPage() {
 
   if (success) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f5f5f5' }}>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--hrms-bg)' }}>
         <Result
           status="success"
           title="Password Reset Successful"
@@ -48,10 +48,10 @@ export function ResetPasswordPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f5f5f5' }}>
-      <div style={{ width: 400, padding: 32, background: '#fff', borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--hrms-bg)' }}>
+      <div style={{ width: 400, padding: 32, background: 'var(--hrms-surface)', borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
         <h2 style={{ marginBottom: 8 }}>Reset Password</h2>
-        <p style={{ marginBottom: 24, color: '#666' }}>Enter your new password below.</p>
+        <p style={{ marginBottom: 24, color: 'var(--hrms-text-secondary)' }}>Enter your new password below.</p>
         <Form layout="vertical" onFinish={handleSubmit} size="large">
           <Form.Item
             name="newPassword"

@@ -49,7 +49,7 @@ function TagManager({ form, fieldPath, placeholder }: { form: any; fieldPath: st
               ))}
             </Space>
           ) : (
-            <span style={{ color: '#999', fontSize: 13 }}>None configured</span>
+            <span style={{ color: 'var(--hrms-text-muted)', fontSize: 13 }}>None configured</span>
           )}
         </div>
       </Form.Item>
@@ -61,7 +61,7 @@ export function AssetSection({ form, onSave }: AssetSectionProps) {
   return (
     <Form form={form} layout="vertical" onFinish={onSave}>
       <h3 style={{ marginBottom: 16 }}>Asset Management Configuration</h3>
-      <p style={{ marginBottom: 24, color: '#666' }}>
+      <p style={{ marginBottom: 24, color: 'var(--hrms-text-secondary)' }}>
         Configure asset tracking, code generation, allocation rules, and maintenance reminders.
       </p>
 
@@ -84,9 +84,9 @@ export function AssetSection({ form, onSave }: AssetSectionProps) {
         </Col>
       </Row>
 
-      <div style={{ marginTop: 16, padding: 16, background: '#f0f5ff', borderRadius: 8, border: '1px solid #d9e6ff' }}>
+      <div style={{ marginTop: 16, padding: 16, background: 'var(--hrms-info-light)', borderRadius: 8, border: '1px solid var(--hrms-info)' }}>
         <h4 style={{ marginBottom: 12 }}>Asset Code & Maintenance</h4>
-        <p style={{ marginBottom: 16, color: '#666', fontSize: 13 }}>
+        <p style={{ marginBottom: 16, color: 'var(--hrms-text-secondary)', fontSize: 13 }}>
           Define the asset code format and set maintenance reminder intervals.
         </p>
         <Row gutter={16}>
@@ -108,9 +108,9 @@ export function AssetSection({ form, onSave }: AssetSectionProps) {
         </Row>
       </div>
 
-      <div style={{ marginTop: 16, padding: 16, background: '#fff7e6', borderRadius: 8, border: '1px solid #ffe7ba' }}>
+      <div style={{ marginTop: 16, padding: 16, background: 'var(--hrms-warning-light)', borderRadius: 8, border: '1px solid var(--hrms-warning)' }}>
         <h4 style={{ marginBottom: 12 }}>Categories & Conditions</h4>
-        <p style={{ marginBottom: 16, color: '#666', fontSize: 13 }}>
+        <p style={{ marginBottom: 16, color: 'var(--hrms-text-secondary)', fontSize: 13 }}>
           Define asset categories and condition labels used for tracking.
         </p>
         <Row gutter={16}>

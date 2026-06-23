@@ -31,7 +31,7 @@ export function DrillDownModal({ visible, onClose, data, loading }: DrillDownMod
           disableRowClick
         />
       ) : (
-        <div style={{ textAlign: 'center', padding: 24, color: '#999' }}>No records found</div>
+        <div style={{ textAlign: 'center', padding: 24, color: 'var(--hrms-text-muted)' }}>No records found</div>
       )}
     </Modal>
   );

@@ -49,7 +49,7 @@ export function EssLeavePage() {
           percent={record.total > 0 ? Math.round((remaining / record.total) * 100) : 0}
           size="small"
           format={() => `${remaining}`}
-          strokeColor={remaining > 0 ? '#52c41a' : '#ff4d4f'}
+          strokeColor={remaining > 0 ? 'var(--hrms-success)' : 'var(--hrms-danger)'}
           style={{ minWidth: 80 }}
         />
       ),
@@ -94,7 +94,7 @@ export function EssLeavePage() {
             <Statistic
               title={<span style={{ fontSize: 13 }}>Pending</span>}
               value={pendingCount}
-              valueStyle={{ color: '#faad14', fontSize: 20, fontWeight: 600 }}
+              valueStyle={{ color: 'var(--hrms-warning)', fontSize: 20, fontWeight: 600 }}
             />
           </Card>
         </Col>
@@ -103,7 +103,7 @@ export function EssLeavePage() {
             <Statistic
               title={<span style={{ fontSize: 13 }}>Approved</span>}
               value={approvedThisMonth}
-              valueStyle={{ color: '#52c41a', fontSize: 20, fontWeight: 600 }}
+              valueStyle={{ color: 'var(--hrms-success)', fontSize: 20, fontWeight: 600 }}
             />
           </Card>
         </Col>

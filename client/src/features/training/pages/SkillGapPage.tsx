@@ -79,7 +79,7 @@ export function SkillGapPage() {
             <Text strong style={{ fontSize: 16 }}>Existing Skills ({employeeSkills.length})</Text>
             <div style={{ marginBottom: 24, marginTop: 8 }}><DataTable dataSource={employeeSkills} columns={existingSkillColumns} rowKey={(record) => getId(record)} hidePagination /></div>
 
-            <Text strong style={{ fontSize: 16, color: missingSkills.length > 0 ? '#ff4d4f' : '#52c41a' }}>
+            <Text strong style={{ fontSize: 16, color: missingSkills.length > 0 ? 'var(--hrms-danger)' : 'var(--hrms-success)' }}>
               {missingSkills.length > 0 ? `Missing Skills (${missingSkills.length})` : 'No skill gaps found'}
             </Text>
             <div style={{ marginTop: 8 }}><DataTable dataSource={missingSkills} columns={columns} rowKey={(record) => getId(record)} hidePagination /></div>

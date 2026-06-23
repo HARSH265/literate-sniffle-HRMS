@@ -109,8 +109,8 @@ export function StatutoryDashboard() {
               title="PF Due (Employee + Employer)"
               value={summary?.pf?.totalPfDue || 0}
               prefix={<BankOutlined />}
-              suffix={<span style={{ fontSize: 14, color: '#888' }}>/ {summary?.pf?.applicableEmployees || 0} emp</span>}
-              valueStyle={{ color: '#1890ff' }}
+              suffix={<span style={{ fontSize: 14, color: 'var(--hrms-text-muted)' }}>/ {summary?.pf?.applicableEmployees || 0} emp</span>}
+              valueStyle={{ color: 'var(--hrms-info)' }}
             />
           </Card>
         </Col>
@@ -120,8 +120,8 @@ export function StatutoryDashboard() {
               title="ESI Due (Employee + Employer)"
               value={summary?.esi?.totalEsiDue || 0}
               prefix={<SafetyCertificateOutlined />}
-              suffix={<span style={{ fontSize: 14, color: '#888' }}>/ {summary?.esi?.applicableEmployees || 0} emp</span>}
-              valueStyle={{ color: '#722ed1' }}
+              suffix={<span style={{ fontSize: 14, color: 'var(--hrms-text-muted)' }}>/ {summary?.esi?.applicableEmployees || 0} emp</span>}
+              valueStyle={{ color: 'var(--hrms-primary)' }}
             />
           </Card>
         </Col>
@@ -131,8 +131,8 @@ export function StatutoryDashboard() {
               title="Professional Tax Due"
               value={summary?.pt?.totalAmount || 0}
               prefix={<DollarOutlined />}
-              suffix={<span style={{ fontSize: 14, color: '#888' }}>/ {summary?.pt?.applicableEmployees || 0} emp</span>}
-              valueStyle={{ color: '#fa8c16' }}
+              suffix={<span style={{ fontSize: 14, color: 'var(--hrms-text-muted)' }}>/ {summary?.pt?.applicableEmployees || 0} emp</span>}
+              valueStyle={{ color: 'var(--hrms-warning)' }}
             />
           </Card>
         </Col>
@@ -212,7 +212,7 @@ export function StatutoryDashboard() {
 
       <Modal title="Generate PF Challan" open={challanModalOpen} onCancel={() => setChallanModalOpen(false)} onOk={() => generateChallanMutation.mutate()} confirmLoading={generateChallanMutation.isPending}>
         <p>Generate PF challan for <strong>{selectedMonth}</strong>?</p>
-        <p style={{ color: '#888', fontSize: 13 }}>This will calculate PF contributions for all non-exempt employees and create a challan record.</p>
+        <p style={{ color: 'var(--hrms-text-muted)', fontSize: 13 }}>This will calculate PF contributions for all non-exempt employees and create a challan record.</p>
       </Modal>
 
       <Modal title="Generate Statutory Report" open={reportModalOpen} onCancel={() => setReportModalOpen(false)} footer={null}>
@@ -229,7 +229,7 @@ export function StatutoryDashboard() {
 
       <Modal title="Details" open={viewModalOpen} onCancel={() => { setViewModalOpen(false); setViewData(null); }} footer={null} width={800}>
         {viewData && (
-          <pre style={{ maxHeight: 500, overflow: 'auto', fontSize: 12, background: '#f5f5f5', padding: 16, borderRadius: 8 }}>
+          <pre style={{ maxHeight: 500, overflow: 'auto', fontSize: 12, background: 'var(--hrms-bg)', padding: 16, borderRadius: 8 }}>
             {JSON.stringify(viewData, null, 2)}
           </pre>
         )}

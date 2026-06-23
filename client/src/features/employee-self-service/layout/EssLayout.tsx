@@ -76,8 +76,8 @@ export function EssLayout() {
       >
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            marginBottom: 16, padding: '10px 14px', background: '#fff',
-            borderRadius: 12, border: '1px solid #f0f0f0',
+            marginBottom: 16, padding: '10px 14px', background: 'var(--hrms-surface)',
+            borderRadius: 12, border: '1px solid var(--hrms-border-light)',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <div style={{
@@ -85,18 +85,18 @@ export function EssLayout() {
                 background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
-                <UserOutlined style={{ color: '#fff', fontSize: 15 }} />
+                <UserOutlined style={{ color: 'var(--hrms-surface)', fontSize: 15 }} />
               </div>
               <div style={{ lineHeight: 1 }}>
                 <Text strong style={{ fontSize: 13, lineHeight: '20px', display: 'block' }}>{user?.name || 'User'}</Text>
-                <Text style={{ fontSize: 11, color: '#999', lineHeight: '16px', display: 'block' }}>{user?.role}</Text>
+                <Text style={{ fontSize: 11, color: 'var(--hrms-text-muted)', lineHeight: '16px', display: 'block' }}>{user?.role}</Text>
               </div>
             </div>
             <Space size={8}>
               <Badge count={unreadCount} size="small" offset={[2, -2]}>
                 <Button
                   type="text"
-                  icon={<BellOutlined style={{ fontSize: 16, color: '#666' }} />}
+                  icon={<BellOutlined style={{ fontSize: 16, color: 'var(--hrms-text-secondary)' }} />}
                   style={{ borderRadius: 8, width: 34, height: 34 }}
                   onClick={() => setNotifDrawerOpen(true)}
                 />
@@ -106,7 +106,7 @@ export function EssLayout() {
                 onClick={handleLogout}
                 style={{
                   borderRadius: 8, height: 34, fontSize: 13,
-                  borderColor: '#f0f0f0', color: '#888',
+                  borderColor: 'var(--hrms-border-light)', color: 'var(--hrms-text-muted)',
                 }}
               >
                 Logout
@@ -138,7 +138,7 @@ export function EssLayout() {
               dataSource={notifications}
               renderItem={(item: any) => (
                 <List.Item
-                  style={{ padding: '12px 16px', cursor: 'pointer', background: item.isRead ? 'transparent' : '#f0f7ff', borderRadius: 8 }}
+                  style={{ padding: '12px 16px', cursor: 'pointer', background: item.isRead ? 'transparent' : 'var(--hrms-info-light)', borderRadius: 8 }}
                   onClick={() => {
                     if (!item.isRead) handleMarkAsRead(item.id || item._id);
                     setNotifDrawerOpen(false);

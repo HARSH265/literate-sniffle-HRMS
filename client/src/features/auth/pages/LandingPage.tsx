@@ -190,22 +190,22 @@ export function LandingPage() {
               <div className="lp-dash-actions">
                 <div className="lp-dash-actions-title">Pending Actions</div>
                 <div className="lp-dash-action">
-                  <span className="lp-dash-action-dot" style={{ background: '#f59e0b' }} />
+                  <span className="lp-dash-action-dot" style={{ background: 'var(--hrms-warning)' }} />
                   <span className="lp-dash-action-text">Approve leave requests</span>
                   <span className="lp-dash-action-count">5</span>
                 </div>
                 <div className="lp-dash-action">
-                  <span className="lp-dash-action-dot" style={{ background: '#6366f1' }} />
+                  <span className="lp-dash-action-dot" style={{ background: 'var(--hrms-primary)' }} />
                   <span className="lp-dash-action-text">Loan approvals pending</span>
                   <span className="lp-dash-action-count">3</span>
                 </div>
                 <div className="lp-dash-action">
-                  <span className="lp-dash-action-dot" style={{ background: '#10b981' }} />
+                  <span className="lp-dash-action-dot" style={{ background: 'var(--hrms-success)' }} />
                   <span className="lp-dash-action-text">Payroll finalize ready</span>
                   <span className="lp-dash-action-count">1</span>
                 </div>
                 <div className="lp-dash-action">
-                  <span className="lp-dash-action-dot" style={{ background: '#ef4444' }} />
+                  <span className="lp-dash-action-dot" style={{ background: 'var(--hrms-danger)' }} />
                   <span className="lp-dash-action-text">Compliance filings due</span>
                   <span className="lp-dash-action-count">2</span>
                 </div>
@@ -316,7 +316,7 @@ export function LandingPage() {
         <div className="lp-container" style={{ position: 'relative', zIndex: 1 }}>
           <div className="lp-cta-inner">
             <div className="lp-cta-badge">
-              <i className="fas fa-star" style={{ color: '#fbbf24', fontSize: 10 }} />
+              <i className="fas fa-star" style={{ color: 'var(--hrms-warning)', fontSize: 10 }} />
               Trusted by 350+ manufacturing companies
             </div>
             <h2>Ready to streamline<br />your HR operations?</h2>
@@ -341,7 +341,7 @@ export function LandingPage() {
             <div className="lp-footer-brand">
               <div className="lp-nav-logo">
                 <div className="lp-nav-logo-icon">O</div>
-                <span className="lp-nav-logo-text" style={{ color: '#fff' }}>Orian</span>
+                <span className="lp-nav-logo-text" style={{ color: 'var(--hrms-surface)' }}>Orian</span>
               </div>
               <p className="lp-footer-brand-desc">
                 HRMS built for Indian manufacturing — Workforce Management made simple, compliant, and powerful.

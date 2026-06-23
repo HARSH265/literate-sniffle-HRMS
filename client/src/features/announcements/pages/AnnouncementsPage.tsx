@@ -49,7 +49,7 @@ export function AnnouncementsPage() {
       key: 'title',
       render: (title: string, record: any) => (
         <Space>
-          <BellOutlined style={{ color: priorityColors[record.priority] || '#999' }} />
+          <BellOutlined style={{ color: priorityColors[record.priority] || 'var(--hrms-text-muted)' }} />
           <span style={{ fontWeight: record.readBy?.length === 0 ? 600 : 400 }}>{title}</span>
         </Space>
       ),

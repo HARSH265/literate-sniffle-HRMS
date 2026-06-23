@@ -203,7 +203,7 @@ export function PayrollPage() {
           <Form.Item name="monthYear" label="Select Month" rules={[{ required: true, message: 'Select month' }]}>
             <DatePicker.MonthPicker style={{ width: '100%' }} placeholder="Select month" />
           </Form.Item>
-          <p style={{ fontSize: 12, color: '#666' }}>This will process payroll for all active employees based on attendance, overtime, and leave records.</p>
+          <p style={{ fontSize: 12, color: 'var(--hrms-text-secondary)' }}>This will process payroll for all active employees based on attendance, overtime, and leave records.</p>
         </Form>
       </Modal>
 
@@ -221,7 +221,7 @@ export function PayrollPage() {
             <p><strong>Month:</strong> {dayjs(previewData.month + '-01').format('MMMM YYYY')}</p>
             <p><strong>Employees:</strong> {previewData.totalEmployees}</p>
             <p><strong>Estimated Total Net Pay:</strong> {formatCurrency(previewData.totalNetPay)}</p>
-            <p style={{ fontSize: 12, color: '#888' }}>This is a what-if preview. No data has been saved.</p>
+            <p style={{ fontSize: 12, color: 'var(--hrms-text-muted)' }}>This is a what-if preview. No data has been saved.</p>
             <DataTable
               dataSource={previewData.items?.slice(0, 10) || []}
               loading={previewMutation.isPending}
@@ -238,7 +238,7 @@ export function PayrollPage() {
               disableRowClick
               noCard
             />
-            {previewData.items?.length > 10 && <p style={{ textAlign: 'center', marginTop: 8, color: '#888' }}>...and {previewData.items.length - 10} more employees</p>}
+            {previewData.items?.length > 10 && <p style={{ textAlign: 'center', marginTop: 8, color: 'var(--hrms-text-muted)' }}>...and {previewData.items.length - 10} more employees</p>}
           </div>
         )}
       </Modal>

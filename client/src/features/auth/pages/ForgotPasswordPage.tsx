@@ -24,7 +24,7 @@ export function ForgotPasswordPage() {
 
   if (sent) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f5f5f5' }}>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--hrms-bg)' }}>
         <Result
           status="success"
           title="Check your email"
@@ -36,10 +36,10 @@ export function ForgotPasswordPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f5f5f5' }}>
-      <div style={{ width: 400, padding: 32, background: '#fff', borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--hrms-bg)' }}>
+      <div style={{ width: 400, padding: 32, background: 'var(--hrms-surface)', borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
         <h2 style={{ marginBottom: 8 }}>Forgot Password</h2>
-        <p style={{ marginBottom: 24, color: '#666' }}>Enter your email and we'll send you a reset link.</p>
+        <p style={{ marginBottom: 24, color: 'var(--hrms-text-secondary)' }}>Enter your email and we'll send you a reset link.</p>
         <Form layout="vertical" onFinish={handleSubmit} size="large">
           <Form.Item name="email" label="Email" rules={[{ required: true, type: 'email', message: 'Enter a valid email' }]}>
             <Input prefix={<MailOutlined />} placeholder="admin@hrms.com" />

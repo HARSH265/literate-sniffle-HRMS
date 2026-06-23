@@ -54,7 +54,7 @@ export function EmailSection({ form, onSave, onTestEmail, isTesting }: { form: a
         </Col>
       </Row>
 
-      <div style={{ marginTop: 16, padding: 16, background: '#f0f5ff', borderRadius: 8, border: '1px solid #d9e6ff' }}>
+      <div style={{ marginTop: 16, padding: 16, background: 'var(--hrms-info-light)', borderRadius: 8, border: '1px solid var(--hrms-info)' }}>
         <h4 style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
           <BellOutlined /> Notification Preferences
         </h4>
@@ -97,7 +97,7 @@ export function EmailSection({ form, onSave, onTestEmail, isTesting }: { form: a
         </Row>
       </div>
 
-      <div style={{ marginTop: 24, padding: 16, background: '#f5f5f5', borderRadius: 8 }}>
+      <div style={{ marginTop: 24, padding: 16, background: 'var(--hrms-bg)', borderRadius: 8 }}>
         <h4 style={{ marginBottom: 12 }}>Test Email Configuration</h4>
         <Row gutter={12} align="middle">
           <Col flex="auto">

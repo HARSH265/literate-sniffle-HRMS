@@ -42,9 +42,9 @@ export function CompliancePage() {
     <PageContainer>
       <PageHeader title="Compliance" />
       <Row gutter={16} style={{ marginBottom: 24 }}>
-        <Col span={8}><Card><Statistic title="Passed" value={0} prefix={<CheckCircleOutlined />} valueStyle={{ color: '#3f8600' }} /></Card></Col>
-        <Col span={8}><Card><Statistic title="Warnings" value={0} prefix={<WarningOutlined />} valueStyle={{ color: '#faad14' }} /></Card></Col>
-        <Col span={8}><Card><Statistic title="Failures" value={0} prefix={<CloseCircleOutlined />} valueStyle={{ color: '#cf1322' }} /></Card></Col>
+        <Col span={8}><Card><Statistic title="Passed" value={0} prefix={<CheckCircleOutlined />} valueStyle={{ color: 'var(--hrms-success)' }} /></Card></Col>
+        <Col span={8}><Card><Statistic title="Warnings" value={0} prefix={<WarningOutlined />} valueStyle={{ color: 'var(--hrms-warning)' }} /></Card></Col>
+        <Col span={8}><Card><Statistic title="Failures" value={0} prefix={<CloseCircleOutlined />} valueStyle={{ color: 'var(--hrms-danger)' }} /></Card></Col>
       </Row>
       <DataTable columns={columns} dataSource={reports} rowKey="runId" />
     </PageContainer>

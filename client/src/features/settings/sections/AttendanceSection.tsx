@@ -86,7 +86,7 @@ export function AttendanceSection({ form, onSave }: { form: any; onSave: (values
         </Col>
       </Row>
 
-      <div style={{ marginTop: 24, padding: 16, background: '#f0f5ff', borderRadius: 8, border: '1px solid #d9e6ff' }}>
+      <div style={{ marginTop: 24, padding: 16, background: 'var(--hrms-info-light)', borderRadius: 8, border: '1px solid var(--hrms-info)' }}>
         <h4 style={{ marginBottom: 12 }}>QR Kiosk System</h4>
         <Row gutter={16}>
           <Col span={6}>

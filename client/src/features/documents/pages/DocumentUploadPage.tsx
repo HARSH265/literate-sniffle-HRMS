@@ -199,7 +199,7 @@ export function DocumentUploadPage() {
                               ))}
                             </Space>
                           ) : (
-                            <span style={{ color: '#999', fontSize: 13 }}>No tags added</span>
+                            <span style={{ color: 'var(--hrms-text-muted)', fontSize: 13 }}>No tags added</span>
                           )}
                         </div>
                       </Form.Item>

@@ -314,11 +314,11 @@ export function AuditLogsPage() {
       >
         <div style={{ padding: '16px 0' }}>
           {retention?.data?.deletableCount ? (
-            <div style={{ background: '#fff7e6', padding: 12, borderRadius: 8, marginBottom: 16 }}>
+              <div style={{ background: 'var(--hrms-warning-light)', padding: 12, borderRadius: 8, marginBottom: 16 }}>
               <Text>{retention.data.message}</Text>
             </div>
           ) : (
-            <div style={{ background: '#f6ffed', padding: 12, borderRadius: 8, marginBottom: 16 }}>
+            <div style={{ background: 'var(--hrms-success-light)', padding: 12, borderRadius: 8, marginBottom: 16 }}>
               <Text>All logs are within the retention period. No cleanup needed.</Text>
             </div>
           )}
@@ -335,7 +335,7 @@ export function AuditLogsPage() {
               { label: '365 days', value: 365 },
             ]}
           />
-          <div style={{ marginTop: 16, padding: 12, background: '#f5f5f5', borderRadius: 8 }}>
+          <div style={{ marginTop: 16, padding: 12, background: 'var(--hrms-bg)', borderRadius: 8 }}>
             <Text type="secondary" style={{ fontSize: 12 }}>
               Before deletion, you can export all logs as Excel for backup. The exported file will include all filtered logs with complete details.
             </Text>

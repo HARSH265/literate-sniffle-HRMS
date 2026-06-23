@@ -85,7 +85,7 @@ export function SummaryTab({
             <Statistic
               title="Total Present"
               value={attendanceSummary?.data?.stats?.totalPresent || 0}
-              valueStyle={{ color: '#3f8600' }}
+              valueStyle={{ color: 'var(--hrms-success)' }}
             />
           </Card>
         </Col>
@@ -94,7 +94,7 @@ export function SummaryTab({
             <Statistic
               title="Total Absent"
               value={attendanceSummary?.data?.stats?.totalAbsent || 0}
-              valueStyle={{ color: '#cf1322' }}
+              valueStyle={{ color: 'var(--hrms-danger)' }}
             />
           </Card>
         </Col>
@@ -129,7 +129,7 @@ export function SummaryTab({
             <Statistic title="Total Deductions" value={payrollSummary?.data?.ytd?.totalDeductions || 0} prefix="₹" />
           </Col>
           <Col span={8}>
-            <Statistic title="Total Net Pay" value={payrollSummary?.data?.ytd?.totalNet || 0} prefix="₹" valueStyle={{ color: '#3f8600' }} />
+            <Statistic title="Total Net Pay" value={payrollSummary?.data?.ytd?.totalNet || 0} prefix="₹" valueStyle={{ color: 'var(--hrms-success)' }} />
           </Col>
         </Row>
       </Card>

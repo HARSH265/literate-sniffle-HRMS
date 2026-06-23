@@ -26,19 +26,19 @@ import { AnnouncementWidget } from '../../announcements/components/AnnouncementW
 import apiClient from '../../../core/api/apiClient';
 
 const STAT_ICONS: Record<string, { bg: string; color: string }> = {
-  employees: { bg: '#eef2ff', color: '#4f46e5' },
-  departments: { bg: '#f0f9ff', color: '#0284c7' },
-  designations: { bg: '#faf5ff', color: '#7c3aed' },
-  shifts: { bg: '#ecfdf5', color: '#059669' },
+  employees: { bg: 'var(--hrms-primary-light)', color: 'var(--hrms-primary)' },
+  departments: { bg: 'var(--hrms-info-light)', color: 'var(--hrms-info)' },
+  designations: { bg: 'var(--hrms-primary-light)', color: 'var(--hrms-primary)' },
+  shifts: { bg: 'var(--hrms-success-light)', color: 'var(--hrms-success)' },
 };
 
 const QUICK_ACTIONS = [
-  { label: 'Add New Employee', icon: <UserAddOutlined />, path: '/employees/new', color: '#4f46e5', bg: '#eef2ff' },
-  { label: 'Mark Attendance', icon: <UserOutlined />, path: '/attendance', color: '#059669', bg: '#ecfdf5' },
-  { label: 'Process Payroll', icon: <DollarOutlined />, path: '/payroll', color: '#d97706', bg: '#fffbeb' },
-  { label: 'Generate Reports', icon: <BarChartOutlined />, path: '/reports', color: '#0284c7', bg: '#f0f9ff' },
-  { label: 'View Audit Logs', icon: <AuditOutlined />, path: '/audit-logs', color: '#7c3aed', bg: '#faf5ff' },
-  { label: 'Manage Users', icon: <SafetyOutlined />, path: '/users', color: '#0891b2', bg: '#ecfeff' },
+  { label: 'Add New Employee', icon: <UserAddOutlined />, path: '/employees/new', color: 'var(--hrms-primary)', bg: 'var(--hrms-primary-light)' },
+  { label: 'Mark Attendance', icon: <UserOutlined />, path: '/attendance', color: 'var(--hrms-success)', bg: 'var(--hrms-success-light)' },
+  { label: 'Process Payroll', icon: <DollarOutlined />, path: '/payroll', color: 'var(--hrms-warning)', bg: 'var(--hrms-warning-light)' },
+  { label: 'Generate Reports', icon: <BarChartOutlined />, path: '/reports', color: 'var(--hrms-info)', bg: 'var(--hrms-info-light)' },
+  { label: 'View Audit Logs', icon: <AuditOutlined />, path: '/audit-logs', color: 'var(--hrms-primary)', bg: 'var(--hrms-primary-light)' },
+  { label: 'Manage Users', icon: <SafetyOutlined />, path: '/users', color: 'var(--hrms-info)', bg: 'var(--hrms-info-light)' },
 ] as const;
 
 function StatCard({
@@ -236,11 +236,11 @@ export function DashboardPage() {
 
   const getActivityColor = (action: string) => {
     const upper = action?.toUpperCase();
-    if (['CREATE', 'ADD', 'INSERT'].includes(upper)) return '#4f46e5';
-    if (['DELETE', 'REMOVE'].includes(upper)) return '#dc2626';
-    if (['PAYROLL', 'PROCESS', 'GENERATE'].includes(upper)) return '#059669';
-    if (['UPDATE', 'EDIT', 'PATCH'].includes(upper)) return '#d97706';
-    return '#94a3b8';
+    if (['CREATE', 'ADD', 'INSERT'].includes(upper)) return 'var(--hrms-primary)';
+    if (['DELETE', 'REMOVE'].includes(upper)) return 'var(--hrms-danger)';
+    if (['PAYROLL', 'PROCESS', 'GENERATE'].includes(upper)) return 'var(--hrms-success)';
+    if (['UPDATE', 'EDIT', 'PATCH'].includes(upper)) return 'var(--hrms-warning)';
+    return 'var(--hrms-text-muted)';
   };
 
   const formatActivityTime = (dateStr: string) => {
@@ -297,16 +297,16 @@ export function DashboardPage() {
             title="Today's Attendance"
             onClick={() => navigate('/attendance')}
             icon={<FieldTimeOutlined />}
-            accent={{ bg: '#f0f9ff', color: '#0284c7' }}
+            accent={{ bg: 'var(--hrms-info-light)', color: 'var(--hrms-info)' }}
           >
             <div style={{ fontSize: 22, fontWeight: 700, lineHeight: 1.2, marginTop: 4 }}>
-              <span style={{ color: '#22c55e' }}>{attStats?.totalPresent ?? '-'}</span>
+              <span style={{ color: 'var(--hrms-success)' }}>{attStats?.totalPresent ?? '-'}</span>
               <span style={{ fontSize: 13, fontWeight: 400, color: 'var(--hrms-text-muted)', margin: '0 4px' }}>/</span>
-              <span style={{ color: '#ef4444' }}>{attStats?.totalAbsent ?? '-'}</span>
+              <span style={{ color: 'var(--hrms-danger)' }}>{attStats?.totalAbsent ?? '-'}</span>
             </div>
             {attStats && (
               <div style={{ fontSize: 12, color: 'var(--hrms-text-muted)', marginTop: 2 }}>
-                <span style={{ color: '#f59e0b' }}>{attStats.totalHalfDay} half-day</span>
+                <span style={{ color: 'var(--hrms-warning)' }}>{attStats.totalHalfDay} half-day</span>
                 <span style={{ margin: '0 4px' }}>•</span>
                 <span>{attStats.totalLeave} on leave</span>
               </div>
@@ -319,13 +319,13 @@ export function DashboardPage() {
             title="Pending Approvals"
             onClick={() => navigate('/leave/approvals')}
             icon={<FileProtectOutlined />}
-            accent={{ bg: '#fef2f2', color: '#dc2626' }}
+            accent={{ bg: 'var(--hrms-danger-light)', color: 'var(--hrms-danger)' }}
           >
             <div className="stat-value">{pendingLeaveTotal + pendingLoanTotal}</div>
             <div style={{ fontSize: 12, color: 'var(--hrms-text-muted)', marginTop: 2 }}>
-              <span style={{ color: '#1890ff' }}>{pendingLeaveTotal} leave</span>
+              <span style={{ color: 'var(--hrms-info)' }}>{pendingLeaveTotal} leave</span>
               <span style={{ margin: '0 4px' }}>•</span>
-              <span style={{ color: '#722ed1' }}>{pendingLoanTotal} loans</span>
+              <span style={{ color: 'var(--hrms-primary)' }}>{pendingLoanTotal} loans</span>
             </div>
           </MetricCard>
         </Col>
@@ -335,7 +335,7 @@ export function DashboardPage() {
             title="Payroll"
             onClick={() => navigate('/payroll')}
             icon={<DollarOutlined />}
-            accent={{ bg: '#fffbeb', color: '#d97706' }}
+            accent={{ bg: 'var(--hrms-warning-light)', color: 'var(--hrms-warning)' }}
           >
             {latestRun ? (
               <>
@@ -360,7 +360,7 @@ export function DashboardPage() {
             title="Overtime (This Month)"
             onClick={() => navigate('/overtime')}
             icon={<CalculatorOutlined />}
-            accent={{ bg: '#faf5ff', color: '#7c3aed' }}
+            accent={{ bg: 'var(--hrms-primary-light)', color: 'var(--hrms-primary)' }}
           >
             <div className="stat-value">{otStats?.totalEmployeesWithOT ?? '-'}</div>
             <div style={{ fontSize: 12, color: 'var(--hrms-text-muted)', marginTop: 2 }}>
@@ -435,7 +435,7 @@ export function DashboardPage() {
 
               {recentActivities.length === 0 && (
                 <div style={{ textAlign: 'center', padding: '32px 16px', color: 'var(--hrms-text-muted)', fontSize: 13 }}>
-                  <div style={{ fontSize: 32, marginBottom: 12, color: '#cbd5e1' }}>
+                  <div style={{ fontSize: 32, marginBottom: 12, color: 'var(--hrms-text-muted)' }}>
                     <AuditOutlined />
                   </div>
                   No recent activity to display
@@ -450,7 +450,7 @@ export function DashboardPage() {
             <Col span={24}>
               <SectionCard>
                 <SectionHeader
-                  title={<><GiftOutlined style={{ marginRight: 8, color: '#d97706' }} />Upcoming Holidays</>}
+                  title={<><GiftOutlined style={{ marginRight: 8, color: 'var(--hrms-warning)' }} />Upcoming Holidays</>}
                   subtitle="Next calendar events for the team"
                 />
 
@@ -496,7 +496,7 @@ export function DashboardPage() {
         <Col xs={24} md={12} xl={7}>
           <SectionCard minHeight={420}>
             <SectionHeader
-              title={<><SafetyOutlined style={{ marginRight: 8, color: '#059669' }} />Quick Actions</>}
+              title={<><SafetyOutlined style={{ marginRight: 8, color: 'var(--hrms-success)' }} />Quick Actions</>}
               subtitle="Common operational shortcuts"
             />
 

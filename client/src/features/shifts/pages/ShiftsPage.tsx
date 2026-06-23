@@ -83,7 +83,7 @@ export function ShiftsPage() {
       ),
     },
     { title: 'Hours/Day', dataIndex: 'workingHours', key: 'workingHours', width: 110, render: (h: number) => <Tag style={{ borderRadius: 20, fontWeight: 600 }} color="blue">{h}h</Tag> },
-    { title: 'Applicable To', dataIndex: 'applicableTo', key: 'applicableTo', width: 160, render: (v: string) => <span className="cat-tag" style={{ background: v === 'all' ? '#ecfdf5' : v === 'worker' ? '#eff6ff' : '#faf5ff', color: v === 'all' ? '#059669' : v === 'worker' ? '#2563eb' : '#7c3aed' }}>{APPLICABLE_OPTIONS.find(o => o.value === v)?.label || v}</span> },
+    { title: 'Applicable To', dataIndex: 'applicableTo', key: 'applicableTo', width: 160, render: (v: string) => <span className="cat-tag" style={{ background: v === 'all' ? 'var(--hrms-success-light)' : v === 'worker' ? 'var(--hrms-info-light)' : 'var(--hrms-primary-light)', color: v === 'all' ? 'var(--hrms-success)' : v === 'worker' ? 'var(--hrms-info)' : 'var(--hrms-primary)' }}>{APPLICABLE_OPTIONS.find(o => o.value === v)?.label || v}</span> },
     { title: 'Status', dataIndex: 'isActive', key: 'isActive', width: 110, render: (a: boolean) => <span className={`status-badge ${a ? 'status-active' : 'status-inactive'}`}>{a ? 'Active' : 'Inactive'}</span> },
     {
       title: '',

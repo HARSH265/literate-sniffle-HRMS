@@ -231,7 +231,7 @@ case 'statutory':
               return (
                 <div key={group.key} style={{ marginBottom: 4 }}>
                   {group.label && (
-                    <div style={{ padding: '8px 12px 4px', fontSize: 11, fontWeight: 600, color: '#999', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                    <div style={{ padding: '8px 12px 4px', fontSize: 11, fontWeight: 600, color: 'var(--hrms-text-muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
                       {group.label}
                     </div>
                   )}
@@ -246,7 +246,7 @@ case 'statutory':
                           cursor: 'pointer',
                           borderRadius: 6,
                           margin: '0 6px',
-                          background: isActive ? '#f5f5f5' : 'transparent',
+                          background: isActive ? 'var(--hrms-bg)' : 'transparent',
                           color: 'var(--hrms-text-primary)',
                           display: 'flex',
                           alignItems: 'center',
@@ -254,10 +254,10 @@ case 'statutory':
                           transition: 'all 0.15s ease',
                           fontWeight: isActive ? 600 : 400,
                           fontSize: 13,
-                          borderLeft: isActive ? '3px solid #1890ff' : '3px solid transparent',
+                          borderLeft: isActive ? '3px solid var(--hrms-info)' : '3px solid transparent',
                         }}
                       >
-                        <span style={{ fontSize: 14, color: isActive ? '#1890ff' : 'inherit' }}>{item.icon}</span>
+                        <span style={{ fontSize: 14, color: isActive ? 'var(--hrms-info)' : 'inherit' }}>{item.icon}</span>
                         <span>{item.label}</span>
                       </div>
                     );

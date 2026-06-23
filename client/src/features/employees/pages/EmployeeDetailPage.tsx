@@ -181,7 +181,7 @@ export function EmployeeDetailPage() {
                   size={100}
                   src={employee.photo}
                   icon={<UserOutlined />}
-                  style={{ background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', flexShrink: 0 }}
+                  style={{ background: 'linear-gradient(135deg, var(--hrms-primary), var(--hrms-primary))', flexShrink: 0 }}
                 />
                 <div style={{ fontSize: 20, fontWeight: 700, marginTop: 16, color: 'var(--hrms-text-primary)' }}>
                   {employee.fullName}
@@ -320,11 +320,11 @@ export function EmployeeDetailPage() {
                                     <EyeOutlined key="view" onClick={() => window.open(doc.filePath, '_blank,noopener,noreferrer')} />,
                                     <DownloadOutlined key="download" onClick={() => window.open(employeeService.getDocumentUrl(employee.id, doc._id), '_blank,noopener,noreferrer')} />,
                                     <Popconfirm key="delete" title="Delete this document?" onConfirm={() => deleteMutation.mutate(doc._id)}>
-                                      <DeleteOutlined style={{ color: '#dc2626' }} />
+                                      <DeleteOutlined style={{ color: 'var(--hrms-danger)' }} />
                                     </Popconfirm>
                                   ]}
                                 >
-                                  <Card.Meta avatar={<FileTextOutlined style={{ fontSize: 24, color: '#4f46e5' }} />} title={docTypeLabels[doc.type] || doc.type} description={doc.fileName} />
+                                  <Card.Meta avatar={<FileTextOutlined style={{ fontSize: 24, color: 'var(--hrms-primary)' }} />} title={docTypeLabels[doc.type] || doc.type} description={doc.fileName} />
                                 </Card>
                               </Col>
                             ))}

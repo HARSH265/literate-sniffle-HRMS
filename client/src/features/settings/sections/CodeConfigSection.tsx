@@ -27,7 +27,7 @@ export function CodeConfigSection({ form, onSave }: { form: any; onSave: (values
       {activeTab === 'employee' && (
         <>
           <h3 style={{ marginBottom: 16 }}>Employee Code Configuration</h3>
-          <p style={{ marginBottom: 20, color: '#666', fontSize: 13 }}>
+          <p style={{ marginBottom: 20, color: 'var(--hrms-text-secondary)', fontSize: 13 }}>
             Configure how employee codes are auto-generated when adding new employees.
           </p>
           <Row gutter={16}>
@@ -52,7 +52,7 @@ export function CodeConfigSection({ form, onSave }: { form: any; onSave: (values
               </Form.Item>
             </Col>
           </Row>
-          <div style={{ marginTop: 12, padding: 12, background: '#f6f8fa', borderRadius: 8, fontSize: 13, color: '#555' }}>
+          <div style={{ marginTop: 12, padding: 12, background: 'var(--hrms-bg)', borderRadius: 8, fontSize: 13, color: 'var(--hrms-text-secondary)' }}>
             Preview: <Tag color="blue">{form.getFieldValue(['employeeCodeConfig', 'prefix']) || 'EMP'}{String(form.getFieldValue(['employeeCodeConfig', 'startNumber']) || 1).padStart(form.getFieldValue(['employeeCodeConfig', 'padding']) || 3, '0')}</Tag>
           </div>
         </>
@@ -61,7 +61,7 @@ export function CodeConfigSection({ form, onSave }: { form: any; onSave: (values
       {activeTab === 'department' && (
         <>
           <h3 style={{ marginBottom: 16 }}>Department Code Configuration</h3>
-          <p style={{ marginBottom: 20, color: '#666', fontSize: 13 }}>
+          <p style={{ marginBottom: 20, color: 'var(--hrms-text-secondary)', fontSize: 13 }}>
             Configure how department codes are auto-generated when creating new departments.
           </p>
           <Row gutter={16}>
@@ -86,7 +86,7 @@ export function CodeConfigSection({ form, onSave }: { form: any; onSave: (values
               </Form.Item>
             </Col>
           </Row>
-          <div style={{ marginTop: 12, padding: 12, background: '#f6f8fa', borderRadius: 8, fontSize: 13, color: '#555' }}>
+          <div style={{ marginTop: 12, padding: 12, background: 'var(--hrms-bg)', borderRadius: 8, fontSize: 13, color: 'var(--hrms-text-secondary)' }}>
             Preview: <Tag color="blue">{form.getFieldValue(['departmentCodeConfig', 'prefix']) || 'DEPT'}{String(form.getFieldValue(['departmentCodeConfig', 'startNumber']) || 1).padStart(form.getFieldValue(['departmentCodeConfig', 'padding']) || 3, '0')}</Tag>
           </div>
         </>

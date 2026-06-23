@@ -167,7 +167,7 @@ export function PerformanceReviewDetailPage() {
           <>
             <Divider />
             <Title level={5}>Appeal Reason</Title>
-            <Card style={{ background: '#fff7e6', borderRadius: 8 }}>
+            <Card style={{ background: 'var(--hrms-warning-light)', borderRadius: 8 }}>
               <Text>{review.appealReason}</Text>
               {review.appealedAt && (
                 <div><Text type="secondary">Appealed on {new Date(review.appealedAt).toLocaleDateString('en-IN')}</Text></div>
@@ -180,7 +180,7 @@ export function PerformanceReviewDetailPage() {
           <>
             <Divider />
             <Title level={5}>Appeal Resolution</Title>
-            <Card style={{ background: '#f6ffed', borderRadius: 8 }}>
+            <Card style={{ background: 'var(--hrms-success-light)', borderRadius: 8 }}>
               <Text>{review.appealResolution}</Text>
               {review.resolvedAt && (
                 <div><Text type="secondary">Resolved on {new Date(review.resolvedAt).toLocaleDateString('en-IN')}</Text></div>
@@ -296,7 +296,7 @@ export function PerformanceReviewDetailPage() {
           {review.status === 'appealed' && (
             <div>
               <Text strong>Appeal Reason:</Text>
-              <Card size="small" style={{ marginTop: 4, background: '#fff7e6' }}>
+              <Card size="small" style={{ marginTop: 4, background: 'var(--hrms-warning-light)' }}>
                 <Text>{review.appealReason}</Text>
               </Card>
             </div>

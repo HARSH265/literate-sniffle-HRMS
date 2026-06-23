@@ -95,7 +95,7 @@ export function EssLoansPage() {
             <Statistic
               title={<span style={{ fontSize: 13 }}>Active</span>}
               value={activeLoans}
-              valueStyle={{ color: '#52c41a', fontSize: 20, fontWeight: 600 }}
+              valueStyle={{ color: 'var(--hrms-success)', fontSize: 20, fontWeight: 600 }}
             />
           </Card>
         </Col>
@@ -104,7 +104,7 @@ export function EssLoansPage() {
             <Statistic
               title={<span style={{ fontSize: 13 }}>Pending</span>}
               value={pendingLoans}
-              valueStyle={{ color: '#faad14', fontSize: 20, fontWeight: 600 }}
+              valueStyle={{ color: 'var(--hrms-warning)', fontSize: 20, fontWeight: 600 }}
             />
           </Card>
         </Col>

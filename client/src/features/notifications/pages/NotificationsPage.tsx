@@ -60,7 +60,7 @@ export function NotificationsPage() {
           width: 10,
           height: 10,
           borderRadius: '50%',
-          background: r.type === 'info' ? '#1890ff' : r.type === 'success' ? '#52c41a' : r.type === 'warning' ? '#fa8c16' : '#ff4d4f',
+          background: r.type === 'info' ? 'var(--hrms-info)' : r.type === 'success' ? 'var(--hrms-success)' : r.type === 'warning' ? 'var(--hrms-warning)' : 'var(--hrms-danger)',
         }} />
       ),
     },

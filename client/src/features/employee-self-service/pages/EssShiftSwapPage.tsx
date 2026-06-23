@@ -67,7 +67,7 @@ export function EssShiftSwapPage() {
               title={<span style={{ fontSize: 13 }}>Remaining Swaps</span>}
               value={eligibility?.remainingSwaps ?? '-'}
               suffix={eligibility ? `/ ${eligibility.maxSwaps}` : ''}
-              valueStyle={{ fontSize: 20, fontWeight: 600, color: (eligibility?.remainingSwaps ?? 0) > 0 ? '#52c41a' : '#ff4d4f' }}
+              valueStyle={{ fontSize: 20, fontWeight: 600, color: (eligibility?.remainingSwaps ?? 0) > 0 ? 'var(--hrms-success)' : 'var(--hrms-danger)' }}
             />
           </Card>
         </Col>

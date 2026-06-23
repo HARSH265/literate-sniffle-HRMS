@@ -8,8 +8,8 @@ import type { ChartsTabProps } from '../types/reportTypes';
 
 const { RangePicker } = DatePicker;
 
-const COLORS = ['#3f8600', '#cf1322', '#faad14', '#1890ff', '#722ed1', '#fa8c16', '#13c2c2', '#eb2f96'];
-const PIE_COLORS = ['#3f8600', '#cf1322', '#faad14', '#1890ff', '#722ed1'];
+const COLORS = ['var(--hrms-success)', 'var(--hrms-danger)', 'var(--hrms-warning)', 'var(--hrms-info)', 'var(--hrms-primary)', 'var(--hrms-warning)', 'var(--hrms-info)', 'var(--hrms-danger)'];
+const PIE_COLORS = ['var(--hrms-success)', 'var(--hrms-danger)', 'var(--hrms-warning)', 'var(--hrms-info)', 'var(--hrms-primary)'];
 
 export function ChartsTab({
   chartType, setChartType,
@@ -31,7 +31,7 @@ export function ChartsTab({
   });
 
   const renderChart = () => {
-    if (!chartData?.data?.data) return <div style={{ textAlign: 'center', padding: '60px 40px', fontSize: 16, color: '#999' }}>No chart data available</div>;
+    if (!chartData?.data?.data) return <div style={{ textAlign: 'center', padding: '60px 40px', fontSize: 16, color: 'var(--hrms-text-muted)' }}>No chart data available</div>;
 
     const data = chartData.data.data;
     const chartTypeData = chartData.data;
@@ -59,10 +59,10 @@ export function ChartsTab({
             <YAxis />
             <Tooltip />
             <Legend />
-            <Bar dataKey="present" fill="#3f8600" name="Present" />
-            <Bar dataKey="absent" fill="#cf1322" name="Absent" />
-            <Bar dataKey="halfDay" fill="#faad14" name="Half Day" />
-            <Bar dataKey="leave" fill="#1890ff" name="Leave" />
+            <Bar dataKey="present" fill="var(--hrms-success)" name="Present" />
+            <Bar dataKey="absent" fill="var(--hrms-danger)" name="Absent" />
+            <Bar dataKey="halfDay" fill="var(--hrms-warning)" name="Half Day" />
+            <Bar dataKey="leave" fill="var(--hrms-info)" name="Leave" />
           </BarChart>
         </ResponsiveContainer>
       );
@@ -77,8 +77,8 @@ export function ChartsTab({
             <YAxis />
             <Tooltip />
             <Legend />
-            <Bar dataKey="present" fill="#3f8600" name="Present" />
-            <Bar dataKey="absent" fill="#cf1322" name="Absent" />
+            <Bar dataKey="present" fill="var(--hrms-success)" name="Present" />
+            <Bar dataKey="absent" fill="var(--hrms-danger)" name="Absent" />
           </BarChart>
         </ResponsiveContainer>
       );
@@ -93,9 +93,9 @@ export function ChartsTab({
             <YAxis />
             <Tooltip formatter={(v: any) => `₹${(v || 0).toLocaleString()}`} />
             <Legend />
-            <Bar dataKey="gross" fill="#1890ff" name="Gross" />
-            <Bar dataKey="deductions" fill="#faad14" name="Deductions" />
-            <Bar dataKey="net" fill="#3f8600" name="Net Pay" />
+            <Bar dataKey="gross" fill="var(--hrms-info)" name="Gross" />
+            <Bar dataKey="deductions" fill="var(--hrms-warning)" name="Deductions" />
+            <Bar dataKey="net" fill="var(--hrms-success)" name="Net Pay" />
           </BarChart>
         </ResponsiveContainer>
       );
@@ -110,9 +110,9 @@ export function ChartsTab({
             <YAxis />
             <Tooltip />
             <Legend />
-            <Bar dataKey="total" fill="#1890ff" name="Total Employees" />
-            <Bar dataKey="workers" fill="#3f8600" name="Workers" />
-            <Bar dataKey="officeStaff" fill="#722ed1" name="Office Staff" />
+            <Bar dataKey="total" fill="var(--hrms-info)" name="Total Employees" />
+            <Bar dataKey="workers" fill="var(--hrms-success)" name="Workers" />
+            <Bar dataKey="officeStaff" fill="var(--hrms-primary)" name="Office Staff" />
           </BarChart>
         </ResponsiveContainer>
       );

@@ -179,10 +179,10 @@ export function ScanPage() {
 
   if (step === 'confirm' && result) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f5f5f5', padding: 20 }}>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--hrms-bg)', padding: 20 }}>
         <Result
           status={result.isLate ? 'warning' : 'success'}
-          icon={result.isLate ? undefined : <CheckCircleOutlined style={{ color: '#52c41a', fontSize: 64 }} />}
+          icon={result.isLate ? undefined : <CheckCircleOutlined style={{ color: 'var(--hrms-success)', fontSize: 64 }} />}
           title={result.isLate ? 'Checked in Late' : mode === 'checkin' ? 'Check-in Successful' : 'Check-out Successful'}
           subTitle={result.message}
           extra={[
@@ -197,14 +197,14 @@ export function ScanPage() {
     <div style={{
       minHeight: '100vh', display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'center',
-      background: '#f5f5f5', padding: 24, fontFamily: 'system-ui, sans-serif',
+      background: 'var(--hrms-bg)', padding: 24, fontFamily: 'system-ui, sans-serif',
     }}>
       <div style={{
-        background: '#fff', borderRadius: 16, padding: 32,
+        background: 'var(--hrms-surface)', borderRadius: 16, padding: 32,
         width: '100%', maxWidth: 400, boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
       }}>
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
-          <QrcodeOutlined style={{ fontSize: 48, color: '#1a1a2e', marginBottom: 12 }} />
+          <QrcodeOutlined style={{ fontSize: 48, color: 'var(--hrms-text-primary)', marginBottom: 12 }} />
           <Title level={4} style={{ margin: 0 }}>Orian Attendance</Title>
           <Text type="secondary">{mode === 'checkin' ? 'Check In' : 'Check Out'}</Text>
         </div>
@@ -214,7 +214,7 @@ export function ScanPage() {
             <div style={{
               border: '2px dashed #d9d9d9', borderRadius: 12,
               marginBottom: 16, overflow: 'hidden', position: 'relative',
-              minHeight: 220, background: cameraActive ? '#000' : 'transparent',
+              minHeight: 220, background: cameraActive ? 'var(--hrms-text-primary)' : 'transparent',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
               {cameraActive ? (
@@ -223,14 +223,14 @@ export function ScanPage() {
                   <canvas ref={canvasRef} style={{ display: 'none' }} />
                 </>
               ) : (
-                <ScanOutlined style={{ fontSize: 56, color: '#1677ff' }} />
+                <ScanOutlined style={{ fontSize: 56, color: 'var(--hrms-info)' }} />
               )}
             </div>
 
             {cameraActive ? (
               <Text type="success" style={{ display: 'block', marginBottom: 16 }}>
                 Camera active — point at kiosk QR code
-                {!hasBarcodeDetector && <span style={{ color: '#888', fontSize: 12 }}> (loading decoder...)</span>}
+                {!hasBarcodeDetector && <span style={{ color: 'var(--hrms-text-muted)', fontSize: 12 }}> (loading decoder...)</span>}
               </Text>
             ) : (
               <Text type="secondary" style={{ display: 'block', marginBottom: 16 }}>

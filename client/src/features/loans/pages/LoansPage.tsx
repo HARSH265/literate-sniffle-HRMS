@@ -63,9 +63,9 @@ export function LoansPage() {
       <PageHeader title="Loans" subtitle="View and manage loan applications" />
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={6}><Card><Statistic title="Total" value={stats.total} prefix={<DollarOutlined />} /></Card></Col>
-        <Col span={6}><Card><Statistic title="Applied" value={stats.applied} valueStyle={{ color: '#1890ff' }} /></Card></Col>
-        <Col span={6}><Card><Statistic title="Approved" value={stats.approved} valueStyle={{ color: '#52c41a' }} /></Card></Col>
-        <Col span={6}><Card><Statistic title="Active" value={stats.active} valueStyle={{ color: '#faad14' }} /></Card></Col>
+        <Col span={6}><Card><Statistic title="Applied" value={stats.applied} valueStyle={{ color: 'var(--hrms-info)' }} /></Card></Col>
+        <Col span={6}><Card><Statistic title="Approved" value={stats.approved} valueStyle={{ color: 'var(--hrms-success)' }} /></Card></Col>
+        <Col span={6}><Card><Statistic title="Active" value={stats.active} valueStyle={{ color: 'var(--hrms-warning)' }} /></Card></Col>
       </Row>
       <DataTable
         dataSource={loans}

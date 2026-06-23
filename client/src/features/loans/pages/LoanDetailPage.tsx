@@ -79,7 +79,7 @@ export function LoanDetailPage() {
         <Col span={6}><Card><Statistic title="Loan Amount" value={loan.amount} prefix="₹" /></Card></Col>
         <Col span={6}><Card><Statistic title="Monthly EMI" value={loan.emiAmount} prefix="₹" /></Card></Col>
         <Col span={6}><Card><Statistic title="Total Payable" value={loan.totalPayable} prefix="₹" /></Card></Col>
-        <Col span={6}><Card><Statistic title="Total Interest" value={loan.totalInterest} prefix="₹" valueStyle={{ color: '#cf1322' }} /></Card></Col>
+        <Col span={6}><Card><Statistic title="Total Interest" value={loan.totalInterest} prefix="₹" valueStyle={{ color: 'var(--hrms-danger)' }} /></Card></Col>
       </Row>
 
       <Card title="Loan Information" style={{ marginBottom: 16 }}>

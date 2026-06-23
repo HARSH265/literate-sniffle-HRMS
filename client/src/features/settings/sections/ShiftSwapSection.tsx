@@ -5,7 +5,7 @@ export function ShiftSwapSection({ form, onSave }: { form: any; onSave: (values:
   return (
     <Form form={form} layout="vertical" onFinish={onSave}>
       <h3 style={{ marginBottom: 16 }}>Shift Swap Configuration</h3>
-      <p style={{ marginBottom: 24, color: '#666' }}>
+      <p style={{ marginBottom: 24, color: 'var(--hrms-text-secondary)' }}>
         Configure shift swap rules including approval workflows, matching, and deadlines.
       </p>
 
@@ -28,9 +28,9 @@ export function ShiftSwapSection({ form, onSave }: { form: any; onSave: (values:
         </Col>
       </Row>
 
-      <div style={{ marginTop: 16, padding: 16, background: '#f0f5ff', borderRadius: 8, border: '1px solid #d9e6ff' }}>
+      <div style={{ marginTop: 16, padding: 16, background: 'var(--hrms-info-light)', borderRadius: 8, border: '1px solid var(--hrms-info)' }}>
         <h4 style={{ marginBottom: 12 }}>Matching & Preferences</h4>
-        <p style={{ marginBottom: 16, color: '#666', fontSize: 13 }}>
+        <p style={{ marginBottom: 16, color: 'var(--hrms-text-secondary)', fontSize: 13 }}>
           Control how shift swaps are matched and whether employees can set recurring preferences.
         </p>
         <Row gutter={16}>

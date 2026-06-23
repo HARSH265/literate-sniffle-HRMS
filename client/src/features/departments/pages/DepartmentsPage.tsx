@@ -118,7 +118,7 @@ export function DepartmentsPage() {
       key: 'code',
       width: 160,
       render: (code: string) => (
-        <span style={{ fontFamily: 'monospace', fontSize: 12, background: '#f1f5f9', padding: '3px 8px', borderRadius: 6, fontWeight: 600 }}>{code}</span>
+        <span style={{ fontFamily: 'monospace', fontSize: 12, background: 'var(--hrms-bg)', padding: '3px 8px', borderRadius: 6, fontWeight: 600 }}>{code}</span>
       ),
     },
     { title: 'Name', dataIndex: 'name', key: 'name', render: (name: string) => <span style={{ fontWeight: 500 }}>{name}</span> },

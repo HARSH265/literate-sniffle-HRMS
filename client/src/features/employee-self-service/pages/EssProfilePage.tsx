@@ -15,7 +15,7 @@ export function EssProfilePage() {
   if (isLoading) return <Spin size="large" style={{ display: 'block', margin: '40px auto' }} />;
 
   const profile = profileData?.data;
-  if (!profile) return <div style={{ padding: 24, textAlign: 'center', color: '#888' }}>Failed to load profile</div>;
+  if (!profile) return <div style={{ padding: 24, textAlign: 'center', color: 'var(--hrms-text-muted)' }}>Failed to load profile</div>;
 
   const editableFields = profile.editableFields || [];
 
@@ -77,7 +77,7 @@ export function EssProfilePage() {
 
         {canEdit && (
           <div style={{ marginTop: 16 }}>
-            <div style={{ marginBottom: 8, fontSize: 13, color: '#888' }}>
+            <div style={{ marginBottom: 8, fontSize: 13, color: 'var(--hrms-text-muted)' }}>
               <span style={{ fontWeight: 600 }}>Editable Fields</span>
               {editableFields.map((field: string) => (
                 <Tag key={field} color="blue" style={{ marginLeft: 6, fontSize: 11 }}>

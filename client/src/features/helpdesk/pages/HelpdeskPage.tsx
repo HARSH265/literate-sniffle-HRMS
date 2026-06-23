@@ -113,7 +113,7 @@ export function HelpdeskPage() {
       key: 'sla',
       width: 70,
       render: (_: unknown, record: any) => {
-        if (record.status === 'resolved' || record.status === 'closed') return <span style={{ color: '#94a3b8' }}>—</span>;
+        if (record.status === 'resolved' || record.status === 'closed') return <span style={{ color: 'var(--hrms-text-muted)' }}>—</span>;
         if (record.slaBreached) {
           return (
             <Tooltip title={
@@ -121,7 +121,7 @@ export function HelpdeskPage() {
                 ? `SLA breached! Deadline was ${dayjs(record.slaDeadline).format('DD MMM h:mm A')}`
                 : 'SLA breached!'
             }>
-              <span style={{ color: '#ef4444', fontWeight: 600, fontSize: 12 }}>
+              <span style={{ color: 'var(--hrms-danger)', fontWeight: 600, fontSize: 12 }}>
                 <WarningOutlined style={{ marginRight: 4 }} />Overdue
               </span>
             </Tooltip>
@@ -130,7 +130,7 @@ export function HelpdeskPage() {
         if (record.slaDeadline) {
           const deadline = dayjs(record.slaDeadline);
           const hoursLeft = deadline.diff(dayjs(), 'hour', true);
-          const color = hoursLeft < 2 ? '#ef4444' : hoursLeft < 8 ? '#d97706' : '#22c55e';
+          const color = hoursLeft < 2 ? 'var(--hrms-danger)' : hoursLeft < 8 ? 'var(--hrms-warning)' : 'var(--hrms-success)';
           return (
             <Tooltip title={`Deadline: ${deadline.format('DD MMM h:mm A')}`}>
               <span style={{ color, fontSize: 12, fontWeight: 500 }}>
@@ -143,7 +143,7 @@ export function HelpdeskPage() {
             </Tooltip>
           );
         }
-        return <span style={{ color: '#94a3b8' }}>—</span>;
+        return <span style={{ color: 'var(--hrms-text-muted)' }}>—</span>;
       },
     },
     {
@@ -167,7 +167,7 @@ export function HelpdeskPage() {
             <Tooltip title="Delete">
               <Button type="text" size="small" icon={<DeleteOutlined />}
                 loading={deleteMutation.isPending}
-                style={{ color: '#ef4444', borderRadius: 6 }} />
+                style={{ color: 'var(--hrms-danger)', borderRadius: 6 }} />
             </Tooltip>
           </Popconfirm>
         </div>

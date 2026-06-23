@@ -14,12 +14,12 @@ import { useAuthStore } from '../../../core/stores/authStore';
 const { Text } = Typography;
 
 const ROLE_META: Record<string, { label: string; color: string; icon: React.ReactNode; description: string }> = {
-  'super-admin': { label: 'Super Admin', color: '#f5222d', icon: <SafetyCertificateOutlined />, description: 'Full system access — bypasses all checks' },
-  'hr-admin': { label: 'HR Admin', color: '#1890ff', icon: <UserOutlined />, description: 'Manages all HR operations, employees, attendance, payroll' },
-  'hr-staff': { label: 'HR Staff', color: '#52c41a', icon: <TeamOutlined />, description: 'Daily operations — attendance, leave, view reports' },
-  'accounts': { label: 'Accounts', color: '#faad14', icon: <BankOutlined />, description: 'Payroll processing, loans, statutory compliance' },
-  'manager': { label: 'Manager', color: '#722ed1', icon: <UserOutlined />, description: 'Team management — approve leaves, performance' },
-  'worker': { label: 'Worker', color: '#13c2c2', icon: <UserOutlined />, description: 'Mobile-first ESS — check-in/out, leave, own data only' },
+  'super-admin': { label: 'Super Admin', color: 'var(--hrms-danger)', icon: <SafetyCertificateOutlined />, description: 'Full system access — bypasses all checks' },
+  'hr-admin': { label: 'HR Admin', color: 'var(--hrms-info)', icon: <UserOutlined />, description: 'Manages all HR operations, employees, attendance, payroll' },
+  'hr-staff': { label: 'HR Staff', color: 'var(--hrms-success)', icon: <TeamOutlined />, description: 'Daily operations — attendance, leave, view reports' },
+  'accounts': { label: 'Accounts', color: 'var(--hrms-warning)', icon: <BankOutlined />, description: 'Payroll processing, loans, statutory compliance' },
+  'manager': { label: 'Manager', color: 'var(--hrms-primary)', icon: <UserOutlined />, description: 'Team management — approve leaves, performance' },
+  'worker': { label: 'Worker', color: 'var(--hrms-info)', icon: <UserOutlined />, description: 'Mobile-first ESS — check-in/out, leave, own data only' },
 };
 
 interface PermissionsSectionProps {
@@ -136,7 +136,7 @@ export function PermissionsSection(_props: PermissionsSectionProps) {
     return (
       <div style={{ textAlign: 'center', padding: 60 }}>
         <Spin size="large" />
-        <div style={{ marginTop: 16, color: '#666' }}>Loading permissions...</div>
+        <div style={{ marginTop: 16, color: 'var(--hrms-text-secondary)' }}>Loading permissions...</div>
       </div>
     );
   }
@@ -150,7 +150,7 @@ export function PermissionsSection(_props: PermissionsSectionProps) {
   return (
     <div>
       <h3 style={{ marginBottom: 8 }}>Role Permissions</h3>
-      <p style={{ marginBottom: 24, color: '#666' }}>
+      <p style={{ marginBottom: 24, color: 'var(--hrms-text-secondary)' }}>
         Customize what each role can access. Changes take effect immediately for all users with that role.
       </p>
 
@@ -181,7 +181,7 @@ export function PermissionsSection(_props: PermissionsSectionProps) {
 
       <Card
         size="small"
-        style={{ marginBottom: 16, background: '#fafafa' }}
+        style={{ marginBottom: 16, background: 'var(--hrms-bg)' }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
@@ -201,7 +201,7 @@ export function PermissionsSection(_props: PermissionsSectionProps) {
       {isSuperAdmin ? (
         <Card>
           <div style={{ textAlign: 'center', padding: 40 }}>
-            <SafetyCertificateOutlined style={{ fontSize: 48, color: '#f5222d', marginBottom: 16 }} />
+            <SafetyCertificateOutlined style={{ fontSize: 48, color: 'var(--hrms-danger)', marginBottom: 16 }} />
             <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>Super Admin — Full Access</div>
             <Text type="secondary">
               Super Admin bypasses all permission checks. This role always has access to everything.

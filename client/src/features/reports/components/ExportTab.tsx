@@ -94,10 +94,10 @@ export function ExportTab({
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 16, alignItems: 'stretch' }}>
       {[
         {
-          title: 'Employee Export', color: '#52c41a', loadingKey: 'employees',
+          title: 'Employee Export', color: 'var(--hrms-success)', loadingKey: 'employees',
           fields: (
             <div>
-              <span style={{ color: '#888', fontSize: 12, display: 'block', marginBottom: 8 }}>FILTERS</span>
+              <span style={{ color: 'var(--hrms-text-muted)', fontSize: 12, display: 'block', marginBottom: 8 }}>FILTERS</span>
               <Space wrap>
                 <Select placeholder="Status" allowClear style={{ width: 120 }} value={filters.status || undefined} onChange={(val) => setFilters({ ...filters, status: val })} options={[{ label: 'Active', value: 'active' }, { label: 'Inactive', value: 'inactive' }, { label: 'Terminated', value: 'terminated' }]} />
                 <Select placeholder="Category" allowClear style={{ width: 140 }} value={filters.category || undefined} onChange={(val) => setFilters({ ...filters, category: val })} options={[{ label: 'Office Staff', value: 'staff' }, { label: 'Worker', value: 'worker' }]} />
@@ -109,10 +109,10 @@ export function ExportTab({
           ),
         },
         {
-          title: 'Attendance Report', color: '#1890ff', loadingKey: 'attendance',
+          title: 'Attendance Report', color: 'var(--hrms-info)', loadingKey: 'attendance',
           fields: (
             <div>
-              <span style={{ color: '#888', fontSize: 12, display: 'block', marginBottom: 8 }}>FILTERS</span>
+              <span style={{ color: 'var(--hrms-text-muted)', fontSize: 12, display: 'block', marginBottom: 8 }}>FILTERS</span>
               <Space direction="vertical" style={{ width: '100%' }}>
                 <Select placeholder="Department" allowClear style={{ width: '100%' }} value={attendanceDept} onChange={setAttendanceDept} options={deptOptions} />
                 <RangePicker value={dateRange} onChange={(dates) => setDateRange(dates as [any, any] | null)} format="YYYY-MM-DD" placeholder={['Start Date', 'End Date']} style={{ width: '100%' }} />
@@ -122,10 +122,10 @@ export function ExportTab({
           ),
         },
         {
-          title: 'Payroll Report', color: '#722ed1', loadingKey: 'payroll',
+          title: 'Payroll Report', color: 'var(--hrms-primary)', loadingKey: 'payroll',
           fields: (
             <div>
-              <span style={{ color: '#888', fontSize: 12, display: 'block', marginBottom: 8 }}>FILTERS</span>
+              <span style={{ color: 'var(--hrms-text-muted)', fontSize: 12, display: 'block', marginBottom: 8 }}>FILTERS</span>
               <Space direction="vertical" style={{ width: '100%' }}>
                 <Select placeholder="Department" allowClear style={{ width: '100%' }} value={payrollDept} onChange={setPayrollDept} options={deptOptions} />
                 <RangePicker value={dateRange} onChange={(dates) => setDateRange(dates as [any, any] | null)} format="YYYY-MM-DD" placeholder={['Start Date', 'End Date']} style={{ width: '100%' }} />
@@ -135,10 +135,10 @@ export function ExportTab({
           ),
         },
         {
-          title: 'Overtime Report', color: '#fa8c16', loadingKey: 'overtime',
+          title: 'Overtime Report', color: 'var(--hrms-warning)', loadingKey: 'overtime',
           fields: (
             <div>
-              <span style={{ color: '#888', fontSize: 12, display: 'block', marginBottom: 8 }}>FILTERS</span>
+              <span style={{ color: 'var(--hrms-text-muted)', fontSize: 12, display: 'block', marginBottom: 8 }}>FILTERS</span>
               <Space direction="vertical" style={{ width: '100%' }}>
                 <Select placeholder="Department" allowClear style={{ width: '100%' }} value={overtimeDept} onChange={setOvertimeDept} options={deptOptions} />
                 <DatePicker.MonthPicker value={overtimeMonth} onChange={(val) => val && setOvertimeMonth(val)} allowClear={false} format="YYYY-MM" style={{ width: '100%' }} />

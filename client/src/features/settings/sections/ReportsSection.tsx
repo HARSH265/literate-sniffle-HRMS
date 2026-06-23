@@ -37,7 +37,7 @@ export function ReportsSection({ form }: { form: any }) {
   return (
     <Form form={form} layout="vertical" onFinish={handleFinish}>
       <h3 style={{ marginBottom: 16 }}>Scheduled Report Export Configuration</h3>
-      <p style={{ marginBottom: 20, color: '#666', fontSize: 13 }}>
+      <p style={{ marginBottom: 20, color: 'var(--hrms-text-secondary)', fontSize: 13 }}>
         Configure automated report exports to be sent via email on a schedule.
       </p>
       <Row gutter={16}>

@@ -27,7 +27,7 @@ export function DocumentSection({ form, onSave }: DocumentSectionProps) {
   return (
     <Form form={form} layout="vertical" onFinish={onSave}>
       <h3 style={{ marginBottom: 16 }}>Document Repository Configuration</h3>
-      <p style={{ marginBottom: 24, color: '#666' }}>
+      <p style={{ marginBottom: 24, color: 'var(--hrms-text-secondary)' }}>
         Configure document storage, versioning, file size limits, and expiry reminders.
       </p>
 
@@ -45,9 +45,9 @@ export function DocumentSection({ form, onSave }: DocumentSectionProps) {
         </Col>
       </Row>
 
-      <div style={{ marginTop: 16, padding: 16, background: '#f0f5ff', borderRadius: 8, border: '1px solid #d9e6ff' }}>
+      <div style={{ marginTop: 16, padding: 16, background: 'var(--hrms-info-light)', borderRadius: 8, border: '1px solid var(--hrms-info)' }}>
         <h4 style={{ marginBottom: 12 }}>File Limits & Versioning</h4>
-        <p style={{ marginBottom: 16, color: '#666', fontSize: 13 }}>
+        <p style={{ marginBottom: 16, color: 'var(--hrms-text-secondary)', fontSize: 13 }}>
           Set maximum file size, version retention, and expiry reminder thresholds.
         </p>
         <Row gutter={16}>
@@ -69,9 +69,9 @@ export function DocumentSection({ form, onSave }: DocumentSectionProps) {
         </Row>
       </div>
 
-      <div style={{ marginTop: 16, padding: 16, background: '#fff7e6', borderRadius: 8, border: '1px solid #ffe7ba' }}>
+      <div style={{ marginTop: 16, padding: 16, background: 'var(--hrms-warning-light)', borderRadius: 8, border: '1px solid var(--hrms-warning)' }}>
         <h4 style={{ marginBottom: 12 }}>Document Tags</h4>
-        <p style={{ marginBottom: 16, color: '#666', fontSize: 13 }}>
+        <p style={{ marginBottom: 16, color: 'var(--hrms-text-secondary)', fontSize: 13 }}>
           Create tags to categorize and organize documents in the repository.
         </p>
         <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
@@ -108,7 +108,7 @@ export function DocumentSection({ form, onSave }: DocumentSectionProps) {
                 ))}
               </Space>
             ) : (
-              <span style={{ color: '#999', fontSize: 13 }}>No tags configured. Add one above.</span>
+              <span style={{ color: 'var(--hrms-text-muted)', fontSize: 13 }}>No tags configured. Add one above.</span>
             )}
           </div>
         </Form.Item>

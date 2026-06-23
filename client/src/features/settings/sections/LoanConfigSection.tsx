@@ -20,7 +20,7 @@ export function LoanConfigSection({ form, onSave }: { form: any; onSave: (values
       {activeTab === 'config' && (
         <Form form={form} layout="vertical" onFinish={onSave}>
           <h3 style={{ marginBottom: 16 }}>Loan Configuration</h3>
-          <p style={{ marginBottom: 20, color: '#666', fontSize: 13 }}>
+          <p style={{ marginBottom: 20, color: 'var(--hrms-text-secondary)', fontSize: 13 }}>
             Configure default loan rules for the organization.
           </p>
           <Row gutter={16}>

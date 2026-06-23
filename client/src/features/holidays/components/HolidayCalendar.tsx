@@ -7,10 +7,10 @@ interface HolidayCalendarProps {
 }
 
 const typeColors: Record<string, string> = {
-  national: '#4f46e5',
-  state: '#0891b2',
-  company: '#059669',
-  festival: '#d97706',
+  national: 'var(--hrms-primary)',
+  state: 'var(--hrms-info)',
+  company: 'var(--hrms-success)',
+  festival: 'var(--hrms-warning)',
 };
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -52,7 +52,7 @@ export function HolidayCalendar({ holidays, year }: HolidayCalendarProps) {
             border: '1px solid var(--hrms-border)',
             borderRadius: 12,
             padding: 20,
-            background: '#fff',
+            background: 'var(--hrms-surface)',
             boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
           }}>
             <div style={{
@@ -94,7 +94,7 @@ export function HolidayCalendar({ holidays, year }: HolidayCalendarProps) {
                       padding: '6px 4px',
                       borderRadius: 8,
                       minHeight: 48,
-                      background: dayHolidays.length > 0 ? '#fff7e6' : isToday ? '#e6f7ff' : 'transparent',
+                      background: dayHolidays.length > 0 ? 'var(--hrms-warning-light)' : isToday ? 'var(--hrms-info-light)' : 'transparent',
                       border: isToday ? '1.5px solid var(--hrms-primary)' : '1px solid transparent',
                     }}
                   >
@@ -111,8 +111,8 @@ export function HolidayCalendar({ holidays, year }: HolidayCalendarProps) {
                         key={hi}
                         style={{
                           fontSize: 9,
-                          color: '#fff',
-                          background: typeColors[h.type] || '#999',
+                          color: 'var(--hrms-surface)',
+                          background: typeColors[h.type] || 'var(--hrms-text-muted)',
                           borderRadius: 4,
                           padding: '2px 4px',
                           marginTop: 2,

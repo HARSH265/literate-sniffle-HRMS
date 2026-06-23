@@ -59,12 +59,12 @@ const { data, isLoading, isFetching } = useQuery({
       key: 'department',
       render: (_: unknown, r: Designation) => (
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--hrms-text-secondary)' }}>
-          <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#6366f1', display: 'inline-block' }} />
+          <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--hrms-primary)', display: 'inline-block' }} />
           {r.department?.name || '—'}
         </span>
       ),
     },
-    { title: 'Code', dataIndex: 'code', key: 'code', render: (c?: string) => c ? <span style={{ fontFamily: 'monospace', fontSize: 12, background: '#f1f5f9', padding: '3px 8px', borderRadius: 6, fontWeight: 600 }}>{c}</span> : '—' },
+    { title: 'Code', dataIndex: 'code', key: 'code', render: (c?: string) => c ? <span style={{ fontFamily: 'monospace', fontSize: 12, background: 'var(--hrms-bg)', padding: '3px 8px', borderRadius: 6, fontWeight: 600 }}>{c}</span> : '—' },
     { title: 'Status', dataIndex: 'isActive', key: 'isActive', width: 110, render: (isActive: boolean) => <StatusBadge isActive={isActive} /> },
     {
       title: '',

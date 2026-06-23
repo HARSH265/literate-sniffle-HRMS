@@ -10,7 +10,7 @@ export function AnnouncementSection({ form, onSave }: AnnouncementSectionProps) 
   return (
     <Form form={form} layout="vertical" onFinish={onSave}>
       <h3 style={{ marginBottom: 16 }}>Announcements Configuration</h3>
-      <p style={{ marginBottom: 24, color: '#666' }}>
+      <p style={{ marginBottom: 24, color: 'var(--hrms-text-secondary)' }}>
         Configure how announcements are published, including attachment limits, scheduling, and expiry rules.
       </p>
 
@@ -33,9 +33,9 @@ export function AnnouncementSection({ form, onSave }: AnnouncementSectionProps) 
         </Col>
       </Row>
 
-      <div style={{ marginTop: 16, padding: 16, background: '#f0f5ff', borderRadius: 8, border: '1px solid #d9e6ff' }}>
+      <div style={{ marginTop: 16, padding: 16, background: 'var(--hrms-info-light)', borderRadius: 8, border: '1px solid var(--hrms-info)' }}>
         <h4 style={{ marginBottom: 12 }}>Limits & Expiry</h4>
-        <p style={{ marginBottom: 16, color: '#666', fontSize: 13 }}>
+        <p style={{ marginBottom: 16, color: 'var(--hrms-text-secondary)', fontSize: 13 }}>
           Set character limits, attachment size constraints, and auto-expiry duration for announcements.
         </p>
         <Row gutter={16}>

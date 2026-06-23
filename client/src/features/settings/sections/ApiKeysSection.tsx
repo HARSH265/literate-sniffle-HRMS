@@ -177,7 +177,7 @@ export function ApiKeysSection() {
   return (
     <div>
       <h3 style={{ marginBottom: 8 }}>API Keys</h3>
-      <p style={{ marginBottom: 16, color: '#666' }}>
+      <p style={{ marginBottom: 16, color: 'var(--hrms-text-secondary)' }}>
         Manage programmatic access tokens for external integrations. API keys allow
         third‑party services to call HRMS endpoints without a user session.
       </p>
@@ -198,7 +198,7 @@ export function ApiKeysSection() {
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Space>
-            <KeyOutlined style={{ color: '#1890ff' }} />
+            <KeyOutlined style={{ color: 'var(--hrms-info)' }} />
             <Text strong style={{ fontSize: 14 }}>
               {data?.meta?.total ?? 0} API key{(data?.meta?.total ?? 0) !== 1 ? 's' : ''}
             </Text>
@@ -240,15 +240,15 @@ export function ApiKeysSection() {
         {createdKey ? (
           <div style={{ textAlign: 'center', padding: '16px 0' }}>
             <div style={{
-              background: '#f6ffed', border: '1px solid #b7eb8f', borderRadius: 8,
+              background: 'var(--hrms-success-light)', border: '1px solid var(--hrms-success)', borderRadius: 8,
               padding: 16, marginBottom: 16,
             }}>
-              <CheckCircleOutlined style={{ color: '#52c41a', fontSize: 24, marginBottom: 8 }} />
-              <div style={{ fontSize: 14, color: '#333', marginBottom: 8 }}>
+              <CheckCircleOutlined style={{ color: 'var(--hrms-success)', fontSize: 24, marginBottom: 8 }} />
+              <div style={{ fontSize: 14, color: 'var(--hrms-text-primary)', marginBottom: 8 }}>
                 Your API key has been generated. Copy it now — it will not be shown again.
               </div>
               <div style={{
-                background: '#fff', border: '1px solid #d9d9d9', borderRadius: 6,
+                background: 'var(--hrms-surface)', border: '1px solid var(--hrms-border)', borderRadius: 6,
                 padding: '10px 14px', fontFamily: 'monospace', fontSize: 13,
                 wordBreak: 'break-all', display: 'flex', alignItems: 'center',
                 justifyContent: 'space-between', gap: 8,
@@ -281,7 +281,7 @@ export function ApiKeysSection() {
                 <span>
                   Permissions{' '}
                   <Tooltip title="Select which API operations this key can perform.">
-                    <InfoCircleOutlined style={{ color: '#999' }} />
+                    <InfoCircleOutlined style={{ color: 'var(--hrms-text-muted)' }} />
                   </Tooltip>
                 </span>
               }
@@ -307,7 +307,7 @@ export function ApiKeysSection() {
                   <span>
                     Rate Limit{' '}
                     <Tooltip title="Maximum requests per minute for this key.">
-                      <InfoCircleOutlined style={{ color: '#999' }} />
+                      <InfoCircleOutlined style={{ color: 'var(--hrms-text-muted)' }} />
                     </Tooltip>
                   </span>
                 }
@@ -321,7 +321,7 @@ export function ApiKeysSection() {
                   <span>
                     Expires After{' '}
                     <Tooltip title="Number of days until the key expires. Leave empty for no expiry.">
-                      <InfoCircleOutlined style={{ color: '#999' }} />
+                      <InfoCircleOutlined style={{ color: 'var(--hrms-text-muted)' }} />
                     </Tooltip>
                   </span>
                 }

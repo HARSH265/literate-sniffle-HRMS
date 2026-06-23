@@ -21,7 +21,7 @@ export function LeaveDetailDrawer({ record }: Props) {
               <Tag>{record.employee.employeeCode}</Tag>
               {record.employee.department && <Tag color="blue">{record.employee.department}</Tag>}
             </Space>
-          ) : <span style={{ color: '#999' }}>—</span>}
+          ) : <span style={{ color: 'var(--hrms-text-muted)' }}>—</span>}
         </Descriptions.Item>
 
         <Descriptions.Item label="Leave Type">
@@ -32,7 +32,7 @@ export function LeaveDetailDrawer({ record }: Props) {
               <Tag>{record.leaveType.isPaid ? 'Paid' : 'Unpaid'}</Tag>
               <Tag color="blue">{record.leaveType.code}</Tag>
             </Space>
-          ) : <span style={{ color: '#999' }}>—</span>}
+          ) : <span style={{ color: 'var(--hrms-text-muted)' }}>—</span>}
         </Descriptions.Item>
 
         <Descriptions.Item label="Date Range">
@@ -51,7 +51,7 @@ export function LeaveDetailDrawer({ record }: Props) {
 
         {record.reason && (
           <Descriptions.Item label="Reason">
-            <div style={{ whiteSpace: 'pre-wrap', maxHeight: 120, overflow: 'auto', background: '#fafafa', padding: 8, borderRadius: 4 }}>
+            <div style={{ whiteSpace: 'pre-wrap', maxHeight: 120, overflow: 'auto', background: 'var(--hrms-bg)', padding: 8, borderRadius: 4 }}>
               {record.reason}
             </div>
           </Descriptions.Item>
@@ -87,14 +87,14 @@ export function LeaveDetailDrawer({ record }: Props) {
                       {a.approver?.name || 'Unknown'} — Level {a.level}
                     </div>
                     <Tag color={statusColors[a.status] || 'default'}>{a.status}</Tag>
-                    {a.remarks && <div style={{ color: '#666', fontSize: 12, marginTop: 2 }}>"{a.remarks}"</div>}
-                    {a.decidedAt && <div style={{ color: '#999', fontSize: 11 }}>{dayjs(a.decidedAt).format('DD-MMM-YYYY HH:mm')}</div>}
+                    {a.remarks && <div style={{ color: 'var(--hrms-text-secondary)', fontSize: 12, marginTop: 2 }}>"{a.remarks}"</div>}
+                    {a.decidedAt && <div style={{ color: 'var(--hrms-text-muted)', fontSize: 11 }}>{dayjs(a.decidedAt).format('DD-MMM-YYYY HH:mm')}</div>}
                   </div>
                 ),
               }))}
           />
           {record.approvers.filter(a => a.status === 'pending').length > 0 && (
-            <div style={{ marginTop: 8, color: '#999', fontSize: 12 }}>
+            <div style={{ marginTop: 8, color: 'var(--hrms-text-muted)', fontSize: 12 }}>
               {record.approvers.filter(a => a.status === 'pending').length} approval(s) pending
             </div>
           )}

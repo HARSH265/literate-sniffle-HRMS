@@ -86,7 +86,7 @@ export function TicketDetailPage() {
           <Descriptions.Item label="Created">{dayjs(ticket.createdAt).format('DD MMM YYYY, h:mm A')}</Descriptions.Item>
           {ticket.slaDeadline && (
             <Descriptions.Item label="SLA Deadline">
-              <span style={{ color: ticket.slaBreached ? '#ef4444' : 'inherit', fontWeight: ticket.slaBreached ? 600 : 400 }}>
+              <span style={{ color: ticket.slaBreached ? 'var(--hrms-danger)' : 'inherit', fontWeight: ticket.slaBreached ? 600 : 400 }}>
                 {ticket.slaBreached && <WarningOutlined style={{ marginRight: 6 }} />}
                 {dayjs(ticket.slaDeadline).format('DD MMM YYYY, h:mm A')}
                 {ticket.slaBreached && ' (Breached)'}

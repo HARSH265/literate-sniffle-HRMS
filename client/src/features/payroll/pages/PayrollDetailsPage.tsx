@@ -258,9 +258,9 @@ export function PayrollDetailsPage() {
         return (
           <div>
             <div style={{ fontWeight: 500 }}>{r.employee.name}</div>
-            <div style={{ fontSize: 11, color: '#888' }}>{r.employee.code}</div>
-            {r.proRataDetails?.isJoiner && <div style={{ fontSize: 11, color: '#1890ff' }}>Joined {dayjs(r.proRataDetails.joinDate).format('DD-MMM')} • {r.proRataDetails.daysWorked}d paid</div>}
-            {r.proRataDetails?.isLeaver && <div style={{ fontSize: 11, color: '#faad14' }}>Left {dayjs(r.proRataDetails.leaveDate).format('DD-MMM')} • {r.proRataDetails.daysWorked}d paid</div>}
+            <div style={{ fontSize: 11, color: 'var(--hrms-text-muted)' }}>{r.employee.code}</div>
+            {r.proRataDetails?.isJoiner && <div style={{ fontSize: 11, color: 'var(--hrms-info)' }}>Joined {dayjs(r.proRataDetails.joinDate).format('DD-MMM')} • {r.proRataDetails.daysWorked}d paid</div>}
+            {r.proRataDetails?.isLeaver && <div style={{ fontSize: 11, color: 'var(--hrms-warning)' }}>Left {dayjs(r.proRataDetails.leaveDate).format('DD-MMM')} • {r.proRataDetails.daysWorked}d paid</div>}
             {hasComplianceIssues && <Tooltip title={r.complianceFlags?.filter((f) => f.status === 'fail').map((f) => `${f.check}: ${f.notes || 'gap ' + f.gap}`).join('\n')}><Tag color="error" style={{ fontSize: 10, marginTop: 2 }}><WarningOutlined /> Compliance</Tag></Tooltip>}
             {complianceWarnings.length > 0 && <Tooltip title={complianceWarnings.map((f) => `${f.check}: ${f.notes || 'gap ' + f.gap}`).join('\n')}><Tag color="warning" style={{ fontSize: 10, marginTop: 2 }}><InfoCircleOutlined /> Warning</Tag></Tooltip>}
           </div>
@@ -284,9 +284,9 @@ export function PayrollDetailsPage() {
     {
       title: 'Arrears', key: 'arrears', width: 100,
       render: (_: unknown, r: PayrollItem) => {
-        if (!r.arrears || r.arrears.length === 0) return <span style={{ color: '#bbb' }}>—</span>;
+        if (!r.arrears || r.arrears.length === 0) return <span style={{ color: 'var(--hrms-border)' }}>—</span>;
         const totalArrear = r.arrears.reduce((sum, a) => sum + a.effectiveArrearAmount, 0);
-        if (totalArrear === 0) return <span style={{ color: '#bbb' }}>—</span>;
+        if (totalArrear === 0) return <span style={{ color: 'var(--hrms-border)' }}>—</span>;
         const tooltipContent = r.arrears.map((a) => `${a.component.name}: ${a.isPositive ? '+' : ''}${formatCurrency(a.effectiveArrearAmount)} (${a.applicableArrearDays}d)`).join('\n');
         return (
           <Tooltip title={<pre style={{ margin: 0, fontSize: 12 }}>{tooltipContent}</pre>}>
@@ -357,7 +357,7 @@ export function PayrollDetailsPage() {
       </div>
 
       {batchEditMode && canEdit && (
-        <Card size="small" style={{ marginBottom: 16, background: '#fffbe6', borderColor: '#ffe58f' }}>
+        <Card size="small" style={{ marginBottom: 16, background: 'var(--hrms-warning-light)', borderColor: 'var(--hrms-warning)' }}>
           <Space>
             <span style={{ fontWeight: 500 }}>Batch Edit Mode — Click into any editable cell to change values</span>
             {totalBatchChanges > 0 && <Tag color="blue">{totalBatchChanges} change{totalBatchChanges !== 1 ? 's' : ''} pending</Tag>}
@@ -410,9 +410,9 @@ export function PayrollDetailsPage() {
             label: <span><HistoryOutlined /> Revision History</span>,
             children: run?.revisions && run.revisions.length > 0 ? (
               <Timeline items={run.revisions.map((rev: PayrollRevision) => ({
-                children: <div><strong>{rev.userName}</strong> — {rev.action} <span style={{ color: '#888', fontSize: 12 }}>{dayjs(rev.timestamp).format('DD-MMM-YYYY HH:mm')}</span></div>,
+                children: <div><strong>{rev.userName}</strong> — {rev.action} <span style={{ color: 'var(--hrms-text-muted)', fontSize: 12 }}>{dayjs(rev.timestamp).format('DD-MMM-YYYY HH:mm')}</span></div>,
               }))} />
-            ) : <div style={{ padding: 24, textAlign: 'center', color: '#888' }}>No revisions yet</div>,
+            ) : <div style={{ padding: 24, textAlign: 'center', color: 'var(--hrms-text-muted)' }}>No revisions yet</div>,
           },
           {
             key: 'approval',
@@ -423,20 +423,20 @@ export function PayrollDetailsPage() {
                 children: (
                   <div>
                     <strong>{entry.userName}</strong> <Tag color={entry.action === 'approved' ? 'green' : entry.action === 'rejected' ? 'red' : entry.action === 'finalized' ? 'blue' : 'default'}>{entry.action}</Tag>
-                    <span style={{ color: '#888', fontSize: 12 }}>as {entry.role}</span>
-                    <div style={{ fontSize: 12, color: '#888' }}>{dayjs(entry.timestamp).format('DD-MMM-YYYY HH:mm')}{entry.ipAddress ? ` • IP: ${entry.ipAddress}` : ''}</div>
-                    {entry.comments && <div style={{ marginTop: 4, padding: '4px 8px', background: '#f5f5f5', borderRadius: 4, fontSize: 13 }}>{entry.comments}</div>}
+                    <span style={{ color: 'var(--hrms-text-muted)', fontSize: 12 }}>as {entry.role}</span>
+                    <div style={{ fontSize: 12, color: 'var(--hrms-text-muted)' }}>{dayjs(entry.timestamp).format('DD-MMM-YYYY HH:mm')}{entry.ipAddress ? ` • IP: ${entry.ipAddress}` : ''}</div>
+                    {entry.comments && <div style={{ marginTop: 4, padding: '4px 8px', background: 'var(--hrms-bg)', borderRadius: 4, fontSize: 13 }}>{entry.comments}</div>}
                   </div>
                 ),
               }))} />
-            ) : <div style={{ padding: 24, textAlign: 'center', color: '#888' }}>No approval history yet</div>,
+            ) : <div style={{ padding: 24, textAlign: 'center', color: 'var(--hrms-text-muted)' }}>No approval history yet</div>,
           },
           {
             key: 'tax',
             label: 'Tax Breakdown',
             children: (() => {
               const itemsWithTax = (run?.items || []).filter((item: PayrollItem) => item.taxComputation);
-              if (itemsWithTax.length === 0) return <div style={{ padding: 24, textAlign: 'center', color: '#888' }}>No tax data available</div>;
+              if (itemsWithTax.length === 0) return <div style={{ padding: 24, textAlign: 'center', color: 'var(--hrms-text-muted)' }}>No tax data available</div>;
               return (
                 <div style={{ overflowX: 'auto' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
@@ -459,7 +459,7 @@ export function PayrollDetailsPage() {
                         const t = item.taxComputation!;
                         return (
                           <tr key={item.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
-                            <td style={{ padding: '8px 12px' }}>{item.employee.name}<br/><span style={{ fontSize: 11, color: '#888' }}>{item.employee.code}</span></td>
+                            <td style={{ padding: '8px 12px' }}>{item.employee.name}<br/><span style={{ fontSize: 11, color: 'var(--hrms-text-muted)' }}>{item.employee.code}</span></td>
                             <td style={{ padding: '8px 12px' }}><Tag>{t.taxRegime}</Tag></td>
                             <td style={{ padding: '8px 12px', textAlign: 'right' }}>{formatCurrency(t.projectedAnnualGross)}</td>
                             <td style={{ padding: '8px 12px', textAlign: 'right' }}>{formatCurrency(t.projectedAnnualDeductions)}</td>
@@ -483,7 +483,7 @@ export function PayrollDetailsPage() {
             label: 'Month-over-Month',
             children: (() => {
               const itemsWithComparison = (run?.items || []).filter((item: PayrollItem) => item.previousMonthComparison);
-              if (itemsWithComparison.length === 0) return <div style={{ padding: 24, textAlign: 'center', color: '#888' }}>No previous month data available for comparison</div>;
+              if (itemsWithComparison.length === 0) return <div style={{ padding: 24, textAlign: 'center', color: 'var(--hrms-text-muted)' }}>No previous month data available for comparison</div>;
               const prevMonthLabel = itemsWithComparison[0]?.previousMonthComparison?.previousMonth || '';
               const totalCurrentNet = itemsWithComparison.reduce((s: number, i: PayrollItem) => s + i.netPay, 0);
               const totalPrevNet = itemsWithComparison.reduce((s: number, i: PayrollItem) => s + (i.previousMonthComparison?.previousNetPay || 0), 0);
@@ -517,7 +517,7 @@ export function PayrollDetailsPage() {
                           const netDelta = c.netPayVariance;
                           return (
                             <tr key={item.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
-                              <td style={{ padding: '8px 12px' }}>{item.employee.name}<br/><span style={{ fontSize: 11, color: '#888' }}>{item.employee.code}</span></td>
+                              <td style={{ padding: '8px 12px' }}>{item.employee.name}<br/><span style={{ fontSize: 11, color: 'var(--hrms-text-muted)' }}>{item.employee.code}</span></td>
                               <td style={{ padding: '8px 12px', textAlign: 'right' }}>{formatCurrency(item.grossEarnings)}</td>
                               <td style={{ padding: '8px 12px', textAlign: 'right' }}>{formatCurrency(c.previousGrossPay)}</td>
                               <td style={{ padding: '8px 12px', textAlign: 'right', color: grossDelta > 0 ? 'var(--hrms-success)' : grossDelta < 0 ? 'var(--hrms-danger)' : undefined }}>{grossDelta !== 0 ? `${grossDelta > 0 ? '+' : ''}${formatCurrency(grossDelta)}` : '—'}</td>
@@ -578,7 +578,7 @@ export function PayrollDetailsPage() {
         okText={`Save ${totalBatchChanges} Change${totalBatchChanges !== 1 ? 's' : ''}`}
       >
         <p>You are about to update <strong>{totalBatchChanges}</strong> field{totalBatchChanges !== 1 ? 's' : ''} across <strong>{Object.keys(batchChanges).filter((k) => Object.keys(batchChanges[k]).length > 0).length}</strong> employee(s).</p>
-        <p style={{ color: '#888', fontSize: 13 }}>This action will recalculate gross earnings and net pay for affected items.</p>
+        <p style={{ color: 'var(--hrms-text-muted)', fontSize: 13 }}>This action will recalculate gross earnings and net pay for affected items.</p>
       </Modal>
     </PageContainer>
   );

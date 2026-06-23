@@ -256,7 +256,7 @@ export function KioskDevicesPage() {
           <Tooltip title="Broadcast QR">
             <Button type="text" size="small" icon={<NotificationOutlined />} onClick={() => broadcastMutation.mutate(record.id)}
               loading={broadcastMutation.isPending}
-              style={{ color: '#6366f1', borderRadius: 6 }} />
+              style={{ color: 'var(--hrms-primary)', borderRadius: 6 }} />
           </Tooltip>
           <Tooltip title="Delete">
             <Popconfirm
@@ -269,7 +269,7 @@ export function KioskDevicesPage() {
             >
               <Button type="text" size="small" icon={<DeleteOutlined />}
                 loading={deletingId === record.id}
-                style={{ color: '#ef4444', borderRadius: 6 }} />
+                style={{ color: 'var(--hrms-danger)', borderRadius: 6 }} />
             </Popconfirm>
           </Tooltip>
         </div>
@@ -379,7 +379,7 @@ export function KioskDevicesPage() {
             <canvas ref={canvasRef} style={{ display: 'block', borderRadius: 8, marginBottom: 16 }} />
 
             <div style={{
-              background: '#f5f5f5', borderRadius: 8, padding: '10px 14px',
+              background: 'var(--hrms-bg)', borderRadius: 8, padding: '10px 14px',
               width: '100%', wordBreak: 'break-all', fontSize: 12, fontFamily: 'monospace',
               marginBottom: 12,
             }}>
@@ -400,7 +400,7 @@ export function KioskDevicesPage() {
       <Modal
         title={
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <LinkOutlined style={{ fontSize: 18, color: '#52c41a' }} />
+            <LinkOutlined style={{ fontSize: 18, color: 'var(--hrms-success)' }} />
             Kiosk Connected
           </div>
         }
@@ -423,7 +423,7 @@ export function KioskDevicesPage() {
             <canvas ref={successCanvasRef} style={{ display: 'block', borderRadius: 8, marginBottom: 16 }} />
 
             <div style={{
-              background: '#f5f5f5', borderRadius: 8, padding: '10px 14px',
+              background: 'var(--hrms-bg)', borderRadius: 8, padding: '10px 14px',
               width: '100%', wordBreak: 'break-all', fontSize: 12, fontFamily: 'monospace',
               marginBottom: 12,
             }}>

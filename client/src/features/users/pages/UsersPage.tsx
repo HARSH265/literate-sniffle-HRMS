@@ -28,15 +28,15 @@ const roleColor: Record<string, string> = {
 };
 
 const roleBg: Record<string, string> = {
-  'super-admin': '#fdf2f8',
-  'hr-admin': '#fff7ed',
-  'hr-staff': '#eff6ff',
-  'accounts': '#ecfdf5',
-  'manager': '#faf5ff',
+  'super-admin': 'var(--hrms-danger-light)',
+  'hr-admin': 'var(--hrms-warning-light)',
+  'hr-staff': 'var(--hrms-info-light)',
+  'accounts': 'var(--hrms-success-light)',
+  'manager': 'var(--hrms-primary-light)',
 };
 
 const RoleTag = ({ role }: { role: string }) => (
-  <span style={{ display: 'inline-flex', alignItems: 'center', padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: roleBg[role] || '#f1f5f9', color: roleColor[role] || '#64748b', textTransform: 'capitalize' }}>
+  <span style={{ display: 'inline-flex', alignItems: 'center', padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: roleBg[role] || 'var(--hrms-bg)', color: roleColor[role] || 'var(--hrms-text-secondary)', textTransform: 'capitalize' }}>
     {role.replace('-', ' ')}
   </span>
 );
@@ -200,12 +200,12 @@ export function UsersPage() {
           {r.isActive ? (
             <Tooltip title="Deactivate">
               <Popconfirm title="Deactivate this user?" onConfirm={() => deactivateMutation.mutate(r.id)}>
-                <Button type="text" size="small" icon={<LockOutlined />} style={{ color: '#f59e0b', borderRadius: 6 }} />
+                <Button type="text" size="small" icon={<LockOutlined />} style={{ color: 'var(--hrms-warning)', borderRadius: 6 }} />
               </Popconfirm>
             </Tooltip>
           ) : (
             <Tooltip title="Activate">
-              <Button type="text" size="small" icon={<CheckCircleOutlined />} onClick={() => activateMutation.mutate(r.id)} style={{ color: '#22c55e', borderRadius: 6 }} />
+              <Button type="text" size="small" icon={<CheckCircleOutlined />} onClick={() => activateMutation.mutate(r.id)} style={{ color: 'var(--hrms-success)', borderRadius: 6 }} />
             </Tooltip>
           )}
         </div>
@@ -279,7 +279,7 @@ export function UsersPage() {
             <Button icon={<UploadOutlined />}>Select Excel File</Button>
           </Upload>
           {importFile && <p style={{ marginTop: 8, fontSize: 12 }}>Selected: {importFile.name}</p>}
-          <div style={{ marginTop: 16, padding: 12, background: '#f5f5f5', borderRadius: 8 }}>
+          <div style={{ marginTop: 16, padding: 12, background: 'var(--hrms-bg)', borderRadius: 8 }}>
             <p style={{ fontSize: 12, margin: 0, color: 'var(--hrms-text-muted)' }}>
               <strong>Note:</strong> Existing users (matched by email) will be updated. New users will be created with temporary password.
             </p>

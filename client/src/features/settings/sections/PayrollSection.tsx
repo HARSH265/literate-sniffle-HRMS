@@ -64,9 +64,9 @@ export function PayrollSection({ form, onSave }: PayrollSectionProps) {
         </Col>
       </Row>
 
-      <div style={{ marginTop: 24, padding: 16, background: '#fff7e6', borderRadius: 8, border: '1px solid #ffd591' }}>
+      <div style={{ marginTop: 24, padding: 16, background: 'var(--hrms-warning-light)', borderRadius: 8, border: '1px solid var(--hrms-warning)' }}>
         <h4 style={{ marginBottom: 12 }}>OT Tricks (Cost Optimization)</h4>
-        <p style={{ fontSize: 12, color: '#888', marginBottom: 12 }}>
+        <p style={{ fontSize: 12, color: 'var(--hrms-text-muted)', marginBottom: 12 }}>
           When enabled, these rules optimize payroll costs by rounding OT and applying multiplier to basic only.
         </p>
         <Row gutter={16}>
@@ -98,7 +98,7 @@ export function PayrollSection({ form, onSave }: PayrollSectionProps) {
       </div>
 
        {/* Advanced Payroll Settings */}
-       <div style={{ marginTop: 24, padding: 16, background: '#f0f5ff', borderRadius: 8, border: '1px solid #91d5ff' }}>
+       <div style={{ marginTop: 24, padding: 16, background: 'var(--hrms-info-light)', borderRadius: 8, border: '1px solid var(--hrms-info)' }}>
          <h4 style={{ marginBottom: 12 }}>Advanced Payroll Settings</h4>
          <Row gutter={16}>
            <Col span={8}>

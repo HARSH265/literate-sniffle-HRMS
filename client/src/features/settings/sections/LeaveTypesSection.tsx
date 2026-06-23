@@ -74,7 +74,7 @@ export function LeaveTypesSection() {
     setEditingType(null);
     form.resetFields();
     form.setFieldsValue({
-      isPaid: true, color: '#4f46e5', maxDaysPerApplication: 30, maxDaysPerYear: 30,
+      isPaid: true, color: 'var(--hrms-primary)', maxDaysPerApplication: 30, maxDaysPerYear: 30,
       carryForward: false, carryForwardLimit: 0, encashable: false, encashmentRatePercent: 100,
       requiresDocuments: false, requiresApproval: true, approvalLevels: 1, autoApproveThreshold: 0,
       applicableToGender: 'all', applicableCategories: ['worker', 'office-staff'],

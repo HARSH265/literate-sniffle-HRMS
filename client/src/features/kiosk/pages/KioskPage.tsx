@@ -116,7 +116,7 @@ export function KioskPage() {
       width: '100vw', height: '100vh',
       background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-      color: '#fff', fontFamily: 'system-ui, sans-serif',
+      color: 'var(--hrms-surface)', fontFamily: 'system-ui, sans-serif',
       overflow: 'hidden',
     }}>
       <div style={{ fontSize: 64, fontWeight: 700, marginBottom: 8, letterSpacing: 2 }}>
@@ -127,7 +127,7 @@ export function KioskPage() {
       </div>
 
       <div style={{
-        background: '#fff', borderRadius: 16, padding: 24,
+        background: 'var(--hrms-surface)', borderRadius: 16, padding: 24,
         boxShadow: '0 8px 32px rgba(0,0,0,0.3)', marginBottom: 32,
       }}>
         <canvas ref={canvasRef} style={{ display: 'block' }} />
@@ -142,7 +142,7 @@ export function KioskPage() {
                 navigator.clipboard.writeText(rawToken);
                 message.success('Token copied');
               }}
-              style={{ marginLeft: 8, cursor: 'pointer', color: '#1890ff', textDecoration: 'underline' }}
+              style={{ marginLeft: 8, cursor: 'pointer', color: 'var(--hrms-info)', textDecoration: 'underline' }}
             >
               Copy
             </span>

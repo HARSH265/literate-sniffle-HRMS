@@ -231,13 +231,13 @@ function LoginForm({ onSubmit, loading }: { onSubmit: (v: { email: string; passw
             marginTop: 16,
             padding: '12px 16px',
             borderRadius: 8,
-            background: '#f0f5ff',
+            background: 'var(--hrms-info-light)',
             border: '1px solid #d6e4ff',
             fontSize: 13,
           }}
         >
-          <div style={{ fontWeight: 600, color: '#1d39c4', marginBottom: 4 }}>Demo credentials</div>
-          <div style={{ color: '#595959' }}>
+          <div style={{ fontWeight: 600, color: 'var(--hrms-primary)', marginBottom: 4 }}>Demo credentials</div>
+          <div style={{ color: 'var(--hrms-text-secondary)' }}>
             <code>admin@hrms.com</code> / <code>Admin@1234</code>
           </div>
         </div>
