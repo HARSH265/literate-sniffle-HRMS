@@ -1,4 +1,5 @@
-import { Card, Tag, Button, Space, Spin, Empty } from 'antd';
+import { Card, Tag, Button, Space, Spin } from 'antd';
+import { EmptyState } from '../../../core/components/EmptyState';
 import { DownloadOutlined, EyeOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useEssDocuments } from '../hooks/useEssDocuments';
@@ -53,7 +54,7 @@ export function EssDocumentsPage() {
       {isLoading ? (
         <div style={{ textAlign: 'center', padding: 24 }}><Spin /></div>
       ) : documents.length === 0 ? (
-        <Empty description="No documents uploaded yet" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+        <EmptyState description="No documents uploaded yet" />
       ) : (
         <DataTable
           dataSource={documents}

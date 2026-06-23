@@ -181,7 +181,7 @@ export function PayrollPage() {
         title="Payroll"
         subtitle="Process and manage monthly payroll"
         actions={
-          <Space>
+          <Space size={4}>
             {canProcessPayroll && <Button icon={<ExperimentOutlined />} onClick={() => setIsPreviewModalOpen(true)}>Preview</Button>}
             {canProcessPayroll && <Button type="primary" icon={<PlayCircleOutlined />} onClick={() => setIsRunModalOpen(true)}>Run Payroll</Button>}
           </Space>

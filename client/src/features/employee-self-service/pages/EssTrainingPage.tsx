@@ -1,4 +1,5 @@
-import { Card, Tag, Spin, Empty, Typography, Rate } from 'antd';
+import { Card, Tag, Spin, Typography, Rate } from 'antd';
+import { EmptyState } from '../../../core/components/EmptyState';
 import { BookOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useEssTraining } from '../hooks/useEssTraining';
@@ -54,7 +55,7 @@ export function EssTrainingPage() {
       {isLoading ? (
         <div style={{ textAlign: 'center', padding: 24 }}><Spin /></div>
       ) : enrollments.length === 0 ? (
-        <Empty description="No training programs assigned to you" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+        <EmptyState description="No training programs assigned to you" />
       ) : (
         <DataTable
           dataSource={enrollments}

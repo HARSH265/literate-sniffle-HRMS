@@ -90,7 +90,7 @@ export function AnnouncementsPage() {
       key: 'actions',
       width: 120,
       render: (_: unknown, record: any) => (
-        <Space>
+        <Space size={4}>
           <Tooltip title="View">
             <Button type="text" size="small" icon={<EyeOutlined />} onClick={() => navigate(`/announcements/${record._id}`)} />
           </Tooltip>

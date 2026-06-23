@@ -324,7 +324,7 @@ export function PayrollDetailsPage() {
     <PageContainer>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/payroll')}>Back to Payroll</Button>
-        <Space>
+        <Space size={4}>
           {canProcessPayroll && run?.status === 'draft' && (
             <>
               <Button type="primary" icon={<SendOutlined />} onClick={() => submitMutation.mutate()} loading={submitMutation.isPending}>Submit</Button>
@@ -358,7 +358,7 @@ export function PayrollDetailsPage() {
 
       {batchEditMode && canEdit && (
         <Card size="small" style={{ marginBottom: 16, background: 'var(--hrms-warning-light)', borderColor: 'var(--hrms-warning)' }}>
-          <Space>
+          <Space size={4}>
             <span style={{ fontWeight: 500 }}>Batch Edit Mode — Click into any editable cell to change values</span>
             {totalBatchChanges > 0 && <Tag color="blue">{totalBatchChanges} change{totalBatchChanges !== 1 ? 's' : ''} pending</Tag>}
             <Button type="primary" size="small" icon={<SaveOutlined />} onClick={() => setIsBatchConfirmOpen(true)} loading={batchMutation.isPending} disabled={totalBatchChanges === 0}>Save All Changes</Button>

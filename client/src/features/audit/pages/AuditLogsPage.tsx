@@ -206,7 +206,7 @@ export function AuditLogsPage() {
         title="Audit Logs"
         subtitle="Track all system activities and changes"
         actions={
-          <Space>
+          <Space size={4}>
             <Button icon={<DownloadOutlined />} onClick={handleExport}>Export</Button>
             <Button icon={<DeleteOutlined />} danger onClick={() => setCleanupModalOpen(true)}>
               Cleanup

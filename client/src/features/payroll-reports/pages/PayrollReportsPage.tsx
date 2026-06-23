@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Card, Tabs, Select, Button, Space, Statistic, Row, Col, message, Spin, Empty, Tag } from 'antd';
+import { Card, Tabs, Select, Button, Space, Statistic, Row, Col, message, Spin, Tag } from 'antd';
+import { EmptyState } from '../../../core/components/EmptyState';
 import { DownloadOutlined, BankOutlined, FileExcelOutlined, TeamOutlined, BarChartOutlined, DollarOutlined, WarningOutlined, ToolOutlined, FundOutlined } from '@ant-design/icons';
 import { PageHeader } from '../../../core/components/PageHeader';
 import { PageContainer } from '../../../core/components/PageContainer';
@@ -92,7 +93,7 @@ function SalaryRegisterTab({ runId, runLabel }: { runId: string; runLabel?: stri
     <Card>
       <Space direction="vertical" style={{ width: '100%' }}>
         <p>Download the salary register with component-wise breakdown for all employees.</p>
-        <Space>
+        <Space size={4}>
           <Button type="primary" icon={<DownloadOutlined />} loading={loadingXlsx} onClick={() => handleDownload('xlsx')}>
             Download Excel
           </Button>
@@ -135,7 +136,7 @@ function HeadcountCostTab() {
   }));
 
   if (isLoading) return <Spin />;
-  if (error) return <Empty description="Failed to load headcount data" />;
+  if (error) return <EmptyState description="Failed to load headcount data" />;
 
   return (
     <Space direction="vertical" style={{ width: '100%' }} size="middle">
@@ -184,7 +185,7 @@ function MoMVarianceTab() {
   }));
 
   if (isLoading) return <Spin />;
-  if (error) return <Empty description="Failed to load MoM variance data" />;
+  if (error) return <EmptyState description="Failed to load MoM variance data" />;
 
   return (
     <Space direction="vertical" style={{ width: '100%' }} size="middle">
@@ -231,7 +232,7 @@ function YtdCostTab() {
   }));
 
   if (isLoading) return <Spin />;
-  if (error) return <Empty description="Failed to load YTD cost data" />;
+  if (error) return <EmptyState description="Failed to load YTD cost data" />;
 
   const ytdFilename = `ytd-cost-${year}.xlsx`;
 
@@ -283,9 +284,9 @@ function OtLopTab({ runId }: { runId: string }) {
     'LOP Days': d.lopDays, 'LOP Amount': d.lopAmount,
   }));
 
-  if (!runId) return <Empty description="Select a payroll run to view OT/LOP analysis" />;
+  if (!runId) return <EmptyState description="Select a payroll run to view OT/LOP analysis" />;
   if (isLoading) return <Spin />;
-  if (error) return <Empty description="Failed to load OT/LOP data" />;
+  if (error) return <EmptyState description="Failed to load OT/LOP data" />;
 
   const otLopFilename = `ot-lop-${runId}.xlsx`;
 
@@ -337,7 +338,7 @@ function LoanOutstandingTab() {
   }));
 
   if (isLoading) return <Spin />;
-  if (error) return <Empty description="Failed to load loan data" />;
+  if (error) return <EmptyState description="Failed to load loan data" />;
 
   return (
     <Space direction="vertical" style={{ width: '100%' }} size="middle">
@@ -386,9 +387,9 @@ function BudgetVsActualTab({ runId }: { runId: string }) {
     Department: d.department, Budgeted: d.budgeted, Actual: d.actual, Variance: d.variance, 'Variance %': d.variancePct,
   }));
 
-  if (!runId) return <Empty description="Select a payroll run to view budget vs actual" />;
+  if (!runId) return <EmptyState description="Select a payroll run to view budget vs actual" />;
   if (isLoading) return <Spin />;
-  if (error) return <Empty description="Failed to load budget data" />;
+  if (error) return <EmptyState description="Failed to load budget data" />;
 
   const budgetFilename = `budget-vs-actual-${runId}.xlsx`;
 
@@ -448,7 +449,7 @@ function PayrollReportsPageInner() {
       <div>
         <PageHeader title="Payroll Reports" />
         <Card>
-          <Empty description="No finalized payroll runs found. Finalize a payroll run to generate reports." />
+          <EmptyState description="No finalized payroll runs found. Finalize a payroll run to generate reports." />
         </Card>
       </div>
       </PageContainer>

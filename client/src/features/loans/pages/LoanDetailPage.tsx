@@ -97,7 +97,7 @@ export function LoanDetailPage() {
         </Descriptions>
 
         {loan.status === 'applied' && (
-          <Space style={{ marginTop: 16 }}>
+          <Space size={4} style={{ marginTop: 16 }}>
             <Button type="primary" icon={<CheckCircleOutlined />} onClick={() => approveMutation.mutate()} loading={approveMutation.isPending}>Approve</Button>
             <Button danger icon={<CloseCircleOutlined />} onClick={() => setRejectModalOpen(true)}>Reject</Button>
             <Popconfirm title="Cancel this application?" onConfirm={() => cancelMutation.mutate()}>
@@ -106,7 +106,7 @@ export function LoanDetailPage() {
           </Space>
         )}
         {loan.status === 'approved' && (
-          <Space style={{ marginTop: 16 }}>
+          <Space size={4} style={{ marginTop: 16 }}>
             <Button type="primary" icon={<DollarOutlined />} onClick={() => setDisburseModalOpen(true)} loading={disburseMutation.isPending}>Disburse Loan</Button>
             <Popconfirm title="Cancel this loan?" onConfirm={() => cancelMutation.mutate()}>
               <Button icon={<StopOutlined />}>Cancel</Button>

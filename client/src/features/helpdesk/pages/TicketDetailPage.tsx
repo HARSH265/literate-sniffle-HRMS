@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Card, Descriptions, Tag, Button, Typography, Spin, Input, Empty, Divider, Tooltip } from 'antd';
+import { Card, Descriptions, Tag, Button, Typography, Spin, Input, Divider, Tooltip } from 'antd';
+import { EmptyState } from '../../../core/components/EmptyState';
 import { PageContainer } from '../../../core/components/PageContainer';
 import { ArrowLeftOutlined, EditOutlined, SendOutlined, WarningOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import { useTicket, useAddComment } from '../hooks/useHelpdesk';
@@ -44,7 +45,7 @@ export function TicketDetailPage() {
   if (!ticket) {
     return (
       <div style={{ padding: 80 }}>
-        <Empty description="Ticket not found" />
+        <EmptyState description="Ticket not found" />
         <div style={{ textAlign: 'center', marginTop: 16 }}>
           <Button onClick={() => navigate('/helpdesk')}>Back to Help Desk</Button>
         </div>
@@ -104,7 +105,7 @@ export function TicketDetailPage() {
 
       <Card title={`Comments (${ticket.comments?.length || 0})`}>
         {ticket.comments?.length === 0 ? (
-          <Empty description="No comments yet" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+          <EmptyState description="No comments yet" />
         ) : (
           ticket.comments?.map((c: any) => (
             <div key={c._id} style={{

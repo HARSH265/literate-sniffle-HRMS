@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, Tag, DatePicker, Spin, Empty, Button, Space } from 'antd';
+import { Card, Tag, DatePicker, Spin, Button, Space } from 'antd';
+import { EmptyState } from '../../../core/components/EmptyState';
 import { QrcodeOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useEssAttendance } from '../hooks/useEssAttendance';
@@ -97,7 +98,7 @@ export function EssAttendancePage() {
       {isLoading ? (
         <div style={{ textAlign: 'center', padding: 24 }}><Spin /></div>
       ) : records.length === 0 ? (
-        <Empty description="No attendance records found" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+        <EmptyState description="No attendance records found" />
       ) : (
         <DataTable
           dataSource={records}

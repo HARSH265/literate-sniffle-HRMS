@@ -60,7 +60,7 @@ export function TrainingEnrollmentsPage() {
     {
       title: '', key: 'actions', width: 160,
       render: (_: any, r: any) => canManage ? (
-        <Space>
+        <Space size={4}>
           {(r.status === 'enrolled' || r.status === 'in-progress') && (
             <Button size="small" type="primary" onClick={() => { setCompleteId(getId(r)); setScore(undefined); setFeedback(''); setRating(3); setCompleteModalOpen(true); }}>
               Complete
@@ -85,7 +85,7 @@ export function TrainingEnrollmentsPage() {
       <PageHeader
         title="Training Enrollments"
         subtitle="Manage employee enrollments in training programs"
-        actions={canManage && <Space><Button type="primary" icon={<PlusOutlined />} onClick={() => { setSelectedProgram(''); setEnrollModalOpen(true); }}>Enroll Employee</Button></Space>}
+        actions={canManage && <Space size={4}><Button type="primary" icon={<PlusOutlined />} onClick={() => { setSelectedProgram(''); setEnrollModalOpen(true); }}>Enroll Employee</Button></Space>}
       />
 
       <Card>

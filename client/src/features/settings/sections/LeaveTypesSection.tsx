@@ -119,7 +119,7 @@ export function LeaveTypesSection() {
     {
       title: 'Actions', key: 'actions', width: 120,
       render: (_: any, r: LeaveType) => (
-        <Space>
+        <Space size={4}>
           <Tooltip title="Edit"><Button type="link" icon={<EditOutlined />} onClick={() => openEdit(r)} /></Tooltip>
           <Popconfirm title="Delete this leave type?" onConfirm={() => deleteMutation.mutate(r.id)}>
             <Tooltip title="Delete"><Button type="link" danger icon={<DeleteOutlined />} /></Tooltip>

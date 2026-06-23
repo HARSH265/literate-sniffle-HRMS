@@ -51,7 +51,7 @@ export function TrainingProgramsPage() {
       <PageHeader
         title="Training Programs"
         subtitle="Manage training and development programs"
-        actions={canManage && <Space><Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/training/new')}>New Program</Button></Space>}
+        actions={canManage && <Space size={4}><Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/training/new')}>New Program</Button></Space>}
       />
 
       <DataTable

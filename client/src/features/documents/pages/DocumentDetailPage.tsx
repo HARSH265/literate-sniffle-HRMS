@@ -40,7 +40,7 @@ export function DocumentDetailPage() {
 
   return (
     <PageContainer>
-      <Space style={{ marginBottom: 16 }}>
+      <Space size={4} style={{ marginBottom: 16 }}>
         <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/documents')}>Back to Documents</Button>
       </Space>
 
@@ -56,7 +56,7 @@ export function DocumentDetailPage() {
             }
             extra={
               canManage && (
-                <Space>
+                <Space size={4}>
                   <Button icon={<EditOutlined />} onClick={() => navigate(`/documents/${id}/edit`)}>Edit</Button>
                   <Popconfirm
                     title="Delete this document?"

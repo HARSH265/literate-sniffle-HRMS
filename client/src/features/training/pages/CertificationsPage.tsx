@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Card, Typography, Tag, Space, Select, Empty } from 'antd';
+import { Card, Typography, Tag, Space, Select } from 'antd';
+import { EmptyState } from '../../../core/components/EmptyState';
 import { DataTable } from '../../../core/components/DataTable';
 import { useQuery } from '@tanstack/react-query';
 import { trainingService } from '../services/trainingService';
@@ -51,7 +52,7 @@ export function CertificationsPage() {
           />
         </Space>
         {!selectedEmployee ? (
-          <Empty description="Select an employee to view certifications" />
+          <EmptyState description="Select an employee to view certifications" />
         ) : (
           <>
             <Text strong style={{ fontSize: 16 }}>{certifications.length} Certification{certifications.length !== 1 ? 's' : ''}</Text>

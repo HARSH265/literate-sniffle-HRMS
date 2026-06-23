@@ -1,4 +1,5 @@
-import { Card, Row, Col, Statistic, Tag, Spin, Button, Progress, Empty } from 'antd';
+import { Card, Row, Col, Statistic, Tag, Spin, Button, Progress } from 'antd';
+import { EmptyState } from '../../../core/components/EmptyState';
 import { useLeaveBalances, useLeaveApplications } from '../hooks/useEssLeave';
 import { DataTable } from '../../../core/components/DataTable';
 
@@ -124,7 +125,7 @@ export function EssLeavePage() {
         style={{ ...cardStyle, marginTop: 12 }}
       >
         {balances.length === 0 ? (
-          <Empty description="No leave balances found" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+          <EmptyState description="No leave balances found" />
         ) : (
           <DataTable
             dataSource={balances}
@@ -145,7 +146,7 @@ export function EssLeavePage() {
         extra={<Button type="primary" size="small">Apply Leave</Button>}
       >
         {applications.length === 0 ? (
-          <Empty description="No leave applications" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+          <EmptyState description="No leave applications" />
         ) : (
           <DataTable
             dataSource={applications}

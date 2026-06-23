@@ -76,7 +76,7 @@ export function AssetsPage() {
         subtitle="Track and manage company assets"
         actions={
           canManage && (
-            <Space>
+            <Space size={4}>
               <Button icon={<SwapRightOutlined />} onClick={() => setBulkOpen(true)}>
                 Bulk Allocate
               </Button>

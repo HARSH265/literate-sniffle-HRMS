@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Card, Select, Typography, Tag, Space, Modal, InputNumber, Switch, Button, Empty } from 'antd';
+import { Card, Select, Typography, Tag, Space, Modal, InputNumber, Switch, Button } from 'antd';
+import { EmptyState } from '../../../core/components/EmptyState';
 import { DataTable } from '../../../core/components/DataTable';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { trainingService } from '../services/trainingService';
@@ -102,7 +103,7 @@ export function SkillMatrixPage() {
           />
         </Space>
         {!selectedEmployee ? (
-          <Empty description="Select an employee to view their skills" />
+          <EmptyState description="Select an employee to view their skills" />
         ) : (
           <DataTable dataSource={allSkills} columns={columns} rowKey={(record) => getId(record)} loading={isLoading} hidePagination />
         )}

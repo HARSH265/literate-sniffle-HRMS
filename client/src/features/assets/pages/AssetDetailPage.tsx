@@ -47,7 +47,7 @@ export function AssetDetailPage() {
 
   return (
     <PageContainer>
-      <Space style={{ marginBottom: 16 }}>
+      <Space size={4} style={{ marginBottom: 16 }}>
         <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/assets')}>Back to Assets</Button>
       </Space>
 
@@ -61,7 +61,7 @@ export function AssetDetailPage() {
         }
         extra={
           canManage && (
-            <Space>
+            <Space size={4}>
               <Button icon={<EditOutlined />} onClick={() => navigate(`/assets/${id}/edit`)}>Edit</Button>
               {asset.status === 'available' && (
                 <Button type="primary" icon={<SwapRightOutlined />} onClick={() => setAllocateOpen(true)}>

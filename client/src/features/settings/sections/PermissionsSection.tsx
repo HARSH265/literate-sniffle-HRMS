@@ -271,7 +271,7 @@ export function PermissionsSection(_props: PermissionsSectionProps) {
               </Button>
             </Popconfirm>
 
-            <Space>
+            <Space size={4}>
               {isCustom && (
                 <Tag color="orange">Modified from defaults</Tag>
               )}

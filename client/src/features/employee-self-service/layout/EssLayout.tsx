@@ -1,6 +1,7 @@
 import { Suspense, useCallback, useState, useEffect } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
-import { Layout, Spin, Button, Typography, Badge, List, Empty, Space, Drawer } from 'antd';
+import { Layout, Spin, Button, Typography, Badge, List, Space, Drawer } from 'antd';
+import { EmptyState } from '../../../core/components/EmptyState';
 import { BellOutlined, LogoutOutlined, UserOutlined, CheckOutlined } from '@ant-design/icons';
 import { EssBottomNav } from './EssBottomNav';
 import { useAuthStore } from '../../../core/stores/authStore';
@@ -132,7 +133,7 @@ export function EssLayout() {
           style={{ borderRadius: '16px 16px 0 0' }}
         >
           {notifications.length === 0 ? (
-            <Empty description="No notifications" image={Empty.PRESENTED_IMAGE_SIMPLE} style={{ padding: 32 }} />
+            <EmptyState description="No notifications" />
           ) : (
             <List
               dataSource={notifications}

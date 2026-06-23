@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Card, Select, Typography, Tag, Space, Empty, Spin } from 'antd';
+import { Card, Select, Typography, Tag, Space, Spin } from 'antd';
+import { EmptyState } from '../../../core/components/EmptyState';
 import { DataTable } from '../../../core/components/DataTable';
 import { useQuery } from '@tanstack/react-query';
 import { trainingService } from '../services/trainingService';
@@ -73,7 +74,7 @@ export function SkillGapPage() {
         </Space>
 
         {!selectedEmployee ? (
-          <Empty description="Select an employee to view skill gaps" />
+          <EmptyState description="Select an employee to view skill gaps" />
         ) : skillsLoading ? <Spin /> : (
           <div>
             <Text strong style={{ fontSize: 16 }}>Existing Skills ({employeeSkills.length})</Text>

@@ -1,4 +1,5 @@
-import { Card, Tag, Button, Space, Spin, Empty, message } from 'antd';
+import { Card, Tag, Button, Space, Spin, message } from 'antd';
+import { EmptyState } from '../../../core/components/EmptyState';
 import { DownloadOutlined, EyeOutlined } from '@ant-design/icons';
 import { useEssPayslips } from '../hooks/useEssPayslips';
 import { DataTable } from '../../../core/components/DataTable';
@@ -93,7 +94,7 @@ export function EssPayslipsPage() {
       {isLoading ? (
         <div style={{ textAlign: 'center', padding: 24 }}><Spin /></div>
       ) : payslips.length === 0 ? (
-        <Empty description="No payslips available yet" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+        <EmptyState description="No payslips available yet" />
       ) : (
         <DataTable
           dataSource={payslips}

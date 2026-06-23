@@ -25,7 +25,7 @@ export function ShiftSwapApprovalsPage() {
     {
       title: 'Actions', key: 'actions',
       render: (_: any, record: any) => (
-        <Space>
+        <Space size={4}>
           <Button type="primary" size="small" icon={<CheckOutlined />} onClick={() => approveSwap.mutate(record._id)} loading={approveSwap.isPending}>Approve</Button>
           <Button danger size="small" icon={<CloseOutlined />} onClick={() => setRejectModal({ open: true, id: record._id })}>Reject</Button>
         </Space>

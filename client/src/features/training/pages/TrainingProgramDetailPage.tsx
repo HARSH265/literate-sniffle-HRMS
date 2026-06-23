@@ -57,7 +57,7 @@ export function TrainingProgramDetailPage() {
 
   return (
     <PageContainer>
-      <Space style={{ marginBottom: 16 }}>
+      <Space size={4} style={{ marginBottom: 16 }}>
         <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/training')}>Back to Programs</Button>
       </Space>
 

@@ -47,7 +47,7 @@ export function LoansPage() {
     { title: 'Status', dataIndex: 'status', key: 'status', render: (s: string) => <Tag color={STATUS_COLORS[s] || 'default'}>{s.toUpperCase()}</Tag> },
     { title: 'Applied', dataIndex: 'createdAt', key: 'createdAt', render: (d: string) => d ? dayjs(d).format('DD MMM YYYY') : '-' },
     { title: '', key: 'actions', width: 180, fixed: 'right' as const, render: (_: any, r: Loan) => (
-      <Space>
+      <Space size={4}>
         <Button type="link" size="small" icon={<EyeOutlined />} onClick={() => navigate(`/loans/${r.id}`)}>View</Button>
         {['applied', 'approved'].includes(r.status) && (
           <Popconfirm title="Cancel this loan?" description="This action cannot be undone." onConfirm={() => cancelMutation.mutate(r.id)} okText="Yes, Cancel" okButtonProps={{ danger: true }} cancelText="No">

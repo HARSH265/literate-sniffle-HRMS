@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import {
   Card, Row, Col, Statistic, Tag, Button, Modal, Form,
-  Input, DatePicker, Spin, Empty, Alert,
+  Input, DatePicker, Spin, Alert,
 } from 'antd';
 import { SwapOutlined } from '@ant-design/icons';
 import { useMySwaps, useSwapEligibility, useEssRequestSwap, useEssCancelSwap } from '../hooks/useEssShiftSwaps';
 import { DataTable } from '../../../core/components/DataTable';
+import { EmptyState } from '../../../core/components/EmptyState';
 import dayjs from 'dayjs';
 
 const cardStyle = { borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' };
@@ -99,7 +100,7 @@ export function EssShiftSwapPage() {
         }
       >
         {swaps.length === 0 ? (
-          <Empty description="No swap requests" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+          <EmptyState description="No swap requests" />
         ) : (
           <DataTable
             dataSource={swaps}

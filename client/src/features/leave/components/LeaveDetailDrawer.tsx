@@ -1,4 +1,5 @@
-import { Descriptions, Tag, Space, Timeline, Empty } from 'antd';
+import { Descriptions, Tag, Space, Timeline } from 'antd';
+import { EmptyState } from '../../../core/components/EmptyState';
 import dayjs from 'dayjs';
 import type { LeaveApplication } from '../services/leaveService';
 
@@ -99,7 +100,7 @@ export function LeaveDetailDrawer({ record }: Props) {
             </div>
           )}
           {record.approvers.every(a => a.status === 'pending') && (
-            <Empty description="No approvals yet" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+            <EmptyState description="No approvals yet" />
           )}
         </div>
       )}

@@ -84,7 +84,7 @@ export function PerformanceReviewDetailPage() {
           </Space>
         }
         extra={
-          <Space>
+          <Space size={4}>
             {review.status === 'draft' && canManageOwn && (
               <Button icon={<EditOutlined />} onClick={openGoalsModal}>Set Goals</Button>
             )}

@@ -1,4 +1,5 @@
-import { Card, Tag, Spin, Empty } from 'antd';
+import { Card, Tag, Spin } from 'antd';
+import { EmptyState } from '../../../core/components/EmptyState';
 import { LaptopOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useEssAssets } from '../hooks/useEssAssets';
@@ -73,7 +74,7 @@ export function EssAssetsPage() {
       {isLoading ? (
         <div style={{ textAlign: 'center', padding: 24 }}><Spin /></div>
       ) : assets.length === 0 ? (
-        <Empty description="No assets allocated to you" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+        <EmptyState description="No assets allocated to you" />
       ) : (
         <DataTable
           dataSource={assets}

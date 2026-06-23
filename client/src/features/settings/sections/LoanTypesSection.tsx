@@ -56,7 +56,7 @@ export function LoanTypesSection() {
     { title: 'Applicable', dataIndex: 'applicableTo', key: 'applicableTo', render: (v: string) => <Tag>{v}</Tag> },
     { title: 'Status', dataIndex: 'isActive', key: 'isActive', render: (s: boolean) => <Tag color={s ? 'green' : 'red'}>{s ? 'Active' : 'Inactive'}</Tag> },
     { title: '', key: 'actions', width: 100, render: (_: any, r: LoanType) => (
-      <Space>
+      <Space size={4}>
         <Button type="text" size="small" icon={<EditOutlined />} onClick={() => handleEdit(r)} />
         <Popconfirm title="Delete this loan type?" onConfirm={() => deleteMutation.mutate(r.id)}>
           <Button type="text" size="small" danger icon={<DeleteOutlined />} />

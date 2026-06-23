@@ -120,7 +120,7 @@ export function PerformancePage() {
         subtitle="Manage performance cycles, reviews, and appraisals"
         actions={
           canManage && (
-            <Space>
+            <Space size={4}>
               <Button type="primary" icon={<PlusOutlined />} onClick={() => setCycleModalOpen(true)}>
                 New Cycle
               </Button>

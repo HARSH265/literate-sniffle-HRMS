@@ -73,7 +73,7 @@ export function LeaveApprovalsPage() {
     {
       title: 'Actions', key: 'actions', width: 150, fixed: 'right' as const,
       render: (_: any, r: LeaveApplication) => (
-        <Space onClick={(e) => e.stopPropagation()}>
+        <Space size={4} onClick={(e) => e.stopPropagation()}>
           <Button type="primary" size="small" icon={<CheckCircleOutlined />} onClick={() => openApproveModal(r, 'approved')}>Approve</Button>
           <Button danger size="small" icon={<CloseCircleOutlined />} onClick={() => openApproveModal(r, 'rejected')}>Reject</Button>
         </Space>

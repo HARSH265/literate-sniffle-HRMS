@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
-import { Card, Row, Col, Statistic, Tag, Spin, Button, Empty, Popconfirm } from 'antd';
+import { Card, Row, Col, Statistic, Tag, Spin, Button, Popconfirm } from 'antd';
+import { EmptyState } from '../../../core/components/EmptyState';
 import { PlusOutlined } from '@ant-design/icons';
 import { useMyLoans, useEssCancelLoan } from '../hooks/useEssLoans';
 import { DataTable } from '../../../core/components/DataTable';
@@ -131,7 +132,7 @@ export function EssLoansPage() {
         }
       >
         {loans.length === 0 ? (
-          <Empty description="No loan applications yet" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+          <EmptyState description="No loan applications yet" />
         ) : (
           <DataTable
             dataSource={loans}
