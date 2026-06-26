@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Row, Col, Avatar, Button, Spin, Card, Descriptions, Tag, message, Upload, Select, Popconfirm, Modal, Tabs } from 'antd';
-import { ArrowLeftOutlined, EditOutlined, UserOutlined, CheckCircleOutlined, CloseCircleOutlined, DeleteOutlined, UploadOutlined, FileTextOutlined, EyeOutlined, DownloadOutlined, CalendarOutlined, DollarOutlined } from '@ant-design/icons';
+import { Row, Col, Avatar, Button, Spin, Card, Descriptions, Tag, message, Upload, Select, Popconfirm, Modal, Tabs, Typography } from 'antd';
+import { ArrowLeftOutlined, EditOutlined, UserOutlined, CheckCircleOutlined, CloseCircleOutlined, DeleteOutlined, UploadOutlined, FileTextOutlined, EyeOutlined, DownloadOutlined, CalendarOutlined, DollarOutlined, KeyOutlined } from '@ant-design/icons';
 import { PageHeader } from '../../../core/components/PageHeader';
 import { PageContainer } from '../../../core/components/PageContainer';
 import { EmptyState } from '../../../core/components/EmptyState';
@@ -10,6 +10,7 @@ import { DataTable } from '../../../core/components/DataTable';
 import { employeeService } from '../services/employeeService';
 import { attendanceService } from '../../attendance/services/attendanceService';
 import { payrollService } from '../../payroll/services/payrollService';
+import { settingsService } from '../../settings/services/settingsService';
 import { EMPLOYEE_STATUS_COLORS } from '../../../core/constants/statusColors';
 import { formatCurrency } from '../../../core/constants/currency';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -27,6 +28,8 @@ const docTypeLabels: Record<string, string> = {
 const CATEGORY_LABELS: Record<'worker' | 'office-staff', string> = {
   worker: 'Worker', 'office-staff': 'Office Staff',
 };
+
+const { Text } = Typography;
 
 const loadingFlex: React.CSSProperties = { display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' };
 
@@ -80,6 +83,13 @@ export function EmployeeDetailPage() {
     queryFn: () => payrollService.getByEmployee(id!),
     enabled: !!id && id !== 'new' && activeTab === 'payroll',
   });
+
+  const { data: settingsData } = useQuery({
+    queryKey: ['settings'],
+    queryFn: () => settingsService.get(),
+  });
+
+  const showCredentials = settingsData?.data?.userCredentialsConfig?.showCredentialsInEmployeeDetail ?? true;
 
   const attendanceColumns = useMemo(() => [
     { title: 'Date', dataIndex: 'date', key: 'date', render: (d: string) => dayjs(d).format('DD MMM YYYY') },
@@ -216,6 +226,37 @@ export function EmployeeDetailPage() {
                 </Descriptions>
               </div>
             </Card>
+
+            {showCredentials && (
+              <Card style={{ marginBottom: 24 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+                  <KeyOutlined style={{ fontSize: 16, color: 'var(--hrms-primary)' }} />
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--hrms-text-muted)' }}>
+                    User Account
+                  </div>
+                </div>
+                <Descriptions column={1} size="small" colon={false}>
+                  <Descriptions.Item label="Login Email">
+                    <Text copyable style={{ fontSize: 13, fontFamily: 'monospace' }}>
+                      {employee.email || '—'}
+                    </Text>
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Employee Code">
+                    <Text copyable style={{ fontSize: 13, fontFamily: 'monospace' }}>
+                      {employee.employeeCode || '—'}
+                    </Text>
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Account Status">
+                    <Tag color="green" style={{ fontSize: 11 }}>Active</Tag>
+                  </Descriptions.Item>
+                </Descriptions>
+                <div style={{ marginTop: 12, padding: '8px 12px', background: 'var(--hrms-info-light)', borderRadius: 6 }}>
+                  <Text style={{ fontSize: 12, color: 'var(--hrms-info)' }}>
+                    Credentials can be shared with the employee for ESS portal login. Use "Forgot Password" to reset.
+                  </Text>
+                </div>
+              </Card>
+            )}
           </Col>
 
           <Col xs={24} lg={16}>

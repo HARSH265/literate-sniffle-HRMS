@@ -163,6 +163,11 @@ export class SettingsService {
       Object.assign(changes, sectionChanges);
       (settings as any).shiftSwapConfig = { ...((settings as any).shiftSwapConfig?.toObject?.() || {}), ...data.shiftSwapConfig };
     }
+    if (data.userCredentialsConfig) {
+      const sectionChanges = getChangedFields(oldSettings.userCredentialsConfig, data.userCredentialsConfig, 'userCredentialsConfig');
+      Object.assign(changes, sectionChanges);
+      (settings as any).userCredentialsConfig = { ...((settings as any).userCredentialsConfig?.toObject?.() || {}), ...data.userCredentialsConfig };
+    }
 
     (settings as any).updatedBy = userId;
     await (settings as any).save();

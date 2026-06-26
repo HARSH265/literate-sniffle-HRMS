@@ -298,6 +298,10 @@ export interface ICompanySettings extends Document {
     trainingModes: string[];
     skillCategories: string[];
   };
+  userCredentialsConfig: {
+    showCredentialsInEmployeeDetail: boolean;
+    autoGeneratePasswordOnUserCreate: boolean;
+  };
 }
 
 type CompanySettingsModel = Model<ICompanySettings>;
@@ -654,6 +658,10 @@ const CompanySettingsSchema = new Schema<ICompanySettings>(
       trainingCategories: { type: [String], default: ['Technical', 'Soft Skills', 'Compliance', 'Safety', 'Leadership', 'Other'] },
       trainingModes: { type: [String], default: ['Classroom', 'Online', 'On-the-Job', 'External'] },
       skillCategories: { type: [String], default: ['Technical', 'Functional', 'Behavioral'] },
+    },
+    userCredentialsConfig: {
+      showCredentialsInEmployeeDetail: { type: Boolean, default: true },
+      autoGeneratePasswordOnUserCreate: { type: Boolean, default: true },
     },
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
   },

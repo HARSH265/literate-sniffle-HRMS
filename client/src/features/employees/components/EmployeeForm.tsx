@@ -299,7 +299,7 @@ export function EmployeeForm({ mode, initialValues, onSubmit, isPending, onCance
                 </Form.Item>
               </Col>
               <Col span={12}>
-                <Form.Item name="baseSalary" label="Monthly Salary">
+                <Form.Item name="baseSalary" label="Monthly Salary" rules={[{ required: true, message: 'Required' }]}>
                   <InputNumber style={{ width: '100%' }} className={styles.inputHeight} min={0} placeholder="25000" />
                 </Form.Item>
               </Col>

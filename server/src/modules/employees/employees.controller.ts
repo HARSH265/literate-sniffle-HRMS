@@ -247,7 +247,7 @@ const importEmployees = asyncHandler(async (req: Request, res: Response) => {
 });
 
 const generateNextCode = asyncHandler(async (_req: Request, res: Response) => {
-  const result = await EmployeesService.generateNextEmployeeCode();
+  const result = await EmployeesService.getNextEmployeeCodePreview();
   ResponseHandler.success(res, { employeeCode: result }, 'Employee code generated');
 });
 

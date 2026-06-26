@@ -28,6 +28,7 @@ import {
   ApiKeysSection,
 } from '../sections';
 import { TotpSection } from '../sections/TotpSection';
+import { UserCredentialsSection } from '../sections/UserCredentialsSection';
 import { SettingsModals } from '../components/SettingsModals';
 
 const SETTINGS_MENU = [
@@ -55,6 +56,7 @@ const SETTINGS_MENU = [
   { key: 'documents', label: 'Document Repository', icon: <FolderOutlined />, group: 'features' },
   { key: 'totp', label: 'TOTP Enrollment', icon: <SafetyCertificateOutlined />, group: 'security' },
   { key: 'permissions', label: 'Role Permissions', icon: <LockOutlined />, group: 'security' },
+  { key: 'userCredentials', label: 'User Credentials', icon: <KeyOutlined />, group: 'security' },
   { key: 'apiKeys', label: 'API Keys', icon: <KeyOutlined />, group: 'security' },
 ];
 
@@ -202,6 +204,8 @@ case 'statutory':
         return <TotpSection employees={employees?.data || []} />;
       case 'permissions':
         return <PermissionsSection form={companyForm} onSave={handleSaveCompany} />;
+      case 'userCredentials':
+        return <UserCredentialsSection form={companyForm} onSave={handleSaveCompany} />;
       case 'apiKeys':
         return <ApiKeysSection />;
       default:

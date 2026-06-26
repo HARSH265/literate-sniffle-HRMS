@@ -182,42 +182,72 @@ export class EmployeesService {
     return visited;
   }
 
+  static async getNextEmployeeCodePreview(): Promise<string> {
+    const settings = await CompanySettings.findOne().lean() as unknown as CompanySettingsLean;
+    const config = settings?.employeeCodeConfig || { prefix: 'EMP', padding: 3, startNumber: 1, isAutoGenerate: true };
+    const prefix = config.prefix || 'EMP';
+    const padding = config.padding || 3;
+
+    const escapedPrefix = prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const lastEmployee = await Employee.findOne({ employeeCode: { $regex: `^${escapedPrefix}` } })
+      .sort({ employeeCode: -1 })
+      .select('employeeCode')
+      .lean();
+
+    if (lastEmployee) {
+      const lastCode = String((lastEmployee as Record<string, unknown>).employeeCode ?? '');
+      const numPart = parseInt(lastCode.replace(prefix, ''), 10);
+      if (!isNaN(numPart)) {
+        return `${prefix}${String(numPart + 1).padStart(padding, '0')}`;
+      }
+    }
+    return `${prefix}${String(config.startNumber || 1).padStart(padding, '0')}`;
+  }
+
   static async generateNextEmployeeCode(): Promise<string> {
     const settings = await CompanySettings.findOne().lean() as unknown as CompanySettingsLean;
     const config = settings?.employeeCodeConfig || { prefix: 'EMP', padding: 3, startNumber: 1, isAutoGenerate: true };
     const prefix = config.prefix || 'EMP';
     const padding = config.padding || 3;
 
-    // Ensure counter exists — initialize from existing employees on first call
-    const existing = await EmployeeCounter.findById('employeeCode').lean();
-    if (!existing) {
-      const escapedPrefix = prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const lastEmployee = await Employee.findOne({ employeeCode: { $regex: `^${escapedPrefix}` } })
-        .sort({ employeeCode: -1 })
-        .select('employeeCode')
-        .lean();
+    const escapedPrefix = prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-      let seq = 0;
-      if (lastEmployee) {
-        const lastCode = String((lastEmployee as Record<string, unknown>).employeeCode ?? '');
-        const numPart = parseInt(lastCode.replace(prefix, ''), 10);
-        if (!isNaN(numPart)) {
-          seq = numPart; // $inc will add 1 to make it numPart + 1
+    const MAX_RETRIES = 10;
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      // Initialize counter from existing employees if it doesn't exist yet
+      const existing = await EmployeeCounter.findById('employeeCode').lean();
+      if (!existing) {
+        const lastEmployee = await Employee.findOne({ employeeCode: { $regex: `^${escapedPrefix}` } })
+          .sort({ employeeCode: -1 })
+          .select('employeeCode')
+          .lean();
+
+        let seq = 0;
+        if (lastEmployee) {
+          const lastCode = String((lastEmployee as Record<string, unknown>).employeeCode ?? '');
+          const numPart = parseInt(lastCode.replace(prefix, ''), 10);
+          if (!isNaN(numPart)) {
+            seq = numPart;
+          }
+        } else {
+          seq = (config.startNumber || 1) - 1;
         }
-      } else {
-        seq = (config.startNumber || 1) - 1; // $inc will add 1 to reach startNumber
+        await EmployeeCounter.findByIdAndUpdate('employeeCode', { seq }, { upsert: true });
       }
-      await EmployeeCounter.findByIdAndUpdate('employeeCode', { seq }, { upsert: true });
+
+      const counter = await EmployeeCounter.findByIdAndUpdate(
+        'employeeCode',
+        { $inc: { seq: 1 } },
+        { new: true },
+      );
+
+      const code = `${prefix}${String(counter!.seq).padStart(padding, '0')}`;
+      const conflict = await Employee.findOne({ employeeCode: code }).select('_id').lean();
+      if (!conflict) {
+        return code;
+      }
     }
-
-    // Atomic increment — always safe under concurrency
-    const counter = await EmployeeCounter.findByIdAndUpdate(
-      'employeeCode',
-      { $inc: { seq: 1 } },
-      { new: true },
-    );
-
-    return `${prefix}${String(counter!.seq).padStart(padding, '0')}`;
+    throw new AppError('Failed to generate unique employee code after multiple attempts', 500);
   }
 
   private static autoCalculateSalary(data: Record<string, unknown>, workingDays: number): void {

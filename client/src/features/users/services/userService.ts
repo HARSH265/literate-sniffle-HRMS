@@ -6,17 +6,29 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  role: 'super-admin' | 'hr-admin' | 'hr-staff' | 'accounts' | 'manager';
+  role: 'super-admin' | 'hr-admin' | 'hr-staff' | 'accounts' | 'manager' | 'worker';
   isActive: boolean;
   createdAt: string;
   lastLogin?: string;
+  employeeId?: string;
+  mustChangePassword?: boolean;
 }
 
 export interface CreateUser {
   name: string;
   email: string;
   password?: string;
-  role: 'super-admin' | 'hr-admin' | 'hr-staff' | 'accounts' | 'manager';
+  role: 'super-admin' | 'hr-admin' | 'hr-staff' | 'accounts' | 'manager' | 'worker';
+  employeeId?: string;
+}
+
+export interface CreateUserResponse {
+  success: boolean;
+  data: User & {
+    generatedPassword?: string;
+    loginEmail?: string;
+    mustChangePassword?: boolean;
+  };
 }
 
 export const userService = {
@@ -30,7 +42,7 @@ export const userService = {
     return data;
   },
 
-  async create(payload: CreateUser): Promise<{ success: boolean; data: User }> {
+  async create(payload: CreateUser): Promise<CreateUserResponse> {
     const { data } = await apiClient.post(API_ENDPOINTS.users.create, payload);
     return data;
   },

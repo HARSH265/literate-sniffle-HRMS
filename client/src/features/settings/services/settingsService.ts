@@ -148,6 +148,10 @@ export interface CompanySettings {
     changeRequiresApproval: boolean;
     maxChangesPerMonth: number;
   };
+  userCredentialsConfig?: {
+    showCredentialsInEmployeeDetail: boolean;
+    autoGeneratePasswordOnUserCreate: boolean;
+  };
 }
 
 export const settingsService = {
